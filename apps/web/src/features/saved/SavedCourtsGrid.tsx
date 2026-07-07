@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CourtSummaryDTO } from '@tennis/contracts';
 import { CourtCard } from '@/components/court';
-import { getClientRepositories } from '@/lib/repositories.client';
+import { getMutationSavedRepository } from '@/lib/repositories.client';
 import { AuthRequiredError } from '@/lib/repositories';
 import { SavedEmptyState } from './SavedEmptyState';
 
@@ -20,9 +20,10 @@ import { SavedEmptyState } from './SavedEmptyState';
 // redesigned. Every court here is saved, so CourtCard still renders a filled heart.
 //
 // REPOSITORY / AUTH (mirrors the other saved islands): the write goes through
-// `getClientRepositories()` — the in-memory seam in mock mode, the protected
+// `getMutationSavedRepository()` — the in-memory seam in mock mode, the protected
 // DELETE /v1/me/saved-courts/:courtId in `api` mode (httpOnly cookie via
-// credentials:'include'). Removal is OPTIMISTIC (the card disappears immediately); a
+// credentials:'include', or a server action in staging demo mode). Removal is OPTIMISTIC
+// (the card disappears immediately); a
 // session that expired mid-use surfaces as `AuthRequiredError`, on which we restore the
 // card and route to /signin (Saved is a private page — the same redirect the server uses).
 //
@@ -54,7 +55,8 @@ export interface SavedCourtsGridProps {
 
 export function SavedCourtsGrid({ courts }: SavedCourtsGridProps) {
   const router = useRouter();
-  const repositories = useMemo(() => getClientRepositories(), []);
+  // Mutation repo: browser-cookie path, OR server-action-backed in staging demo mode.
+  const savedRepo = useMemo(() => getMutationSavedRepository(), []);
 
   // Local, optimistic copy of the saved list — seeded from the server prop. Unsaving a
   // court removes it here immediately; a failed write restores it.
@@ -70,7 +72,7 @@ export function SavedCourtsGrid({ courts }: SavedCourtsGridProps) {
       setItems((prev) => prev.filter((c) => c.id !== court.id));
       setPending((prev) => new Set(prev).add(court.id));
 
-      void repositories.saved
+      void savedRepo
         .unsaveCourt(court.id)
         .catch((err: unknown) => {
           // Restore the card on any failure so the grid reflects the true server state.
@@ -90,7 +92,7 @@ export function SavedCourtsGrid({ courts }: SavedCourtsGridProps) {
           }),
         );
     },
-    [pending, repositories, router],
+    [pending, savedRepo, router],
   );
 
   if (items.length === 0) {

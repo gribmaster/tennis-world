@@ -24,6 +24,15 @@
 // singleton store, so a new `MockSavedRepository()` still sees the same in-memory state.
 
 import { getRepositories, type Repositories } from '@/domain';
+import type { SavedRepository } from '@/domain';
+import { isDemoMode } from '@/lib/demo-auth';
+import {
+  createUserCollectionAction,
+  renameUserCollectionAction,
+  saveCourtAction,
+  toggleCourtInCollectionAction,
+  unsaveCourtAction,
+} from '@/lib/saved-actions';
 
 /**
  * Build a repository set for browser-side use whose PROTECTED domains (saved/user) send
@@ -33,4 +42,76 @@ import { getRepositories, type Repositories } from '@/domain';
  */
 export function getClientRepositories(): Repositories {
   return getRepositories(undefined, { auth: 'include' });
+}
+
+/**
+ * The SavedRepository a CLIENT ISLAND should use for MUTATIONS (Feature 76).
+ *
+ * NORMAL operation: the browser HTTP repo, authenticating with the httpOnly session cookie
+ * (`credentials:'include'`) — identical to `getClientRepositories().saved`.
+ *
+ * STAGING DEMO MODE (`isDemoMode()`): there is no session cookie, and the demo secret must
+ * not reach the browser, so the browser can't authenticate a write itself. Instead the
+ * mutations are routed through SERVER ACTIONS (`saved-actions.ts`) that run on the server,
+ * where the secret lives. This adapter exposes exactly the mutation methods islands call
+ * directly, each delegating to its action; the READ methods are never invoked on the client
+ * in this mode (the toggle's read-before-write happens server-side inside the action), so
+ * they throw a clear error if misused rather than silently returning wrong data.
+ *
+ * Islands call this instead of `getClientRepositories().saved` for writes; the returned
+ * object satisfies the same `SavedRepository` type, so the call sites are otherwise unchanged.
+ */
+export function getMutationSavedRepository(): SavedRepository {
+  if (!isDemoMode()) {
+    return getClientRepositories().saved;
+  }
+  return new DemoActionSavedRepository();
+}
+
+/**
+ * SavedRepository whose MUTATIONS delegate to server actions (staging demo mode). Read
+ * methods are unsupported on the client here — they either run server-side (page loads) or
+ * inside an action — so they throw rather than mislead. See {@link getMutationSavedRepository}.
+ */
+class DemoActionSavedRepository implements SavedRepository {
+  private static unsupported(method: string): never {
+    throw new Error(
+      `${method} is not available on the client in staging demo mode; it runs server-side. ` +
+        'Use a server component read or a server action.',
+    );
+  }
+
+  // ── Mutations → server actions (the secret stays server-side) ────────────────
+  saveCourt(courtId: string): Promise<void> {
+    return saveCourtAction(courtId);
+  }
+  unsaveCourt(courtId: string): Promise<void> {
+    return unsaveCourtAction(courtId);
+  }
+  toggleCourtInCollection(collectionId: string, courtId: string): Promise<void> {
+    return toggleCourtInCollectionAction(collectionId, courtId);
+  }
+  createUserCollection(name: string) {
+    return createUserCollectionAction(name);
+  }
+  renameUserCollection(collectionId: string, name: string) {
+    return renameUserCollectionAction(collectionId, name);
+  }
+
+  // ── Reads → never called on the client in demo mode ──────────────────────────
+  getSavedCourts(): never {
+    return DemoActionSavedRepository.unsupported('getSavedCourts');
+  }
+  getSavedCollections(): never {
+    return DemoActionSavedRepository.unsupported('getSavedCollections');
+  }
+  getUserCollectionBySlug(): never {
+    return DemoActionSavedRepository.unsupported('getUserCollectionBySlug');
+  }
+  getCollectionIdsForCourt(): never {
+    return DemoActionSavedRepository.unsupported('getCollectionIdsForCourt');
+  }
+  isCourtSaved(): never {
+    return DemoActionSavedRepository.unsupported('isCourtSaved');
+  }
 }

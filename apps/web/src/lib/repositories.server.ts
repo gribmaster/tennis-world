@@ -23,6 +23,7 @@
 
 import { cookies } from 'next/headers';
 import { getRepositories, type Repositories } from '@/domain';
+import { demoAuthOptions } from './demo-auth.server';
 
 /**
  * Build a request-scoped repository set whose PROTECTED domains (saved/user) carry the
@@ -45,7 +46,18 @@ export async function getRepositoriesForRequest(): Promise<Repositories> {
     .map((c) => `${c.name}=${c.value}`)
     .join('; ');
 
-  // Pass the header only when non-empty so a logged-out request sends no Cookie at all
-  // (cleaner than an empty header) — the protected reads then 401 as expected.
-  return getRepositories(undefined, cookieHeader ? { cookie: cookieHeader } : {});
+  // STAGING-ONLY (Feature 76): in demo mode there is no session cookie (the Vercel↔Railway
+  // cross-domain cookie doesn't stick — the whole reason demo mode exists), so the demo-auth
+  // header IS the credential for the protected /v1/me/* reads. `demoAuthOptions()` reads the
+  // server-only secret (or `{}` when demo mode is off / secret missing) and is merged on top
+  // of the cookie transport. In normal operation this is `{}` and nothing changes.
+  const demo = demoAuthOptions();
+
+  // Pass the cookie only when non-empty so a logged-out request sends no Cookie at all
+  // (cleaner than an empty header) — outside demo mode the protected reads then 401 as
+  // expected. In demo mode the merged demo secret authenticates even with no cookie.
+  return getRepositories(undefined, {
+    ...(cookieHeader ? { cookie: cookieHeader } : {}),
+    ...demo,
+  });
 }

@@ -41,6 +41,35 @@ export interface AuthConfig {
   magicLinkDevLog: boolean;
   /** True when the JWT secret is still the obvious dev sentinel. */
   usingDefaultSecret: boolean;
+  /**
+   * STAGING-ONLY demo auth (Feature 76). See {@link StagingDemoAuthConfig}. `null` when
+   * disabled (the default, and the ONLY safe production value) — the guard's demo branch
+   * is then completely inert. Never enabled implicitly (no NODE_ENV coupling): it is on
+   * ONLY when `STAGING_DEMO_AUTH_ENABLED` is explicitly true.
+   */
+  stagingDemoAuth: StagingDemoAuthConfig | null;
+}
+
+/**
+ * STAGING-ONLY demo auth configuration (Feature 76).
+ *
+ * ⚠️  DANGER — READ BEFORE TOUCHING. This lets any caller who knows a shared secret
+ * authenticate as a fixed demo user WITHOUT a magic link, by sending the
+ * `X-Tennis-Demo-Auth` header. It exists SOLELY so a client can walk through the Vercel
+ * staging deployment (where the cross-domain session cookie doesn't stick) without login
+ * friction. It is:
+ *   - OFF by default and MUST stay off in production (`stagingDemoAuth === null`);
+ *   - gated on an EXPLICIT `STAGING_DEMO_AUTH_ENABLED=true` — never on NODE_ENV;
+ *   - limited to a single, free demo user (no entitlement bypass);
+ *   - NOT a password/general backdoor — it grants exactly one identity.
+ * The proper long-term fix is same-parent-domain subdomains so the real session cookie
+ * works cross-site; this is a temporary staging convenience. See docs/STAGING_DEMO_AUTH.md.
+ */
+export interface StagingDemoAuthConfig {
+  /** Shared secret the caller must present in the `X-Tennis-Demo-Auth` header. */
+  secret: string;
+  /** Email of the demo user (found-or-created on first authenticated demo request). */
+  email: string;
 }
 
 /** Default CORS origins when `API_CORS_ORIGINS` is empty/missing (dev fallback —
@@ -112,6 +141,8 @@ export function loadAuthConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig
     );
   }
 
+  const stagingDemoAuth = loadStagingDemoAuthConfig(env);
+
   return {
     jwtSecret,
     cookieName: env.AUTH_COOKIE_NAME?.trim() || 'tennis_session',
@@ -124,7 +155,46 @@ export function loadAuthConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig
     cookieDomain: cookieDomain && cookieDomain.length > 0 ? cookieDomain : undefined,
     magicLinkDevLog: boolEnv(env.MAGIC_LINK_DEV_LOG, true),
     usingDefaultSecret: jwtSecret === 'change-me',
+    stagingDemoAuth,
   };
+}
+
+/** Default demo user email when `STAGING_DEMO_EMAIL` is unset (but demo auth is enabled). */
+const DEFAULT_STAGING_DEMO_EMAIL = 'demo@tennisworld.local';
+
+/**
+ * Parse the STAGING-ONLY demo-auth env (Feature 76). Returns `null` (disabled) unless
+ * `STAGING_DEMO_AUTH_ENABLED` is explicitly true — the default, and the only safe
+ * production posture. When enabled it REQUIRES `STAGING_DEMO_AUTH_SECRET`; a missing/blank
+ * secret is a fail-fast BOOT ERROR (prompt task 7) rather than a silently-open door with an
+ * empty secret. `STAGING_DEMO_EMAIL` defaults to the documented demo address.
+ *
+ * NODE_ENV is deliberately NOT consulted here (prompt task 6): demo auth turns on ONLY via
+ * this explicit flag, so it can never be enabled implicitly by an environment name.
+ */
+function loadStagingDemoAuthConfig(
+  env: NodeJS.ProcessEnv,
+): StagingDemoAuthConfig | null {
+  if (!boolEnv(env.STAGING_DEMO_AUTH_ENABLED, false)) {
+    return null;
+  }
+
+  const secret = env.STAGING_DEMO_AUTH_SECRET?.trim();
+  if (!secret) {
+    // Fail fast: an enabled-but-secretless demo mode would either reject every request
+    // (useless) or, worse, match an empty header (an open door). Neither is acceptable.
+    throw new Error(
+      'STAGING_DEMO_AUTH_ENABLED=true requires a non-empty STAGING_DEMO_AUTH_SECRET. ' +
+        'Set a long random secret, or disable staging demo auth (unset ' +
+        'STAGING_DEMO_AUTH_ENABLED). This is a STAGING-ONLY convenience — never enable it ' +
+        'in production.',
+    );
+  }
+
+  const email =
+    env.STAGING_DEMO_EMAIL?.trim() || DEFAULT_STAGING_DEMO_EMAIL;
+
+  return { secret, email };
 }
 
 /** DI token for the singleton {@link AuthConfig} provided by AuthModule. */

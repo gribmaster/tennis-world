@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getClientRepositories } from '@/lib/repositories.client';
+import { getMutationSavedRepository } from '@/lib/repositories.client';
 
 // UserCollectionRename — the inline rename control for a USER wishlist folder
 // (`/saved/collections/[slug]`), ported from files/collection.html's
@@ -10,10 +10,11 @@ import { getClientRepositories } from '@/lib/repositories.client';
 // title for an inline input + "Save"). This is the small client island that replaces
 // the Feature 33 DISABLED placeholder; the rest of the hero stays server-rendered.
 //
-// REPOSITORY (Feature 57): Save calls `repositories.saved.renameUserCollection(id, name)`
-// via `getClientRepositories()`. In MOCK mode that's the in-memory seam (Feature 34); in
+// REPOSITORY (Feature 57): Save calls `savedRepo.renameUserCollection(id, name)` via
+// `getMutationSavedRepository()`. In MOCK mode that's the in-memory seam (Feature 34); in
 // `api` mode it's the protected `PATCH /v1/me/collections/:id` (the browser client repo
-// sends the session cookie with `credentials:'include'`). The page that mounts this
+// sends the session cookie with `credentials:'include'`, or a server action in staging demo
+// mode). The page that mounts this
 // (`/saved/collections/[slug]`) is PRIVATE — a logged-out visitor was already redirected
 // to /signin, so an authed session is in hand in `api` mode.
 //
@@ -38,8 +39,9 @@ export interface UserCollectionRenameProps {
 export function UserCollectionRename({ collectionId, name }: UserCollectionRenameProps) {
   const router = useRouter();
 
-  // Browser-side repo set: api mode → session-cookie HTTP repo; mock mode → in-memory seam.
-  const repositories = useMemo(() => getClientRepositories(), []);
+  // Mutation repo: api mode → session-cookie HTTP repo (or server action in staging demo
+  // mode); mock mode → in-memory seam.
+  const savedRepo = useMemo(() => getMutationSavedRepository(), []);
 
   // The visible folder name. Seeded from the server-rendered `name`; updated from the DTO
   // that `renameUserCollection` returns. Local — not global, not persisted.
@@ -68,7 +70,7 @@ export function UserCollectionRename({ collectionId, name }: UserCollectionRenam
     // api mode → PATCH /v1/me/collections/:id; mock mode → in-memory seam. The returned
     // DTO carries the trimmed name and the (possibly new) slug — both come from the
     // mutation result, so we never re-read on the client.
-    const updated = await repositories.saved.renameUserCollection(collectionId, trimmed);
+    const updated = await savedRepo.renameUserCollection(collectionId, trimmed);
     setCurrentName(updated.name);
     setEditing(false);
     setDraft(updated.name);

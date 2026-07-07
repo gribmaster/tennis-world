@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { UserCollectionDTO } from '@tennis/contracts';
-import { getClientRepositories } from '@/lib/repositories.client';
+import { getMutationSavedRepository } from '@/lib/repositories.client';
 import { AuthRequiredError } from '@/lib/repositories';
 import { CreateCollectionModal } from '@/features/user-collections';
 
@@ -15,9 +15,11 @@ import { CreateCollectionModal } from '@/features/user-collections';
 // REPOSITORY (Feature 57): membership changes go through the SavedRepository
 // (`toggleCourtInCollection`, `createUserCollection`). In MOCK mode this is the in-memory
 // seam (Feature 34 — no backend/auth/persistence); in `api` mode it is the protected
-// `/v1/me/*` endpoints, reached via `getClientRepositories()` whose saved repo sends the
+// `/v1/me/*` endpoints, reached via `getMutationSavedRepository()` whose saved repo sends the
 // httpOnly session cookie with `credentials:'include'` (the browser can't read the cookie
-// from JS, so it lets fetch attach it). The UI is identical across modes.
+// from JS, so it lets fetch attach it) — OR, in STAGING DEMO MODE (Feature 76, no cookie),
+// routes the write through a server action so the demo secret stays server-side. The UI is
+// identical across modes.
 //
 // LOGGED-OUT (Feature 57): Court Detail is PUBLIC. For a logged-out visitor in `api` mode
 // the server's protected reads 401'd, so `signedIn` is false and `collections` is empty.
@@ -116,9 +118,10 @@ export function SaveToCollectionMenu({
 }: SaveToCollectionMenuProps) {
   const menuId = useId();
 
-  // Build the browser-side repository set once. In `api` mode its saved repo sends the
-  // session cookie (`credentials:'include'`); in mock mode it's the in-memory seam.
-  const repositories = useMemo(() => getClientRepositories(), []);
+  // Build the mutation repo once. In `api` mode its saved repo sends the session cookie
+  // (`credentials:'include'`), or routes through a server action in staging demo mode; in
+  // mock mode it's the in-memory seam.
+  const savedRepo = useMemo(() => getMutationSavedRepository(), []);
 
   // Flips to false if a mutation hits `AuthRequiredError` (session expired). Seeded from
   // the server-derived `signedIn`. Controls whether the menu shows the sign-in prompt.
@@ -180,7 +183,7 @@ export function SaveToCollectionMenu({
         else next.add(collectionId);
         return next;
       });
-      void repositories.saved
+      void savedRepo
         .toggleCourtInCollection(collectionId, courtId)
         .catch((err: unknown) => {
           if (err instanceof AuthRequiredError) {
@@ -198,7 +201,7 @@ export function SaveToCollectionMenu({
           // fire-and-forget prototype behavior).
         });
     },
-    [courtId, memberIds, repositories],
+    [courtId, memberIds, savedRepo],
   );
 
   // Create-from-menu (matches the prototype, which seeds the new folder WITH the current
@@ -209,11 +212,11 @@ export function SaveToCollectionMenu({
   const handleCreate = useCallback(
     async (name: string) => {
       try {
-        const created = await repositories.saved.createUserCollection(name);
+        const created = await savedRepo.createUserCollection(name);
         setItems((prev) => [...prev, created]);
         // Add the current court to the brand-new folder, mirroring the prototype.
         setMemberIds((prev) => new Set(prev).add(created.id));
-        void repositories.saved.toggleCourtInCollection(created.id, courtId);
+        void savedRepo.toggleCourtInCollection(created.id, courtId);
         setCreateOpen(false);
       } catch (err) {
         if (err instanceof AuthRequiredError) {
@@ -224,7 +227,7 @@ export function SaveToCollectionMenu({
         throw err;
       }
     },
-    [courtId, repositories],
+    [courtId, savedRepo],
   );
 
   return (

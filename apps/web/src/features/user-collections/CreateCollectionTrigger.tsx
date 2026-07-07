@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { UserCollectionDTO } from '@tennis/contracts';
-import { getClientRepositories } from '@/lib/repositories.client';
+import { getMutationSavedRepository } from '@/lib/repositories.client';
 import { CreateCollectionModal } from './CreateCollectionModal';
 
 // CreateCollectionTrigger — the reusable control that opens the CreateCollectionModal.
@@ -11,11 +11,12 @@ import { CreateCollectionModal } from './CreateCollectionModal';
 // state locally (one `useState`, mirroring PaywallTrigger / ConsultationTrigger — no global
 // store, no localStorage), renders a button, and renders the modal alongside it.
 //
-// REPOSITORY (Feature 57): on submit it calls `repositories.saved.createUserCollection(name)`
-// via `getClientRepositories()`. In MOCK mode that's the in-memory seam (Feature 34); in
-// `api` mode it's the protected `POST /v1/me/collections` (the browser client repo sends
-// the session cookie with `credentials:'include'`). The created folder is handed back to
-// the parent via `onCreated` so the parent mirrors it into the visible list.
+// REPOSITORY (Feature 57): on submit it calls `savedRepo.createUserCollection(name)` via
+// `getMutationSavedRepository()`. In MOCK mode that's the in-memory seam (Feature 34); in
+// `api` mode it's the protected `POST /v1/me/collections` (the browser client repo sends the
+// session cookie with `credentials:'include'`, or a server action in staging demo mode). The
+// created folder is handed back to the parent via `onCreated` so the parent mirrors it into
+// the visible list.
 //
 // Where this runs: the Saved page (the only mount today). That page is PRIVATE — a
 // logged-out visitor was already redirected to /signin before this island renders, so an
@@ -66,8 +67,9 @@ export function CreateCollectionTrigger({
   // isn't flagged as an unused prop and to document the future wiring point.
   void source;
 
-  // Browser-side repo set: api mode → session-cookie HTTP repo; mock mode → in-memory seam.
-  const repositories = useMemo(() => getClientRepositories(), []);
+  // Mutation repo: api mode → session-cookie HTTP repo (or server action in staging demo
+  // mode); mock mode → in-memory seam.
+  const savedRepo = useMemo(() => getMutationSavedRepository(), []);
 
   // The ONLY state in this island. Local on purpose: not global, not persisted.
   const [open, setOpen] = useState(false);
@@ -75,7 +77,7 @@ export function CreateCollectionTrigger({
   async function handleCreate(name: string) {
     // Create through the sanctioned client repo. In `api` mode this is the protected
     // POST /v1/me/collections; the returned DTO carries the server-derived slug + count.
-    const created = await repositories.saved.createUserCollection(name);
+    const created = await savedRepo.createUserCollection(name);
     onCreated?.(created);
     setOpen(false);
   }

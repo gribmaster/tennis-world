@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getClientRepositories } from '@/lib/repositories.client';
+import { getMutationSavedRepository } from '@/lib/repositories.client';
 import { AuthRequiredError } from '@/lib/repositories';
 
 // CourtSaveButton — the standalone Save / Unsave (heart) control for Court Detail.
@@ -13,9 +13,10 @@ import { AuthRequiredError } from '@/lib/repositories';
 // — the pair the web layer was previously missing, which left those endpoints unreachable.
 //
 // REPOSITORY (mirrors SaveToCollectionMenu): the write goes through the SavedRepository via
-// `getClientRepositories()`. In MOCK mode that's the in-memory seam (no backend/persistence);
-// in `api` mode it's the protected endpoint, reached with the httpOnly session cookie
-// (`credentials:'include'`). The UI is identical across modes.
+// `getMutationSavedRepository()`. In MOCK mode that's the in-memory seam (no backend/
+// persistence); in `api` mode it's the protected endpoint, reached with the httpOnly session
+// cookie (`credentials:'include'`), OR — in STAGING DEMO MODE (Feature 76, no cookie) —
+// routed through a server action so the demo secret stays server-side. The UI is identical.
 //
 // AUTH (mirrors SaveToCollectionMenu): Court Detail is PUBLIC. For a logged-out visitor in
 // `api` mode `signedIn` is false — the button does NOT mutate; clicking routes to
@@ -75,7 +76,9 @@ export function CourtSaveButton({
   className,
 }: CourtSaveButtonProps) {
   const router = useRouter();
-  const repositories = useMemo(() => getClientRepositories(), []);
+  // Mutation repo: normal browser-cookie path, OR server-action-backed in staging demo mode
+  // (no cookie there — the secret stays server-side). Reads still come from server props.
+  const savedRepo = useMemo(() => getMutationSavedRepository(), []);
 
   const [saved, setSaved] = useState(initialSaved);
   const [pending, setPending] = useState(false);
@@ -96,8 +99,8 @@ export function CourtSaveButton({
     setPending(true);
 
     const write = next
-      ? repositories.saved.saveCourt(courtId)
-      : repositories.saved.unsaveCourt(courtId);
+      ? savedRepo.saveCourt(courtId)
+      : savedRepo.unsaveCourt(courtId);
 
     void write
       .catch((err: unknown) => {
@@ -111,7 +114,7 @@ export function CourtSaveButton({
         setSaved(!next);
       })
       .finally(() => setPending(false));
-  }, [courtId, pending, repositories, router, saved, signInHref, signedIn]);
+  }, [courtId, pending, savedRepo, router, saved, signInHref, signedIn]);
 
   return (
     <button

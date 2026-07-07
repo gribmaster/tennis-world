@@ -36,6 +36,11 @@
 //                           the string in here; this module never touches next/headers).
 //   - `bearerToken: '<jwt>'` → attach `Authorization: Bearer <jwt>` (the mobile-like
 //                           path; also how the Feature-56 verification script authenticates).
+//   - `demoAuthSecret: '<secret>'` → STAGING ONLY (Feature 76): attach
+//                           `X-Tennis-Demo-Auth: <secret>` so the API's staging demo-auth
+//                           branch authenticates as the fixed demo user (no cookie needed).
+//                           This module never READS the secret — a server-only caller
+//                           (lib/repositories.server.ts) supplies it. See docs/STAGING_DEMO_AUTH.md.
 // Public repositories pass NONE of these and keep working exactly as before.
 
 /** Local-dev default. The `/v1` version segment is part of the base. */
@@ -109,6 +114,15 @@ export interface HttpAuthOptions {
    * Feature-56 verification script uses (obtain a token from `POST /v1/auth/verify`).
    */
   bearerToken?: string;
+  /**
+   * STAGING-ONLY (Feature 76): attach `X-Tennis-Demo-Auth: <secret>` so the API's
+   * staging demo-auth branch authenticates the request as the fixed demo user (no cookie
+   * needed). This module never READS the secret — a SERVER-ONLY caller passes it in
+   * (lib/repositories.server.ts reads it from the server-only `STAGING_DEMO_AUTH_SECRET`
+   * env), keeping it out of the browser bundle. Undefined in normal operation. ⚠️  See
+   * docs/STAGING_DEMO_AUTH.md.
+   */
+  demoAuthSecret?: string;
 }
 
 /**
@@ -184,6 +198,11 @@ function buildInit(options: RequestOptions): RequestInit {
   // Bearer path (mobile-like / verification script).
   if (options.bearerToken) {
     headers['authorization'] = `Bearer ${options.bearerToken}`;
+  }
+  // STAGING-ONLY demo-auth header (Feature 76). Only set when a server-only caller supplies
+  // the secret; never present in normal operation. ⚠️  See docs/STAGING_DEMO_AUTH.md.
+  if (options.demoAuthSecret) {
+    headers['x-tennis-demo-auth'] = options.demoAuthSecret;
   }
 
   const init: RequestInit = {

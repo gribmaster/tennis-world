@@ -20,7 +20,8 @@
     "verify:billing-checkout": "tsx scripts/verify-billing-checkout.ts",
     "verify:billing-rate-limit": "tsx scripts/verify-billing-rate-limit.ts",
     "verify:stripe-webhook": "tsx scripts/verify-stripe-webhook.ts",
-    "verify:stripe-e2e": "tsx scripts/verify-stripe-e2e.ts"
+    "verify:stripe-e2e": "tsx scripts/verify-stripe-e2e.ts",
+    "verify:staging-demo-auth": "tsx scripts/verify-staging-demo-auth.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

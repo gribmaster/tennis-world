@@ -58,6 +58,12 @@ import { HttpBillingRepository } from './http/http-billing.repository';
 export type { HttpAuthOptions } from './http/http-client';
 export { AuthRequiredError, HttpError } from './http/http-client';
 
+// Re-exported so the client mutation adapter (lib/repositories.client.ts — Feature 76) can
+// implement the SavedRepository interface (its demo-mode server-action-backed variant)
+// without importing a concrete `*.repository` module (the import-boundary forbids that
+// outside src/domain/**). Type-only — no runtime coupling.
+export type { SavedRepository } from './saved/saved.repository';
+
 // Re-exported so the billing client action helper (UI layer) can recognise "billing is
 // unavailable in this environment" (mock mode has no payment provider) and show a calm
 // message instead of a scary error — without importing a concrete `*.repository` module

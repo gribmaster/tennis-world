@@ -229,4 +229,27 @@ export class AuthService {
       secret: this.config.jwtSecret,
     });
   }
+
+  /**
+   * STAGING-ONLY (Feature 76): resolve the fixed demo user, creating the row on first
+   * use. Returns `{ userId, email }` — the SAME shape the guard's JWT path attaches to
+   * `req.auth`, so every downstream handler treats the demo user exactly like a normal
+   * authenticated user (no special-casing past this point). The user is a plain, FREE
+   * user (`authProvider: 'demo'` tags how it was created; it grants no entitlement — the
+   * EntitlementsService still derives 'free' from its zero entitlement rows).
+   *
+   * ⚠️  Only ever called from the guard's demo branch, which is itself gated on the
+   * explicit `STAGING_DEMO_AUTH_ENABLED` flag AND a matching secret header. See
+   * {@link AuthConfig.stagingDemoAuth} and docs/STAGING_DEMO_AUTH.md.
+   */
+  async resolveDemoUser(email: string): Promise<AccessTokenPayload> {
+    const normalizedEmail = this.normalizeEmail(email);
+    const user = await this.prisma.user.upsert({
+      where: { email: normalizedEmail },
+      create: { email: normalizedEmail, name: 'Demo User', authProvider: 'demo' },
+      update: {},
+      select: { id: true, email: true },
+    });
+    return { sub: user.id, email: user.email };
+  }
 }
