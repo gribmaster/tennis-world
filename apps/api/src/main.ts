@@ -86,7 +86,7 @@ async function bootstrap(): Promise<void> {
   app.enableShutdownHooks();
 
   const port = process.env.PORT ?? 3001;
-  const host = process.env.HOST ?? '127.0.0.1';
+  const host = process.env.HOST ?? '0.0.0.0';
   await app.listen(port, host);
   console.log(`[api] listening on http://${host}:${port}/v1/health`);
 }
