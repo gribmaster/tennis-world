@@ -5,6 +5,16 @@ packages:
 # Allow postinstall build scripts only for the dependencies that legitimately need
 # them (Prisma engine download, NestJS core, sharp for Next/Image, the resolver,
 # and esbuild — the native binary tsx uses to run the Prisma seed).
+
+allowBuilds:
+  "@nestjs/core": true
+  "@prisma/client": true
+  "@prisma/engines": true
+  esbuild: true
+  prisma: true
+  sharp: true
+  unrs-resolver: true
+  
 onlyBuiltDependencies:
   - "@nestjs/core"
   - "@prisma/client"
