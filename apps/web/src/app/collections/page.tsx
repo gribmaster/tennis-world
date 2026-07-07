@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { AppShell } from '@/components/layout';
 import { CollectionsHero, CollectionsGrid } from '@/features/collections';
 import { repositories } from '@/lib/repositories';
+import { isSignedIn } from '@/lib/session.server';
 
 // Collections page (`/collections`) — a Phase-1 screen (Feature 15). Resolves the
 // "All collections" CTA in HomeCollectionsTeaser and the header/footer "Collections"
@@ -28,10 +29,13 @@ export const metadata: Metadata = {
 };
 
 export default async function CollectionsPage() {
-  const collections = await repositories.collections.list();
+  const [collections, signedIn] = await Promise.all([
+    repositories.collections.list(),
+    isSignedIn(),
+  ]);
 
   return (
-    <AppShell unlocked={false}>
+    <AppShell unlocked={false} signedIn={signedIn}>
       <CollectionsHero />
       <CollectionsGrid collections={collections} />
     </AppShell>

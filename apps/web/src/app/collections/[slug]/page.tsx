@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { AppShell } from '@/components/layout';
 import { CollectionDetailHero, CollectionCourtsGrid } from '@/features/collection-detail';
 import { repositories } from '@/lib/repositories';
+import { isSignedIn } from '@/lib/session.server';
 
 // Collection Detail page (`/collections/[slug]`) — a Phase-1 screen (Feature 17).
 // Resolves the per-collection links emitted by the /collections grid and the
@@ -55,10 +56,13 @@ export default async function CollectionDetailPage({
 
   // Courts that belong to this collection. `CourtFilter.collection` takes the
   // collection slug and resolves membership in the data layer.
-  const courts = await repositories.courts.list({ collection: slug });
+  const [courts, signedIn] = await Promise.all([
+    repositories.courts.list({ collection: slug }),
+    isSignedIn(),
+  ]);
 
   return (
-    <AppShell unlocked={false}>
+    <AppShell unlocked={false} signedIn={signedIn}>
       <CollectionDetailHero collection={collection} />
       <CollectionCourtsGrid courts={courts} />
     </AppShell>

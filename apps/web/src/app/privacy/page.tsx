@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { AppShell } from '@/components/layout';
 import { LegalPage, privacyContent } from '@/features/static-pages';
+import { isSignedIn } from '@/lib/session.server';
 
 // Privacy page (`/privacy`) — a static, sectioned legal screen (Feature 29).
 // Resolves the footer "Company → Privacy" link.
@@ -18,9 +19,10 @@ export const metadata: Metadata = {
     'How Tennis World collects, uses, and protects your information. Placeholder copy — not final legal text.',
 };
 
-export default function PrivacyRoute() {
+export default async function PrivacyRoute() {
+  const signedIn = await isSignedIn();
   return (
-    <AppShell unlocked={false}>
+    <AppShell unlocked={false} signedIn={signedIn}>
       <LegalPage content={privacyContent} />
     </AppShell>
   );

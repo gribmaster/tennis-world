@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { AppShell } from '@/components/layout';
 import { AboutPage } from '@/features/static-pages';
+import { isSignedIn } from '@/lib/session.server';
 
 // About page (`/about`) — a static marketing screen (Feature 29). Resolves the
 // footer "Company → About" link.
@@ -18,9 +19,10 @@ export const metadata: Metadata = {
     'Tennis World is a curated atlas of the world’s most beautiful tennis courts — a guide to atmosphere, light, and place.',
 };
 
-export default function AboutRoute() {
+export default async function AboutRoute() {
+  const signedIn = await isSignedIn();
   return (
-    <AppShell unlocked={false}>
+    <AppShell unlocked={false} signedIn={signedIn}>
       <AboutPage />
     </AppShell>
   );

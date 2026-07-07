@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { AppShell, PageContainer } from '@/components/layout';
 import { BillingReturn } from '@/features/billing';
+import { isSignedIn } from '@/lib/session.server';
 
 // Post-checkout return page (`/billing/return`) — Feature 67.
 //
@@ -31,9 +32,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function BillingReturnRoute() {
+export default async function BillingReturnRoute() {
+  // Reached right after checkout — the visitor is signed in (real session or demo mode),
+  // so the header user icon should point at /profile like the rest of the private flow.
+  const signedIn = await isSignedIn();
   return (
-    <AppShell>
+    <AppShell signedIn={signedIn}>
       <PageContainer className="py-section-lg md:py-section-xl">
         <Suspense
           fallback={

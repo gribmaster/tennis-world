@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { AppShell } from '@/components/layout';
 import { LegalPage, termsContent } from '@/features/static-pages';
+import { isSignedIn } from '@/lib/session.server';
 
 // Terms page (`/terms`) — a static, sectioned legal screen (Feature 29). Resolves
 // the footer "Company → Terms" link.
@@ -18,9 +19,10 @@ export const metadata: Metadata = {
     'The terms governing your use of Tennis World. Placeholder copy — not final legal text.',
 };
 
-export default function TermsRoute() {
+export default async function TermsRoute() {
+  const signedIn = await isSignedIn();
   return (
-    <AppShell unlocked={false}>
+    <AppShell unlocked={false} signedIn={signedIn}>
       <LegalPage content={termsContent} />
     </AppShell>
   );

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { AppShell } from '@/components/layout';
 import { JournalHero, JournalGrid } from '@/features/journal';
 import { repositories } from '@/lib/repositories';
+import { isSignedIn } from '@/lib/session.server';
 
 // Journal page (`/journal`) — a Phase-1 screen (Feature 16). Resolves the "All
 // articles" CTA in HomeJournalTeaser and the header/footer "Journal" nav link.
@@ -24,10 +25,13 @@ export const metadata: Metadata = {
 };
 
 export default async function JournalPage() {
-  const articles = await repositories.journal.list();
+  const [articles, signedIn] = await Promise.all([
+    repositories.journal.list(),
+    isSignedIn(),
+  ]);
 
   return (
-    <AppShell unlocked={false}>
+    <AppShell unlocked={false} signedIn={signedIn}>
       <JournalHero />
       <JournalGrid articles={articles} />
     </AppShell>

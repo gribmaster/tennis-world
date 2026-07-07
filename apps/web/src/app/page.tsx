@@ -8,6 +8,7 @@ import {
   HomePaywallBand,
 } from '@/features/home';
 import { repositories } from '@/lib/repositories';
+import { isSignedIn } from '@/lib/session.server';
 
 // Home page — the real Home screen, assembled section by section across Phase-1
 // features: hero, featured courts, Editor's Cut, collections teaser, journal
@@ -25,7 +26,7 @@ import { repositories } from '@/lib/repositories';
 export default async function Home() {
   // Each section's data is fetched here (the page is the only repository
   // boundary) and passed down as props; the section components never fetch.
-  const [featuredCourts, collections, articles] = await Promise.all([
+  const [featuredCourts, collections, articles, signedIn] = await Promise.all([
     // Featured destinations for the "This week, we're dreaming of…" strip. The
     // repository already supports `featured` + `limit`, matching the prototype's 6.
     repositories.courts.list({ featured: true, limit: 6 }),
@@ -33,10 +34,13 @@ export default async function Home() {
     repositories.collections.list({ featured: true, limit: 4 }),
     // The latest few articles for the "Reading list" journal teaser.
     repositories.journal.list({ featured: true, limit: 3 }),
+    // Session status for the header user icon (/profile vs /signin) — true for a real
+    // session AND in staging demo mode (the Demo User), false when logged out.
+    isSignedIn(),
   ]);
 
   return (
-    <AppShell overHero unlocked={false}>
+    <AppShell overHero unlocked={false} signedIn={signedIn}>
       <HomeHero />
 
       <HomeFeaturedCourts courts={featuredCourts} />

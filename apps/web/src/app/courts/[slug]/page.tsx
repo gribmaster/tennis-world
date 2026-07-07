@@ -117,8 +117,9 @@ export default async function CourtDetailPage({
 
   return (
     // NOT overHero — the detail hero is a framed image, not a full-bleed one, so the
-    // header uses its standard solid bar + content offset.
-    <AppShell unlocked={false}>
+    // header uses its standard solid bar + content offset. `signedIn` (derived above from
+    // the protected saved reads) also points the header user icon at /profile vs /signin.
+    <AppShell unlocked={false} signedIn={signedIn}>
       <PageContainer as="article" className="py-section-lg md:py-section-xl">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-[minmax(0,1fr)_360px] md:gap-16 md:items-start">
           {/* ── Left column: media + editorial content ───────────────────────── */}

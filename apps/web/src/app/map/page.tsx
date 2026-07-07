@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { AppShell } from '@/components/layout';
 import { MapExplorer } from '@/features/map';
 import { repositories } from '@/lib/repositories';
+import { isSignedIn } from '@/lib/session.server';
 
 // Map page (`/map`) — a required Phase-1 screen (Feature 13/14). Resolves the three
 // live CTAs that point here ("Explore the Map", "Unlock Map", "View all courts").
@@ -27,13 +28,15 @@ export const metadata: Metadata = {
 };
 
 export default async function MapPage() {
-  const [courts, pins] = await Promise.all([
+  const [courts, pins, signedIn] = await Promise.all([
     repositories.courts.list(),
     repositories.courts.getMapPins(),
+    // Header user icon: /profile vs /signin (true in a real session or staging demo mode).
+    isSignedIn(),
   ]);
 
   return (
-    <AppShell unlocked={false}>
+    <AppShell unlocked={false} signedIn={signedIn}>
       <MapExplorer courts={courts} pins={pins} />
     </AppShell>
   );

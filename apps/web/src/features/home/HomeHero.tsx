@@ -122,7 +122,7 @@ export function HomeHero({ content = HOME_HERO_CONTENT }: HomeHeroProps) {
       />
 
       {/* Content, anchored to the bottom-left and gutter-padded like the prototype. */}
-      <div className="absolute inset-0 flex flex-col justify-end px-[clamp(24px,6vw,80px)] pb-[clamp(48px,7vh,96px)] pt-[clamp(24px,5vw,80px)]">
+      <div className="container-page inset-0 flex flex-col justify-center h-[100%] px-[clamp(24px,6vw,80px)] pb-[clamp(48px,7vh,96px)] pt-[clamp(24px,5vw,80px)]">
         <div className="max-w-[720px]">
           <p className="eyebrow text-bone/75">{eyebrow}</p>
 
