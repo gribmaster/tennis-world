@@ -72,24 +72,27 @@ export function HomeFeaturedCourts({
         <SectionHeader eyebrow={eyebrow} title={title} />
       </PageContainer>
 
+      <PageContainer>
+        <div className="no-scrollbar mt-section flex snap-x snap-mandatory gap-3.5 overflow-x-auto pb-1">
+          {courts.map((court, i) => (
+            <div
+              key={court.id}
+              className="w-[clamp(240px,72vw,300px)] shrink-0 snap-start"
+            >
+              <CourtCard
+                court={court}
+                href={`/courts/${court.slug}`}
+                priority={i === 0}
+              />
+            </div>
+          ))}
+        </div>
+      </PageContainer>
+
       {/* Full-bleed scroll-snap strip. The leading/trailing spacers reproduce the
           prototype's gutter so cards align to the page edge cleanly. */}
-      <div className="no-scrollbar mt-section flex snap-x snap-mandatory gap-3.5 overflow-x-auto pb-1">
-        <div aria-hidden className="w-[clamp(20px,4vw,64px)] shrink-0" />
-        {courts.map((court, i) => (
-          <div
-            key={court.id}
-            className="w-[clamp(240px,72vw,300px)] shrink-0 snap-start"
-          >
-            <CourtCard
-              court={court}
-              href={`/courts/${court.slug}`}
-              priority={i === 0}
-            />
-          </div>
-        ))}
-        <div aria-hidden className="w-[clamp(20px,4vw,64px)] shrink-0" />
-      </div>
+
+
 
       <PageContainer className="mt-5">
         <Link
