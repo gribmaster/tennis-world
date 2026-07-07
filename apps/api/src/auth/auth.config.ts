@@ -29,6 +29,12 @@ export interface AuthConfig {
   corsOrigins: string[];
   /** `Secure` flag for the session cookie (false in local http dev). */
   cookieSecure: boolean;
+  /**
+   * `SameSite` attribute for the session cookie. 'lax' locally; 'none' is required
+   * for cross-site auth (e.g. Vercel web ↔ Railway API on different domains) and
+   * MUST be paired with Secure or the browser drops the cookie.
+   */
+  cookieSameSite: 'lax' | 'none' | 'strict';
   /** Optional cookie Domain; undefined → host-only cookie. */
   cookieDomain: string | undefined;
   /** When true, the dev mailer logs the magic link to the console. */
@@ -53,6 +59,26 @@ function boolEnv(raw: string | undefined, fallback: boolean): boolean {
   return raw === 'true' || raw === '1';
 }
 
+/** Valid `SameSite` values (lowercased). */
+const SAME_SITE_VALUES = ['lax', 'none', 'strict'] as const;
+type SameSite = (typeof SAME_SITE_VALUES)[number];
+
+/**
+ * Parse `AUTH_COOKIE_SAME_SITE` ("lax" | "none" | "strict", case-insensitive).
+ * Empty/missing → 'lax' (the safe local/dev default). An unrecognized value is a
+ * misconfiguration, so throw rather than silently coerce.
+ */
+function sameSiteEnv(raw: string | undefined): SameSite {
+  const value = raw?.trim().toLowerCase();
+  if (!value) return 'lax';
+  if ((SAME_SITE_VALUES as readonly string[]).includes(value)) {
+    return value as SameSite;
+  }
+  throw new Error(
+    `Invalid AUTH_COOKIE_SAME_SITE="${raw}". Expected one of: ${SAME_SITE_VALUES.join(', ')}.`,
+  );
+}
+
 /**
  * Build the {@link AuthConfig} from `process.env`. Reads once at module wiring
  * (AuthModule provider factory) — env is already loaded by `dotenv` in main.ts.
@@ -72,6 +98,20 @@ export function loadAuthConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig
 
   const cookieDomain = env.AUTH_COOKIE_DOMAIN?.trim();
 
+  const cookieSecure = boolEnv(env.AUTH_COOKIE_SECURE, false);
+  const cookieSameSite = sameSiteEnv(env.AUTH_COOKIE_SAME_SITE);
+
+  // Browsers REJECT a `SameSite=None` cookie that isn't also `Secure` — the cookie
+  // is silently dropped, which is exactly the "login doesn't persist" failure this
+  // configuration is meant to fix. Fail fast at boot rather than ship a cookie the
+  // browser will discard.
+  if (cookieSameSite === 'none' && !cookieSecure) {
+    throw new Error(
+      'AUTH_COOKIE_SAME_SITE=none requires AUTH_COOKIE_SECURE=true — browsers reject ' +
+        'a SameSite=None cookie without the Secure attribute (the cookie is dropped).',
+    );
+  }
+
   return {
     jwtSecret,
     cookieName: env.AUTH_COOKIE_NAME?.trim() || 'tennis_session',
@@ -79,7 +119,8 @@ export function loadAuthConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig
     magicLinkTtlMinutes: intEnv(env.MAGIC_LINK_TTL_MINUTES, 15),
     webAppUrl: env.WEB_APP_URL?.trim() || 'http://localhost:3000',
     corsOrigins,
-    cookieSecure: boolEnv(env.AUTH_COOKIE_SECURE, false),
+    cookieSecure,
+    cookieSameSite,
     cookieDomain: cookieDomain && cookieDomain.length > 0 ? cookieDomain : undefined,
     magicLinkDevLog: boolEnv(env.MAGIC_LINK_DEV_LOG, true),
     usingDefaultSecret: jwtSecret === 'change-me',

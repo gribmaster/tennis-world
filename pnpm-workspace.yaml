@@ -14,7 +14,7 @@ allowBuilds:
   prisma: true
   sharp: true
   unrs-resolver: true
-  
+
 onlyBuiltDependencies:
   - "@nestjs/core"
   - "@prisma/client"

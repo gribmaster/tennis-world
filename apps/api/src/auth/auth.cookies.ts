@@ -11,13 +11,17 @@ import type { AuthConfig } from './auth.config';
 // SECURITY (Feature 50 §9):
 //   - httpOnly  : the JWT is not readable by JS → an XSS injection can't exfiltrate
 //                 the session (the whole reason web uses a cookie, not localStorage).
-//   - sameSite  : 'lax' — blocks the cookie on cross-site POST/fetch (CSRF baseline)
-//                 while still sending it on the top-level GET navigation that the
-//                 emailed magic link produces (a 'strict' cookie would be withheld on
-//                 that first click-from-email, breaking the verify landing). The
-//                 stronger double-submit-token control on /v1/me/* mutations is a
-//                 documented follow-on (Feature 50 §7.5); this feature ships no
-//                 cookie-authed mutation, so 'lax' is sufficient here.
+//   - sameSite  : from AUTH_COOKIE_SAME_SITE (default 'lax'). 'lax' blocks the cookie
+//                 on cross-site POST/fetch (CSRF baseline) while still sending it on the
+//                 top-level GET navigation that the emailed magic link produces (a
+//                 'strict' cookie would be withheld on that first click-from-email,
+//                 breaking the verify landing). But when web and API live on DIFFERENT
+//                 sites (e.g. Vercel web ↔ Railway API), the browser treats every
+//                 credentialed API call as cross-site and withholds a 'lax' cookie, so
+//                 the session never persists — those deployments MUST set 'none' (which
+//                 the config layer pairs with Secure, or refuses to boot). The stronger
+//                 double-submit-token control on /v1/me/* mutations is a documented
+//                 follow-on (Feature 50 §7.5).
 //   - secure    : from AUTH_COOKIE_SECURE — false on local http, MUST be true on https.
 //   - path '/'  : the cookie is sent to every API route (the guard reads it anywhere).
 //   - maxAge    : matches the JWT TTL so the cookie and token expire together.
@@ -27,7 +31,7 @@ import type { AuthConfig } from './auth.config';
 function baseCookieOptions(config: AuthConfig): CookieOptions {
   return {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: config.cookieSameSite,
     secure: config.cookieSecure,
     path: '/',
     ...(config.cookieDomain ? { domain: config.cookieDomain } : {}),
