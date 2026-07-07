@@ -1,0 +1,3 @@
+# Placeholder — journal (articles) domain layer is built in a later Phase-1 feature.
+# Per Phase 1 §1, this will hold article.repository.ts / mock-article.repository.ts
+# / article.types.ts / index.ts, mirroring the courts/ structure. No UI yet.

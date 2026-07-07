@@ -1,0 +1,3 @@
+# Placeholder — profile domain layer is built in a later Phase-1 feature.
+# Per Phase 1 §1/§3.10, profile reads the same mock user repository as saved/.
+# This folder reserves the feature slot. No UI yet.

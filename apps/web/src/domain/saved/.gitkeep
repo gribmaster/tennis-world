@@ -1,0 +1,3 @@
+# Placeholder — saved/user domain layer is built in a later Phase-1 feature.
+# Per Phase 1 §1, this will hold user.repository.ts (saved courts, user collections,
+# entitlement status) + its localStorage-backed mock implementation. No UI yet.

@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Tennis World — Sign In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink:      '#0F0F0F',
+          graphite: '#2A2A2A',
+          stone:    '#6B6B6B',
+          mist:     '#B8B8B6',
+          bone:     '#F5F2EC',
+          ivory:    '#FAF8F3',
+          clay:     '#B95C3A',
+          moss:     '#4A5D3F',
+          gold:     '#B89968',
+          paper:    '#FFFFFF',
+        },
+        fontFamily: {
+          serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+          sans:  ['Inter', '-apple-system', 'system-ui', 'sans-serif'],
+        },
+        screens: {
+          sm:  '480px',
+          md:  '768px',
+          lg:  '1024px',
+          xl:  '1280px',
+          '2xl': '1536px',
+        },
+      }
+    }
+  }
+</script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family: Inter, system-ui, sans-serif; color: #0F0F0F; background: #F5F2EC; margin: 0; }
+
+  /* Typography */
+  .serif { font-family: 'Cormorant Garamond', Georgia, serif; }
+  .eyebrow { font-size: 11px; line-height: 16px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; }
+  .display-xl { font-family: 'Cormorant Garamond', Georgia, serif; font-size: clamp(36px, 5vw, 72px); line-height: 1.06; font-weight: 300; letter-spacing: -0.02em; }
+  .display-l  { font-family: 'Cormorant Garamond', Georgia, serif; font-size: clamp(28px, 3.5vw, 52px); line-height: 1.1; font-weight: 300; letter-spacing: -0.02em; }
+  .display-m  { font-family: 'Cormorant Garamond', Georgia, serif; font-size: clamp(22px, 2.5vw, 36px); line-height: 1.2; font-weight: 400; letter-spacing: -0.01em; }
+  .headline   { font-family: 'Cormorant Garamond', Georgia, serif; font-size: clamp(18px, 1.8vw, 26px); line-height: 1.3; font-weight: 500; }
+  .body-l { font-size: clamp(15px, 1.2vw, 18px); line-height: 1.65; font-weight: 400; }
+  .body-m { font-size: clamp(14px, 1vw, 16px); line-height: 1.6; font-weight: 400; }
+  .body-s { font-size: 13px; line-height: 1.55; font-weight: 400; }
+  .mono { font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #B8B8B6; border-radius: 2px; }
+
+  /* Animations */
+  .fade-in { animation: fadeIn 500ms ease-out both; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .slide-up { animation: slideUp 350ms cubic-bezier(0.32,0.72,0,1) both; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(32px); } to { opacity: 1; transform: translateY(0); } }
+
+  .pin-pulse { animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(185,92,58,.4)} 50%{box-shadow:0 0 0 10px rgba(185,92,58,0)} }
+
+  /* Nav */
+  .nav-link { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; color: #6B6B6B; transition: color 150ms; cursor: pointer; }
+  .nav-link:hover, .nav-link.active { color: #0F0F0F; }
+  .nav-link.active { border-bottom: 1px solid #0F0F0F; padding-bottom: 1px; }
+
+  /* Btn */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; border: none; outline: none; transition: opacity 150ms, transform 150ms; font-family: Inter, sans-serif; }
+  .btn:hover { opacity: 0.88; }
+  .btn:active { transform: scale(0.97); opacity: 0.82; }
+  .btn-primary { background: #0F0F0F; color: #F5F2EC; height: 52px; padding: 0 28px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; }
+  .btn-secondary { background: transparent; color: #0F0F0F; border: 1px solid #0F0F0F; height: 52px; padding: 0 28px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; }
+  .btn-ghost { background: transparent; color: #0F0F0F; height: 44px; padding: 0 16px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .btn-gold { background: #B89968; color: #0F0F0F; height: 52px; padding: 0 28px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
+
+  /* Glass */
+  .glass { background: rgba(255,255,255,0.14); backdrop-filter: blur(24px) saturate(180%); border: 1px solid rgba(255,255,255,0.24); }
+
+  /* Cards */
+  .court-card { cursor: pointer; overflow: hidden; transition: transform 300ms ease; }
+  .court-card:hover { transform: translateY(-3px); }
+  .court-card img { transition: transform 500ms ease; }
+  .court-card:hover img { transform: scale(1.04); }
+
+  /* Pill */
+  .pill { border-radius: 999px; }
+  .filter-pill { padding: 7px 16px; border: 1px solid #B8B8B6; background: transparent; color: #0F0F0F; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 150ms; }
+  .filter-pill.active, .filter-pill:hover { background: #0F0F0F; color: #F5F2EC; border-color: #0F0F0F; }
+
+  /* Map */
+  .gmap {
+    background:
+      /* Water bodies */
+      radial-gradient(ellipse 120px 80px at 28% 22%, #c8d4d8 0%, transparent 100%),
+      radial-gradient(ellipse 200px 60px at 72% 45%, #c4d0d8 0%, transparent 100%),
+      radial-gradient(ellipse 80px 120px at 85% 65%, #cad6dc 0%, transparent 100%),
+      /* Land masses */
+      radial-gradient(ellipse 180px 140px at 25% 35%, #ddd8c8 0%, #d4ceba 60%, transparent 100%),
+      radial-gradient(ellipse 100px 80px at 55% 50%, #d8d2c0 0%, transparent 100%),
+      radial-gradient(ellipse 150px 100px at 75% 35%, #dbd5c3 0%, transparent 100%),
+      radial-gradient(ellipse 80px 60px at 18% 55%, #d6d0be 0%, transparent 100%),
+      /* Base */
+      linear-gradient(160deg, #e8e2d0 0%, #ddd7c5 40%, #d8d2c0 100%);
+    filter: saturate(0.6) sepia(0.1);
+  }
+
+  /* Modal backdrop */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(15,15,15,0.6); backdrop-filter: blur(6px); z-index: 200; display: flex; align-items: flex-end; justify-content: center; }
+  @media (min-width: 768px) { .modal-backdrop { align-items: center; } }
+
+  /* Hide scrollbar */
+  .no-scroll-bar { scrollbar-width: none; -ms-overflow-style: none; }
+  .no-scroll-bar::-webkit-scrollbar { display: none; }
+
+  /* Hairline */
+  .hairline { background: #E0DCCC; }
+
+  /* Section spacing */
+  .section { padding: clamp(48px, 6vw, 96px) 0; }
+  .container { max-width: 1280px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 64px); }
+
+  /* Map layout — stacked on mobile, side-by-side on desktop */
+  .map-layout {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 72px - 77px);
+  }
+  .map-canvas-wrap {
+    flex: 0 0 55vh;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .map-list-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+    background: #F5F2EC;
+    border-top: 1px solid #E0DCCC;
+    overflow-y: hidden;
+  }
+  /* Mobile: horizontal card strip */
+  .map-list-inner {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .map-list-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid #E0DCCC;
+    flex-shrink: 0;
+  }
+  .map-cards-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 16px 20px;
+    align-items: flex-start;
+  }
+  .map-card-mobile {
+    flex: 0 0 auto;
+    width: 180px;
+    cursor: pointer;
+  }
+  /* Hide desktop rows on mobile, show cards */
+  .map-rows { display: none; }
+  @media (min-width: 768px) {
+    .map-layout {
+      flex-direction: row;
+      height: calc(100dvh - 72px - 77px);
+    }
+    .map-canvas-wrap {
+      flex: 1 1 auto;
+    }
+    .map-list-panel {
+      flex: 0 0 380px;
+      border-top: none;
+      border-left: 1px solid #E0DCCC;
+      overflow-y: auto;
+    }
+    .map-cards-scroll { display: none; }
+    .map-rows { display: block; overflow-y: auto; flex: 1 1 auto; }
+  }
+
+  /* Editor's Cut rows — stack on mobile, side-by-side on desktop */
+  .editors-row { display: flex; flex-direction: column; }
+  .editors-img { order: 0; }
+  .editors-text { order: 1; }
+  @media (min-width: 768px) {
+    .editors-row { display: grid; grid-template-columns: 1fr 1fr; }
+    .editors-img { order: var(--order); }
+    .editors-text { order: var(--order); }
+  }
+
+  /* Hover link */
+  a { text-decoration: none; color: inherit; }
+
+  /* Focus ring */
+  button:focus-visible { outline: 2px solid #B95C3A; outline-offset: 2px; }
+
+  /* Image overlay gradient */
+  .img-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.72) 100%); }
+  .img-overlay-top { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 45%, rgba(15,15,15,0.85) 100%); }
+
+  /* Sticky nav */
+  #main-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; transition: background 300ms, box-shadow 300ms; }
+  #main-nav.scrolled { background: rgba(245,242,236,0.96); backdrop-filter: blur(20px); box-shadow: 0 1px 0 #E0DCCC; }
+
+  /* Screen panels (SPA) */
+  .screen-panel { display: none; }
+  .screen-panel.active { display: block; }
+
+  /* Saved heart */
+  .heart-btn { width: 36px; height: 36px; border-radius: 999px; background: rgba(0,0,0,0.28); backdrop-filter: blur(8px); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #fff; transition: transform 200ms; }
+  .heart-btn.saved { color: #B95C3A; }
+  .heart-btn:hover { transform: scale(1.12); }
+
+  /* Tag chips */
+  .meta-chip { padding: 5px 12px; border: 1px solid #B8B8B6; background: #FAF8F3; font-size: 13px; border-radius: 2px; }
+
+  /* Locked badge */
+  .locked-badge { position: absolute; top: 12px; left: 12px; padding: 4px 10px; background: rgba(42,42,42,0.85); color: #F5F2EC; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 999px; display: flex; align-items: center; gap: 5px; }
+
+  /* Footer */
+  footer { background: #0F0F0F; color: #F5F2EC; }
+
+  /* Auth gate message */
+  .gate-blur { filter: blur(8px); pointer-events: none; user-select: none; }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+(function(){
+  var fallbacks=['https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=1200&q=80','https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=1200&q=80','https://images.unsplash.com/photo-1530915534234-66dcdb7e2f5d?w=1200&q=80','https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1200&q=80','https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=1200&q=80'];
+  document.addEventListener('error',function(e){var t=e.target;if(t&&t.tagName==='IMG'&&!t.dataset.fb){var n=parseInt(t.dataset.fbn||'0',10);if(n<fallbacks.length){t.dataset.fbn=String(n+1);t.src=fallbacks[n];}else{t.dataset.fb='1';t.style.background='linear-gradient(135deg,#d8d3c5,#b8b3a3)';}}},true);
+})();
+</script>
+<script type="text/babel" data-presets="env,react">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+// ─── Icons ──────────────────────────────────────────────
+const I = {
+  search:       p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>,
+  filter:       p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="M3 6h18M6 12h12M10 18h4"/></svg>,
+  heart:        p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></svg>,
+  heartFill:    p=><svg viewBox="0 0 24 24" fill="currentColor" {...p}><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></svg>,
+  arrow:        p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="M5 12h14M13 6l6 6-6 6"/></svg>,
+  back:         p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="M19 12H5M11 6l-6 6 6 6"/></svg>,
+  close:        p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="M6 6l12 12M18 6 6 18"/></svg>,
+  lock:         p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>,
+  chev:         p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="m9 6 6 6-6 6"/></svg>,
+  chevDown:     p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="m6 9 6 6 6-6"/></svg>,
+  share:        p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="M12 3v13M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>,
+  menu:         p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="M3 6h18M3 12h18M3 18h18"/></svg>,
+  map:          p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="m9 4-6 2v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>,
+  bookmark:     p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="M6 4h12v17l-6-4-6 4z"/></svg>,
+  bookmarkFill: p=><svg viewBox="0 0 24 24" fill="currentColor" {...p}><path d="M6 4h12v17l-6-4-6 4z"/></svg>,
+  play:         p=><svg viewBox="0 0 24 24" fill="currentColor" {...p}><path d="M7 5v14l12-7z"/></svg>,
+  globe:        p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><circle cx="12" cy="12" r="9"/><path d="M2 12h20M12 2c-3 4-3 12 0 20M12 2c3 4 3 12 0 20"/></svg>,
+  user:         p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 5-6 8-6s7 2 8 6"/></svg>,
+  plus:         p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="M12 5v14M5 12h14"/></svg>,
+};
+
+
+
+const AuthIcons = {
+  mail: p => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>,
+  apple: p => <svg viewBox="0 0 24 24" fill="currentColor" {...p}><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-2.003 1.59-3.067 1.59-.04-1.1.522-2.27 1.21-3.04.802-.9 2.156-1.58 3.034-1.63zM21.6 17.13c-.602 1.39-.892 2.01-1.674 3.24-1.09 1.71-2.625 3.84-4.527 3.86-1.69.02-2.137-1.1-4.442-1.09-2.304.01-2.79 1.11-4.485 1.09-1.901-.02-3.351-1.94-4.443-3.65C-1.99 14.93-.515 7.6 4.46 7.32c1.79-.1 3.04 1 4.085 1 1.04 0 2.62-1.13 4.43-1 .76.03 2.99.31 4.41 2.32-3.81 2.31-3.19 7.42-1.78 7.49z"/></svg>,
+  google: p => <svg viewBox="0 0 24 24" {...p}><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.67-2.26 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.85C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.1a6.99 6.99 0 0 1 0-4.2V7.05H2.18a11 11 0 0 0 0 9.9l3.66-2.85z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.05l3.66 2.85c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>,
+}
+
+
+// ─── Sign In ─────────────────────────────────────────────
+function SignIn() {
+  const [email, setEmail] = useState('');
+  const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const submitMagicLink = e => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setLoading(true);
+    setTimeout(() => { setLoading(false); setSent(true); }, 700);
+  };
+
+  return (
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+      {/* Minimal top bar */}
+      <div style={{ padding: '24px clamp(20px,4vw,64px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <a href="home.html" className="serif" style={{ fontSize: 18, letterSpacing: '0.18em', fontWeight: 400, color: '#0F0F0F' }}>
+          TENNIS · WORLD
+        </a>
+        <a href="home.html" className="eyebrow" style={{ color: '#6B6B6B' }}>Continue exploring</a>
+      </div>
+
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px clamp(20px,4vw,64px) 64px' }}>
+        <div style={{ width: '100%', maxWidth: 400 }} className="fade-in">
+
+          {!sent ? (
+            <>
+              <div className="eyebrow" style={{ color: '#6B6B6B', textAlign: 'center' }}>Welcome back</div>
+              <div className="display-l" style={{ textAlign: 'center', marginTop: 12 }}>Sign in to your account</div>
+              <p className="body-m" style={{ color: '#6B6B6B', textAlign: 'center', marginTop: 12 }}>
+                Access your saved courts, collections, and membership.
+              </p>
+
+              <div style={{ marginTop: 40, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', gap: 10 }}>
+                  <AuthIcons.apple width="16" height="16" /> Continue with Apple
+                </button>
+                <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', gap: 10 }}>
+                  <AuthIcons.google width="16" height="16" /> Continue with Google
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '28px 0' }}>
+                <div style={{ flex: 1, height: 1, background: '#E0DCCC' }} />
+                <span className="eyebrow" style={{ color: '#B8B8B6' }}>or</span>
+                <div style={{ flex: 1, height: 1, background: '#E0DCCC' }} />
+              </div>
+
+              <form onSubmit={submitMagicLink}>
+                <div className="eyebrow" style={{ color: '#6B6B6B', marginBottom: 8 }}>Email</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#FAF8F3', border: '1px solid #E0DCCC', height: 52, padding: '0 16px' }}>
+                  <AuthIcons.mail width="16" height="16" style={{ color: '#6B6B6B', flexShrink: 0 }} />
+                  <input
+                    type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                    placeholder="you@example.com" className="body-m"
+                    style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#0F0F0F', minWidth: 0 }}
+                  />
+                </div>
+                <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 14, opacity: loading ? 0.6 : 1 }}>
+                  {loading ? 'Sending…' : 'Send Magic Link'} {!loading && <I.arrow width="14" height="14" />}
+                </button>
+              </form>
+
+              <p className="body-s" style={{ color: '#6B6B6B', textAlign: 'center', marginTop: 28 }}>
+                No password needed — we'll email you a secure sign-in link.
+              </p>
+
+              <div style={{ textAlign: 'center', marginTop: 36, paddingTop: 28, borderTop: '1px solid #E0DCCC' }}>
+                <span className="body-m" style={{ color: '#6B6B6B' }}>New to Tennis World? </span>
+                <a href="signup.html" className="body-m" style={{ color: '#0F0F0F', fontWeight: 500, textDecoration: 'underline' }}>Create an account</a>
+              </div>
+            </>
+          ) : (
+            <div style={{ textAlign: 'center' }} className="fade-in">
+              <div style={{ width: 64, height: 64, borderRadius: 999, background: '#0F0F0F', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+                <AuthIcons.mail width="24" height="24" style={{ color: '#F5F2EC' }} />
+              </div>
+              <div className="display-m" style={{ marginTop: 24 }}>Check your inbox</div>
+              <p className="body-l" style={{ color: '#6B6B6B', marginTop: 12 }}>
+                We've sent a sign-in link to<br/><strong style={{ color: '#0F0F0F' }}>{email}</strong>
+              </p>
+              <button onClick={() => setSent(false)} className="btn btn-ghost" style={{ marginTop: 24, color: '#6B6B6B' }}>
+                Use a different email
+              </button>
+            </div>
+          )}
+
+        </div>
+      </div>
+
+      <div style={{ textAlign: 'center', padding: '0 24px 32px' }}>
+        <span className="body-s" style={{ color: '#B8B8B6' }}>By continuing, you agree to our <a href="terms.html" style={{ color: '#6B6B6B', textDecoration: 'underline' }}>Terms</a> and <a href="privacy.html" style={{ color: '#6B6B6B', textDecoration: 'underline' }}>Privacy Policy</a>.</span>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<SignIn />);
+
+</script>
+</body>
+</html>

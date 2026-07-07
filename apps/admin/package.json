@@ -1,0 +1,11 @@
+{
+  "name": "@tennis/admin",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Admin panel placeholder. Empty by design until Phase 3 (Decision #14) — Refine is NOT installed here yet. This package exists only so the workspace graph and CI are correct from day one.",
+  "scripts": {
+    "build": "echo \"[admin] placeholder — no build until Phase 3 (Decision #14)\"",
+    "lint": "echo \"[admin] placeholder — nothing to lint\"",
+    "typecheck": "echo \"[admin] placeholder — nothing to typecheck\""
+  }
+}

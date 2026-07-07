@@ -1,0 +1,19 @@
+# Phase 0 local dev: Postgres only.
+# Redis / MinIO / S3-compatible storage are deliberately NOT added here — they are
+# introduced when a feature actually needs them (image upload pipeline, Phase 3).
+services:
+  postgres:
+    image: postgres:16
+    container_name: tennis_world_pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tennis
+      POSTGRES_PASSWORD: tennis
+      POSTGRES_DB: tennis_world
+    ports:
+      - "15432:5432"
+    volumes:
+      - tennis_pg_data:/var/lib/postgresql/data
+
+volumes:
+  tennis_pg_data:

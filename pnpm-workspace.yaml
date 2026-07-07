@@ -1,0 +1,15 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Allow postinstall build scripts only for the dependencies that legitimately need
+# them (Prisma engine download, NestJS core, sharp for Next/Image, the resolver,
+# and esbuild — the native binary tsx uses to run the Prisma seed).
+onlyBuiltDependencies:
+  - "@nestjs/core"
+  - "@prisma/client"
+  - "@prisma/engines"
+  - esbuild
+  - prisma
+  - sharp
+  - unrs-resolver

@@ -1,0 +1,313 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @tennis/api prisma:generate
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+  # Feature 48 / 59 — mock/API parity + authed saved/user gate. Boots a disposable
+  # Postgres, applies the committed migrations (migrate deploy — non-destructive, no reset
+  # prompt) and the idempotent seed, starts the built API, waits for /v1/health, then runs:
+  #   • the Feature 47 public parity harness (35/35 deep-equal + masking + shape checks),
+  #   • the Feature 56 HTTP user/saved repository harness (17/17, authed via a bearer token),
+  #   • the Feature 58 factory-flipped persisted reload-survival harness (21/21, authed).
+  # The two authed harnesses need a real bearer token; the `Issue CI auth token` step mints
+  # one DETERMINISTICALLY through the genuine /v1/auth/verify path (no dev-log scraping,
+  # no new endpoint — see apps/api/scripts/ci-issue-token.ts). Every harness exits non-zero
+  # on any drift/assertion failure, failing the job. The CI fixture user is cleaned up in
+  # `if: always()` so repeated runs stay deterministic.
+  parity:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: tennis
+          POSTGRES_PASSWORD: tennis
+          POSTGRES_DB: tennis_world
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U tennis -d tennis_world"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Matches docker-compose.yml / apps/api/.env.example. The Prisma CLI, the seed,
+      # the running API, the token-bootstrap script, and the harnesses all read these.
+      DATABASE_URL: "postgresql://tennis:tennis@localhost:5432/tennis_world?schema=public"
+      NEXT_PUBLIC_API_BASE_URL: "http://localhost:3001/v1"
+
+      # ── Auth env for the /v1/me/* gate (Feature 59) — TEST-ONLY, no real secrets. ──
+      # JWT_SECRET is a throwaway CI value (not the "change-me" sentinel and not a prod
+      # secret). The API signs with it AND the token-bootstrap verify path mints against
+      # the same running API, so they agree by construction. NONE of these are NEXT_PUBLIC_*
+      # (secrets never ship to the web bundle); the web harnesses only need the base URL.
+      JWT_SECRET: "ci-test-secret-not-for-production"
+      AUTH_COOKIE_NAME: "tennis_session"
+      AUTH_TOKEN_TTL_SECONDS: "3600"
+      MAGIC_LINK_TTL_MINUTES: "15"
+      WEB_APP_URL: "http://localhost:3000"
+      API_CORS_ORIGINS: "http://localhost:3000"
+      AUTH_COOKIE_SECURE: "false"
+      MAGIC_LINK_DEV_LOG: "true"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @tennis/api prisma:generate
+
+      # migrate deploy (not reset) — applies the committed migrations to the fresh CI
+      # DB without the destructive-reset confirmation the Prisma guardrail blocks.
+      - name: Apply migrations
+        run: pnpm --filter @tennis/api exec prisma migrate deploy
+
+      - name: Seed database
+        run: pnpm --filter @tennis/api db:seed
+
+      - name: Build API
+        run: pnpm --filter @tennis/api build
+
+      - name: Start API
+        run: |
+          node apps/api/dist/main.js &
+          echo "API_PID=$!" >> "$GITHUB_ENV"
+
+      # Wait (no extra dependency — plain curl loop) for the versioned health route.
+      - name: Wait for API health
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3001/v1/health > /dev/null; then
+              echo "API is up (attempt $i)."
+              exit 0
+            fi
+            echo "Waiting for API… ($i/30)"
+            sleep 1
+          done
+          echo "API did not become healthy in time." >&2
+          exit 1
+
+      - name: Verify mock/API parity
+        run: pnpm verify:api-parity
+
+      # Mint a real bearer token deterministically through the genuine /v1/auth/verify
+      # path (inserts a magic-link token row, exchanges it — no dev-log scraping, no new
+      # endpoint). The token is the LAST stdout line; everything else goes to stderr.
+      # Captured into $GITHUB_ENV so the two authed harness steps can read it.
+      - name: Issue CI auth token
+        run: |
+          TOKEN="$(pnpm --filter @tennis/api ci:issue-token | tail -n 1)"
+          if [ -z "$TOKEN" ]; then
+            echo "Failed to mint a CI auth token." >&2
+            exit 1
+          fi
+          echo "::add-mask::$TOKEN"
+          echo "AUTH_BEARER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+
+      # Feature 56 — HttpUserRepository + HttpSavedRepository, driven DIRECTLY against the
+      # live auth-gated /v1/me/* API with the bearer token (17/17 incl. masking checks).
+      - name: Verify HTTP user/saved repositories
+        run: pnpm --filter @tennis/web verify:user-saved-http
+
+      # Feature 58 — factory-flipped (`api` mode) persisted saved/user flow: every mutation
+      # is re-read through a FRESH repo set (a simulated reload) to prove writes survive in
+      # Postgres (21/21 incl. the logged-out AuthRequiredError path + masking).
+      - name: Verify persisted saved/user flow
+        run: pnpm --filter @tennis/web verify:persisted-saved-flow
+
+      # Remove the dedicated CI fixture user + its folders/saves/tokens so repeated runs on
+      # a reused DB stay deterministic. `if: always()` so a failing harness still cleans up.
+      - name: Clean CI auth fixtures
+        if: always()
+        run: pnpm --filter @tennis/api ci:clean-auth-fixtures
+
+      - name: Stop API
+        if: always()
+        run: kill "$API_PID" 2>/dev/null || true
+
+  # ── Feature 68 — OPTIONAL Stripe test-mode E2E smoke lane (NEVER blocks normal CI) ──
+  # This job is a HYBRID real-Stripe check: it drives real Stripe TEST-MODE checkout/portal/
+  # customer creation against the live Stripe API AND posts signed synthetic webhook events
+  # (real signature over the real webhook secret) to prove fulfillment → /v1/me flip →
+  # exact-location unlock → refund revoke. See apps/api/scripts/verify-stripe-e2e.ts.
+  #
+  # SAFETY / "required CI must not depend on Stripe" (prompt task 5 hard rule):
+  #   • This is a SEPARATE job; the `verify` + `parity` jobs above never reference Stripe.
+  #   • GitHub Actions can't put `secrets.*` in a job-level `if`, so we gate at the STEP
+  #     level: a `guard` step reads whether the org/repo secret STRIPE_SECRET_KEY is present
+  #     (via an env indirection — the secret VALUE never appears in a condition or a log) and
+  #     exposes a boolean output; every real step is `if: steps.guard.outputs.configured ==
+  #     'true'`. With no secret configured the job runs, prints a clear SKIP, and passes green
+  #     — it does NOT fail and does NOT run anything Stripe. Nothing here is a required check.
+  #   • Secrets are only ever passed as `env:` to the API process + the script; never echoed.
+  #     `continue-on-error` is NOT set — when secrets ARE present, a real failure fails the job
+  #     (but only this optional job).
+  stripe-e2e:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: tennis
+          POSTGRES_PASSWORD: tennis
+          POSTGRES_DB: tennis_world
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U tennis -d tennis_world"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: "postgresql://tennis:tennis@localhost:5432/tennis_world?schema=public"
+      NEXT_PUBLIC_API_BASE_URL: "http://localhost:3001/v1"
+      # Same throwaway auth env as the parity job (needed to mint the E2E user's bearer token
+      # through the real /v1/auth/verify path). None are NEXT_PUBLIC_* — no web-bundle leak.
+      JWT_SECRET: "ci-test-secret-not-for-production"
+      AUTH_COOKIE_NAME: "tennis_session"
+      AUTH_TOKEN_TTL_SECONDS: "3600"
+      MAGIC_LINK_TTL_MINUTES: "15"
+      WEB_APP_URL: "http://localhost:3000"
+      API_CORS_ORIGINS: "http://localhost:3000"
+      AUTH_COOKIE_SECURE: "false"
+      MAGIC_LINK_DEV_LOG: "true"
+      # ── Stripe TEST-MODE secrets (repo/org secrets; ABSENT on forks / unconfigured repos) ──
+      # The API process + the E2E script read these. When unset the guard step skips the job.
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_PRICE_LIFETIME: ${{ secrets.STRIPE_PRICE_LIFETIME }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      # Optional subscription price — leave unset to keep subscription checkout a clean 400.
+      STRIPE_PRICE_SUBSCRIPTION: ${{ secrets.STRIPE_PRICE_SUBSCRIPTION }}
+
+    steps:
+      # Presence gate — the ONLY place we look at the secret, and only to test emptiness. The
+      # value is never printed. `configured` drives every real step below.
+      - name: Determine if Stripe secrets are configured
+        id: guard
+        run: |
+          if [ -n "$STRIPE_SECRET_KEY" ] && [ -n "$STRIPE_PRICE_LIFETIME" ] && [ -n "$STRIPE_WEBHOOK_SECRET" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "Stripe test secrets are present — running the optional E2E smoke."
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "No Stripe test secrets configured — skipping the optional E2E smoke (this is normal and not a failure)."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.guard.outputs.configured == 'true'
+
+      - uses: pnpm/action-setup@v4
+        if: steps.guard.outputs.configured == 'true'
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        if: steps.guard.outputs.configured == 'true'
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        if: steps.guard.outputs.configured == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        if: steps.guard.outputs.configured == 'true'
+        run: pnpm --filter @tennis/api prisma:generate
+
+      - name: Apply migrations
+        if: steps.guard.outputs.configured == 'true'
+        run: pnpm --filter @tennis/api exec prisma migrate deploy
+
+      - name: Seed database
+        if: steps.guard.outputs.configured == 'true'
+        run: pnpm --filter @tennis/api db:seed
+
+      - name: Build API
+        if: steps.guard.outputs.configured == 'true'
+        run: pnpm --filter @tennis/api build
+
+      # The API inherits the Stripe env from the job `env:` above, so checkout uses the real
+      # test key and the webhook verifies the synthetic signature against the same secret.
+      - name: Start API
+        if: steps.guard.outputs.configured == 'true'
+        run: |
+          node apps/api/dist/main.js &
+          echo "API_PID=$!" >> "$GITHUB_ENV"
+
+      - name: Wait for API health
+        if: steps.guard.outputs.configured == 'true'
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3001/v1/health > /dev/null; then
+              echo "API is up (attempt $i)."
+              exit 0
+            fi
+            echo "Waiting for API… ($i/30)"
+            sleep 1
+          done
+          echo "API did not become healthy in time." >&2
+          exit 1
+
+      # RUN_STRIPE_E2E=1 makes a missing-secret run a HARD FAILURE — but we only reach here
+      # when the guard already confirmed the secrets are present, so this asserts the wiring.
+      # The script self-cleans its namespaced (`f68-…@tennis.test`, `evt_f68_…`) fixtures at
+      # both start and end (and on crash), so a reused Postgres container stays deterministic
+      # without a separate cleanup step. RUN_STRIPE_E2E=1 turns any missing config into a hard
+      # failure — unreachable here because the guard already confirmed the secrets are present.
+      - name: Run Stripe test-mode E2E smoke
+        if: steps.guard.outputs.configured == 'true'
+        env:
+          RUN_STRIPE_E2E: "1"
+        run: pnpm --filter @tennis/api verify:stripe-e2e
+
+      - name: Stop API
+        if: always() && steps.guard.outputs.configured == 'true'
+        run: kill "$API_PID" 2>/dev/null || true

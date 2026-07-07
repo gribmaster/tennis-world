@@ -1,0 +1,27 @@
+{
+  "name": "tennis-world",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.0.8",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "verify:api-parity": "pnpm --filter @tennis/web verify:api-parity",
+    "verify:api-auth": "pnpm --filter @tennis/web verify:user-saved-http && pnpm --filter @tennis/web verify:persisted-saved-flow",
+    "verify:stripe-e2e": "pnpm --filter @tennis/api verify:stripe-e2e"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "name": "@tennis/web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 18000 -H 127.0.0.1",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "verify:api-parity": "tsx scripts/verify-api-parity.ts",
+    "verify:user-saved-http": "tsx scripts/verify-user-saved-http.ts",
+    "verify:persisted-saved-flow": "tsx scripts/verify-persisted-saved-flow.ts",
+    "verify:saved-court-toggle": "tsx scripts/verify-saved-court-toggle.ts",
+    "verify:web-exact-location": "tsx scripts/verify-web-exact-location.ts",
+    "verify:web-billing": "tsx scripts/verify-web-billing.ts"
+  },
+  "dependencies": {
+    "@tennis/contracts": "workspace:*",
+    "@tennis/mock-data": "workspace:*",
+    "leaflet": "^1.9.4",
+    "next": "^15.1.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tennis/config": "workspace:*",
+    "@types/leaflet": "^1.9.21",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "^15.1.3",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.22.4",
+    "typescript": "^5.7.2"
+  }
+}

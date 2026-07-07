@@ -1,0 +1,3 @@
+# Placeholder — collections domain layer is built in a later Phase-1 feature.
+# Per Phase 1 §1, this will hold collection.repository.ts / mock-court.repository.ts
+# / collection.types.ts / index.ts, mirroring the courts/ structure. No UI yet.

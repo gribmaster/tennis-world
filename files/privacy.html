@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Tennis World — Privacy Policy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink:      '#0F0F0F',
+          graphite: '#2A2A2A',
+          stone:    '#6B6B6B',
+          mist:     '#B8B8B6',
+          bone:     '#F5F2EC',
+          ivory:    '#FAF8F3',
+          clay:     '#B95C3A',
+          moss:     '#4A5D3F',
+          gold:     '#B89968',
+          paper:    '#FFFFFF',
+        },
+        fontFamily: {
+          serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+          sans:  ['Inter', '-apple-system', 'system-ui', 'sans-serif'],
+        },
+        screens: {
+          sm:  '480px',
+          md:  '768px',
+          lg:  '1024px',
+          xl:  '1280px',
+          '2xl': '1536px',
+        },
+      }
+    }
+  }
+</script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family: Inter, system-ui, sans-serif; color: #0F0F0F; background: #F5F2EC; margin: 0; }
+
+  /* Typography */
+  .serif { font-family: 'Cormorant Garamond', Georgia, serif; }
+  .eyebrow { font-size: 11px; line-height: 16px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; }
+  .display-xl { font-family: 'Cormorant Garamond', Georgia, serif; font-size: clamp(36px, 5vw, 72px); line-height: 1.06; font-weight: 300; letter-spacing: -0.02em; }
+  .display-l  { font-family: 'Cormorant Garamond', Georgia, serif; font-size: clamp(28px, 3.5vw, 52px); line-height: 1.1; font-weight: 300; letter-spacing: -0.02em; }
+  .display-m  { font-family: 'Cormorant Garamond', Georgia, serif; font-size: clamp(22px, 2.5vw, 36px); line-height: 1.2; font-weight: 400; letter-spacing: -0.01em; }
+  .headline   { font-family: 'Cormorant Garamond', Georgia, serif; font-size: clamp(18px, 1.8vw, 26px); line-height: 1.3; font-weight: 500; }
+  .body-l { font-size: clamp(15px, 1.2vw, 18px); line-height: 1.65; font-weight: 400; }
+  .body-m { font-size: clamp(14px, 1vw, 16px); line-height: 1.6; font-weight: 400; }
+  .body-s { font-size: 13px; line-height: 1.55; font-weight: 400; }
+  .mono { font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #B8B8B6; border-radius: 2px; }
+
+  /* Animations */
+  .fade-in { animation: fadeIn 500ms ease-out both; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .slide-up { animation: slideUp 350ms cubic-bezier(0.32,0.72,0,1) both; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(32px); } to { opacity: 1; transform: translateY(0); } }
+
+  .pin-pulse { animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(185,92,58,.4)} 50%{box-shadow:0 0 0 10px rgba(185,92,58,0)} }
+
+  /* Nav */
+  .nav-link { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; color: #6B6B6B; transition: color 150ms; cursor: pointer; }
+  .nav-link:hover, .nav-link.active { color: #0F0F0F; }
+  .nav-link.active { border-bottom: 1px solid #0F0F0F; padding-bottom: 1px; }
+
+  /* Btn */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; border: none; outline: none; transition: opacity 150ms, transform 150ms; font-family: Inter, sans-serif; }
+  .btn:hover { opacity: 0.88; }
+  .btn:active { transform: scale(0.97); opacity: 0.82; }
+  .btn-primary { background: #0F0F0F; color: #F5F2EC; height: 52px; padding: 0 28px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; }
+  .btn-secondary { background: transparent; color: #0F0F0F; border: 1px solid #0F0F0F; height: 52px; padding: 0 28px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; }
+  .btn-ghost { background: transparent; color: #0F0F0F; height: 44px; padding: 0 16px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .btn-gold { background: #B89968; color: #0F0F0F; height: 52px; padding: 0 28px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
+
+  /* Glass */
+  .glass { background: rgba(255,255,255,0.14); backdrop-filter: blur(24px) saturate(180%); border: 1px solid rgba(255,255,255,0.24); }
+
+  /* Cards */
+  .court-card { cursor: pointer; overflow: hidden; transition: transform 300ms ease; }
+  .court-card:hover { transform: translateY(-3px); }
+  .court-card img { transition: transform 500ms ease; }
+  .court-card:hover img { transform: scale(1.04); }
+
+  /* Pill */
+  .pill { border-radius: 999px; }
+  .filter-pill { padding: 7px 16px; border: 1px solid #B8B8B6; background: transparent; color: #0F0F0F; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 150ms; }
+  .filter-pill.active, .filter-pill:hover { background: #0F0F0F; color: #F5F2EC; border-color: #0F0F0F; }
+
+  /* Map */
+  .gmap {
+    background:
+      /* Water bodies */
+      radial-gradient(ellipse 120px 80px at 28% 22%, #c8d4d8 0%, transparent 100%),
+      radial-gradient(ellipse 200px 60px at 72% 45%, #c4d0d8 0%, transparent 100%),
+      radial-gradient(ellipse 80px 120px at 85% 65%, #cad6dc 0%, transparent 100%),
+      /* Land masses */
+      radial-gradient(ellipse 180px 140px at 25% 35%, #ddd8c8 0%, #d4ceba 60%, transparent 100%),
+      radial-gradient(ellipse 100px 80px at 55% 50%, #d8d2c0 0%, transparent 100%),
+      radial-gradient(ellipse 150px 100px at 75% 35%, #dbd5c3 0%, transparent 100%),
+      radial-gradient(ellipse 80px 60px at 18% 55%, #d6d0be 0%, transparent 100%),
+      /* Base */
+      linear-gradient(160deg, #e8e2d0 0%, #ddd7c5 40%, #d8d2c0 100%);
+    filter: saturate(0.6) sepia(0.1);
+  }
+
+  /* Modal backdrop */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(15,15,15,0.6); backdrop-filter: blur(6px); z-index: 200; display: flex; align-items: flex-end; justify-content: center; }
+  @media (min-width: 768px) { .modal-backdrop { align-items: center; } }
+
+  /* Hide scrollbar */
+  .no-scroll-bar { scrollbar-width: none; -ms-overflow-style: none; }
+  .no-scroll-bar::-webkit-scrollbar { display: none; }
+
+  /* Hairline */
+  .hairline { background: #E0DCCC; }
+
+  /* Section spacing */
+  .section { padding: clamp(48px, 6vw, 96px) 0; }
+  .container { max-width: 1280px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 64px); }
+
+  /* Map layout — stacked on mobile, side-by-side on desktop */
+  .map-layout {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 72px - 77px);
+  }
+  .map-canvas-wrap {
+    flex: 0 0 55vh;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .map-list-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+    background: #F5F2EC;
+    border-top: 1px solid #E0DCCC;
+    overflow-y: hidden;
+  }
+  /* Mobile: horizontal card strip */
+  .map-list-inner {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .map-list-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid #E0DCCC;
+    flex-shrink: 0;
+  }
+  .map-cards-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 16px 20px;
+    align-items: flex-start;
+  }
+  .map-card-mobile {
+    flex: 0 0 auto;
+    width: 180px;
+    cursor: pointer;
+  }
+  /* Hide desktop rows on mobile, show cards */
+  .map-rows { display: none; }
+  @media (min-width: 768px) {
+    .map-layout {
+      flex-direction: row;
+      height: calc(100dvh - 72px - 77px);
+    }
+    .map-canvas-wrap {
+      flex: 1 1 auto;
+    }
+    .map-list-panel {
+      flex: 0 0 380px;
+      border-top: none;
+      border-left: 1px solid #E0DCCC;
+      overflow-y: auto;
+    }
+    .map-cards-scroll { display: none; }
+    .map-rows { display: block; overflow-y: auto; flex: 1 1 auto; }
+  }
+
+  /* Editor's Cut rows — stack on mobile, side-by-side on desktop */
+  .editors-row { display: flex; flex-direction: column; }
+  .editors-img { order: 0; }
+  .editors-text { order: 1; }
+  @media (min-width: 768px) {
+    .editors-row { display: grid; grid-template-columns: 1fr 1fr; }
+    .editors-img { order: var(--order); }
+    .editors-text { order: var(--order); }
+  }
+
+  /* Hover link */
+  a { text-decoration: none; color: inherit; }
+
+  /* Focus ring */
+  button:focus-visible { outline: 2px solid #B95C3A; outline-offset: 2px; }
+
+  /* Image overlay gradient */
+  .img-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.72) 100%); }
+  .img-overlay-top { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 45%, rgba(15,15,15,0.85) 100%); }
+
+  /* Sticky nav */
+  #main-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; transition: background 300ms, box-shadow 300ms; }
+  #main-nav.scrolled { background: rgba(245,242,236,0.96); backdrop-filter: blur(20px); box-shadow: 0 1px 0 #E0DCCC; }
+
+  /* Screen panels (SPA) */
+  .screen-panel { display: none; }
+  .screen-panel.active { display: block; }
+
+  /* Saved heart */
+  .heart-btn { width: 36px; height: 36px; border-radius: 999px; background: rgba(0,0,0,0.28); backdrop-filter: blur(8px); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #fff; transition: transform 200ms; }
+  .heart-btn.saved { color: #B95C3A; }
+  .heart-btn:hover { transform: scale(1.12); }
+
+  /* Tag chips */
+  .meta-chip { padding: 5px 12px; border: 1px solid #B8B8B6; background: #FAF8F3; font-size: 13px; border-radius: 2px; }
+
+  /* Locked badge */
+  .locked-badge { position: absolute; top: 12px; left: 12px; padding: 4px 10px; background: rgba(42,42,42,0.85); color: #F5F2EC; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 999px; display: flex; align-items: center; gap: 5px; }
+
+  /* Footer */
+  footer { background: #0F0F0F; color: #F5F2EC; }
+
+  /* Auth gate message */
+  .gate-blur { filter: blur(8px); pointer-events: none; user-select: none; }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+(function(){
+  var fallbacks=['https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=1200&q=80','https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=1200&q=80','https://images.unsplash.com/photo-1530915534234-66dcdb7e2f5d?w=1200&q=80','https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1200&q=80','https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=1200&q=80'];
+  document.addEventListener('error',function(e){var t=e.target;if(t&&t.tagName==='IMG'&&!t.dataset.fb){var n=parseInt(t.dataset.fbn||'0',10);if(n<fallbacks.length){t.dataset.fbn=String(n+1);t.src=fallbacks[n];}else{t.dataset.fb='1';t.style.background='linear-gradient(135deg,#d8d3c5,#b8b3a3)';}}},true);
+})();
+</script>
+<script type="text/babel" data-presets="env,react">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+// ─── Data ───────────────────────────────────────────────
+const U = (id, w=1400) => `https://images.unsplash.com/${id}?w=${w}&q=80&auto=format&fit=crop`;
+const IMG = {
+  clayCourt:   'photo-1554068865-24cecd4e34b8',
+  courtAerial: 'photo-1530915534234-66dcdb7e2f5d',
+  courtShadow: 'photo-1622279457486-62dcc4a431d6',
+  como:        'photo-1599391398131-cd12dfc6c24e',
+  capri:       'photo-1571896349842-33c89424de2d',
+  med:         'photo-1505142468610-359e7d316be0',
+  morocco:     'photo-1539020140153-e479b8c5b1bc',
+  bali:        'photo-1537953773345-d172ccf13cf1',
+  aspen:       'photo-1551038247-3d9af20df552',
+  maldives:    'photo-1582719508461-905c673771fd',
+  tokyo:       'photo-1503899036084-c55cdd92da26',
+  cotswolds:   'photo-1469474968028-56623f02e42e',
+};
+const COURTS = [
+  { id:'tremezzo', name:'Grand Hotel Tremezzo', country:'Italy', region:'Lake Como', surface:'Clay', setting:'Lakefront', access:'Resort', io:'Outdoor', scenic:true, locked:false, featured:true, coords:[49,32], hero:U(IMG.como), images:[U(IMG.como),U(IMG.courtAerial),U(IMG.courtShadow),U(IMG.clayCourt),U(IMG.med)], blurb:"Suspended above Lake Como's mirror-still water, the court at Grand Hotel Tremezzo is set within a century-old garden of cypress and bougainvillea. Players rally against a backdrop of the Grigne mountains and a horizon of pale stucco villas. After play, retreat to the lakeside terrace for a campari and the slow hours that follow." },
+  { id:'tragara', name:'Hotel Punta Tragara', country:'Italy', region:'Capri', surface:'Hard', setting:'Cliffside', access:'Resort', io:'Outdoor', scenic:true, locked:true, featured:false, coords:[54,44], hero:U(IMG.capri), images:[U(IMG.capri),U(IMG.med),U(IMG.courtAerial)], blurb:"A Le Corbusier-designed sanctuary on Capri's southern cliffs. The single court is cut into the rock above the Faraglioni — play opens to the Mediterranean and closes with limoncello in the garden bar." },
+  { id:'mansour', name:'Royal Mansour', country:'Morocco', region:'Marrakech', surface:'Clay', setting:'Walled garden', access:'Resort', io:'Outdoor', scenic:false, locked:true, featured:true, coords:[40,56], hero:U(IMG.morocco), images:[U(IMG.morocco),U(IMG.clayCourt),U(IMG.courtShadow)], blurb:"Inside the medina's terracotta walls, a court of rust-red clay shaded by ancient olive trees. Morning hours only — the heat takes the afternoon." },
+  { id:'residencia', name:'Belmond La Residencia', country:'Spain', region:'Mallorca', surface:'Clay', setting:'Mountain village', access:'Resort', io:'Outdoor', scenic:true, locked:false, featured:false, coords:[44,38], hero:U(IMG.med), images:[U(IMG.med),U(IMG.clayCourt),U(IMG.courtAerial)], blurb:"Tucked into the Tramuntana mountains above Deià, two clay courts within an olive grove, the village church bells the only sound between points." },
+  { id:'como', name:'Como Shambhala Estate', country:'Indonesia', region:'Bali', surface:'Hard', setting:'Jungle', access:'Resort', io:'Outdoor', scenic:true, locked:true, featured:false, coords:[78,58], hero:U(IMG.bali), images:[U(IMG.bali),U(IMG.courtShadow)], blurb:"Cut into the Ayung river gorge near Ubud. The court is reached by a stone path through frangipani; macaques watch from the canopy." },
+  { id:'nell', name:'The Little Nell', country:'USA', region:'Aspen', surface:'Hard', setting:'Alpine', access:'Resort', io:'Outdoor', scenic:true, locked:false, featured:false, coords:[18,36], hero:U(IMG.aspen), images:[U(IMG.aspen),U(IMG.courtAerial)], blurb:"Aspen Mountain rises directly behind the baseline. Summer mornings smell of pine; the altitude lifts the ball an extra foot." },
+  { id:'cheval', name:'Cheval Blanc Randheli', country:'Maldives', region:'Noonu Atoll', surface:'Hard', setting:'Island', access:'Private', io:'Outdoor', scenic:true, locked:true, featured:true, coords:[70,60], hero:U(IMG.maldives), images:[U(IMG.maldives),U(IMG.courtAerial)], blurb:"An island unto itself. The court sits between two reef-edges, lit at dusk by lanterns staked into the sand." },
+  { id:'aman', name:'Aman Tokyo', country:'Japan', region:'Otemachi', surface:'Hard', setting:'Rooftop', access:'Resort', io:'Indoor', scenic:false, locked:true, featured:false, coords:[82,38], hero:U(IMG.tokyo), images:[U(IMG.tokyo),U(IMG.courtAerial)], blurb:"On the 33rd floor of the Otemachi tower, a private court rises above the imperial gardens. Wash basins of warm cedar at the door." },
+  { id:'soho', name:'Soho Farmhouse', country:'UK', region:'Cotswolds', surface:'Grass', setting:'Countryside', access:'Club', io:'Outdoor', scenic:false, locked:false, featured:false, coords:[47,28], hero:U(IMG.cotswolds), images:[U(IMG.cotswolds),U(IMG.courtAerial)], blurb:"Mown stripes, white linens, an honesty bar of Pimm's. The grass court at Soho Farmhouse keeps an English summer to itself." },
+  { id:'monte', name:'Monte-Carlo Country Club', country:'Monaco', region:'Roquebrune', surface:'Clay', setting:'Cliffside', access:'Club', io:'Outdoor', scenic:true, locked:true, featured:false, coords:[50,40], hero:U(IMG.courtAerial), images:[U(IMG.courtAerial),U(IMG.clayCourt)], blurb:"The terraced clay courts of Roquebrune face the Mediterranean head-on. Cypress hedges, white umbrellas, the Masters in April." },
+  { id:'sixsenses', name:'Six Senses Douro', country:'Portugal', region:'Douro Valley', surface:'Clay', setting:'Vineyard', access:'Resort', io:'Outdoor', scenic:true, locked:true, featured:false, coords:[42,38], hero:U(IMG.clayCourt), images:[U(IMG.clayCourt),U(IMG.med)], blurb:"A clay court terraced into a 19th-century vineyard above the Douro. Play before the heat, port at dusk." },
+  { id:'edenroc', name:'Hotel du Cap-Eden-Roc', country:'France', region:'Antibes', surface:'Clay', setting:'Coastal', access:'Resort', io:'Outdoor', scenic:true, locked:true, featured:false, coords:[51,42], hero:U(IMG.med), images:[U(IMG.med),U(IMG.clayCourt)], blurb:"Five clay courts on the Cap d'Antibes, pine-shaded and salt-aired. The kind of place where time collapses gracefully." },
+];
+const COLLECTIONS = [
+  { id:'coastal',  name:'Coastal Courts',  count:14, img:U(IMG.med,900) },
+  { id:'desert',   name:'Desert Courts',   count:8,  img:U(IMG.morocco,900) },
+  { id:'hidden',   name:'Hidden Resorts',  count:22, img:U(IMG.bali,900) },
+  { id:'historic', name:'Historic Clubs',  count:11, img:U(IMG.cotswolds,900) },
+  { id:'mountain', name:'Mountain Courts', count:9,  img:U(IMG.aspen,900) },
+  { id:'rooftop',  name:'Rooftop & Urban', count:6,  img:U(IMG.tokyo,900) },
+];
+const FILTER_FN = {
+  'All':()=>true, 'Resorts':c=>c.access==='Resort', 'Clubs':c=>c.access==='Club',
+  'Private':c=>c.access==='Private', 'Indoor':c=>c.io==='Indoor', 'Scenic':c=>c.scenic,
+};
+const ONBOARDING = [
+  { chapter:'CHAPTER 01', title:'The world, as a tennis map.', sub:'A curated atlas of the most beautiful courts on earth — from clay terraces above Lake Como to grass under English oaks.', img:U(IMG.como,1800) },
+  { chapter:'CHAPTER 02', title:'Discover before you arrive.', sub:'Editorial guides, hidden resorts, and the courts only insiders know — gathered into one slow, considered feed.', img:U(IMG.maldives,1800) },
+  { chapter:'CHAPTER 03', title:'Travel for the love of place.', sub:'Save courts to wishlists. Plan trips. Ask our concierge for a bespoke recommendation.', img:U(IMG.cotswolds,1800) },
+];
+
+
+const ARTICLES = [
+  {
+    id: 'clay-court-season',
+    t: 'The slow art of the clay-court season',
+    sub: 'Why the red clay demands a different kind of presence — and why it rewards it.',
+    img: U(IMG.courtAerial), r: '6 min', cat: 'Clay & Craft',
+    author: 'Janet See', date: 'March 14, 2026',
+    body: [
+      "There is a particular quiet that settles over a clay court in the hour before the heat arrives. The surface is still cool underfoot, faintly damp from the morning's watering, and the red dust hasn't yet risen into the air the way it will by noon. This is the hour serious clay players know — and the hour most visitors miss entirely.",
+      "Clay rewards patience in a way few other surfaces do. The ball sits up slightly higher, slides on contact, and punishes anyone who tries to play through it the way they would on a hard court. You learn to wait. You learn to construct a point rather than end it. The footwork changes too — long, sliding steps replace the quick stops of a hard-court game, and within a few sessions your whole relationship to movement on a tennis court is different.",
+      "We've spent the better part of three seasons visiting clay courts across the Mediterranean, from the terraced courts above Monte-Carlo to the quieter, sea-facing courts of the Amalfi coast. What unites them isn't just the surface — it's an entire culture built around slowness. Lunch breaks that stretch past two hours. A respect for the early and late light. A general suspicion of anyone in a hurry.",
+      "If you're planning a clay-court trip for the first time, our advice is simple: don't overschedule. Book fewer courts, stay longer at each, and let the rhythm of the place dictate your day rather than the other way around. The courts that matter most on this map are the ones built for staying, not just playing.",
+    ],
+  },
+  {
+    id: 'cotswolds-racquet',
+    t: 'Three days at the Cotswolds with a racquet',
+    sub: 'Grass, elderflower cordial, and a club that has not changed since 1893.',
+    img: U(IMG.cotswolds), r: '4 min', cat: 'Travel',
+    author: 'Janet See', date: 'February 28, 2026',
+    body: [
+      "Soho Farmhouse's single grass court is easy to miss on a first visit — tucked behind a hedge, unmarked, with a single honesty bar at one end stocked with Pimm's and elderflower cordial. That, it turns out, is rather the point.",
+      "English grass-court tennis carries a different etiquette than anywhere else we've visited. Whites are still expected on some private courts. The ball bounces low and fast, rewarding serve-and-volley players in a way the modern game has mostly forgotten. And the courts themselves are mown, by hand, in stripes that change direction by the week.",
+      "We spent three days moving between two private clubs and one quietly excellent hotel court, and the throughline across all three was unhurried hospitality — long breakfasts, slow afternoons, and tennis treated as one part of a much larger day rather than the centerpiece of it.",
+      "If grass-court tennis is new to you, give yourself at least a full day to adjust before expecting to play your best. The bounce takes getting used to, and so, frankly, does the pace of life around it.",
+    ],
+  },
+  {
+    id: 'hidden-courts',
+    t: "The courts you'll never find on Google",
+    sub: "A selection from our hidden atlas — places passed only between players who've been there.",
+    img: U(IMG.bali), r: '7 min', cat: 'Discovery',
+    author: 'Janet See', date: 'February 9, 2026',
+    body: [
+      "Some of the most beautiful courts in our atlas don't appear on any map service, aren't listed on the resort's own website, and in a few cases aren't bookable at all without a personal introduction. This piece is about why we still include them — and how to think about visiting one.",
+      "A court cut into the side of a river gorge near Ubud. A single clay court behind a private residence in the Atlas Mountains, accessible only with the owner's blessing. A members-only grass court in the English countryside that has never once been photographed for publication. These places exist because someone cared enough to build something beautiful without any intention of it becoming famous.",
+      "Our approach to including hidden courts is simple: we verify they exist, we describe what makes them remarkable, and where access is genuinely restricted, we say so plainly rather than implying anyone can simply show up. Some of the most special places on this map are aspirational rather than immediately bookable — and we think that's worth preserving rather than smoothing over.",
+      "If a hidden court catches your eye, our concierge service exists precisely for this — reach out and we'll tell you honestly what's possible.",
+    ],
+  },
+  {
+    id: 'monte-carlo-morning',
+    t: 'Morning light at Monte-Carlo Country Club',
+    sub: 'The terraced clay courts of Roquebrune, before the crowds arrive.',
+    img: U(IMG.clayCourt), r: '5 min', cat: 'Destinations',
+    author: 'Janet See', date: 'January 22, 2026',
+    body: [
+      "We arrived just after six, before the gates officially opened, with permission from a friend on staff who wanted us to see the courts the way the groundskeepers do — empty, freshly watered, lit at a low angle that makes the clay look almost copper.",
+      "Monte-Carlo Country Club sits just over the border in Roquebrune-Cap-Martin, technically in France though everyone associates it with Monaco next door. The Rolex Masters fills these terraces every April, but for the other eleven months the courts belong to members and a quiet population of professionals who train here in the off-season.",
+      "What struck us most was the relationship between the architecture and the sea. Nearly every court has a sightline to the Mediterranean, and the cypress hedges that border the property are trimmed specifically to preserve those views rather than block the wind, which seemed, to us, a very Monégasque set of priorities.",
+      "Members-only for most of the calendar, but worth knowing about for anyone planning a trip during tournament season — even as a spectator, the early-morning practice courts are some of the best tennis-watching anywhere in Europe.",
+    ],
+  },
+  {
+    id: 'aspen-altitude',
+    t: 'On the altitude of Aspen tennis',
+    sub: 'Playing at 8,000 feet teaches you things about the game — and yourself.',
+    img: U(IMG.aspen), r: '8 min', cat: 'Technique',
+    author: 'Janet See', date: 'January 8, 2026',
+    body: [
+      "The first thing anyone tells you about playing tennis in Aspen is that the ball flies further. The thinner air at altitude reduces drag, and shots that would land a foot inside the baseline at sea level sail long. It takes most visiting players a full session, sometimes two, to recalibrate.",
+      "The Little Nell's court sits with Aspen Mountain rising directly behind the baseline, which is dramatic in photographs but genuinely distracting in play — we watched more than one rally interrupted by someone simply stopping to look up.",
+      "Beyond the physical adjustment, there's something clarifying about playing tennis at altitude. The reduced oxygen forces a more economical game — fewer unnecessary movements, longer recovery between points, a premium on conserving energy that ends up teaching better shot selection almost by accident.",
+      "If you're visiting from sea level, our advice is to play your first sessions in the morning, hydrate more than feels necessary, and expect your first set to be primarily about recalibrating depth perception rather than winning.",
+    ],
+  },
+  {
+    id: 'bali-season',
+    t: 'A season in Bali, one court at a time',
+    sub: 'The Ayung valley has more good courts than you might expect for a jungle.',
+    img: U(IMG.bali), r: '6 min', cat: 'Travel',
+    author: 'Janet See', date: 'December 19, 2025',
+    body: [
+      "Bali is not, on paper, a tennis destination. There's no grand-slam history, no famous academy, no long tradition of the sport on the island at all. And yet the Ayung river valley near Ubud has quietly become home to some of the most atmospheric courts we've found anywhere in Asia.",
+      "Como Shambhala Estate's court is the standout — reached by a stone path through frangipani trees, with long-tailed macaques watching from the canopy and the sound of the river audible between points. It's hard hard-court tennis, surprisingly fast given the humidity, and entirely unlike anything else on this list.",
+      "What makes the valley work as a tennis destination isn't the courts in isolation but the surrounding culture — wellness retreats, rice-terrace views, and a generally slower pace that makes a two-hour hit feel like the right amount of exertion rather than the bare minimum.",
+      "We'd recommend pairing any Bali tennis trip with at least four nights to properly adjust to the heat — courts here are best played at dawn or dusk, and the in-between hours are for everything else the island does well.",
+    ],
+  },
+];
+
+const USER_COLLECTIONS = [
+  { id: 'summer-italy',    name: 'Summer in Italy',    courtIds: ['tremezzo','tragara','edenroc','monte','sixsenses'] },
+  { id: 'hidden-honeymoon', name: 'Hidden Honeymoon',  courtIds: ['cheval','como','aman'] },
+];
+// ─── Icons ──────────────────────────────────────────────
+const I = {
+  search:       p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>,
+  filter:       p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="M3 6h18M6 12h12M10 18h4"/></svg>,
+  heart:        p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></svg>,
+  heartFill:    p=><svg viewBox="0 0 24 24" fill="currentColor" {...p}><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></svg>,
+  arrow:        p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="M5 12h14M13 6l6 6-6 6"/></svg>,
+  back:         p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="M19 12H5M11 6l-6 6 6 6"/></svg>,
+  close:        p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="M6 6l12 12M18 6 6 18"/></svg>,
+  lock:         p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>,
+  chev:         p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="m9 6 6 6-6 6"/></svg>,
+  chevDown:     p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="m6 9 6 6 6-6"/></svg>,
+  share:        p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="M12 3v13M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>,
+  menu:         p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="M3 6h18M3 12h18M3 18h18"/></svg>,
+  map:          p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="m9 4-6 2v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>,
+  bookmark:     p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="M6 4h12v17l-6-4-6 4z"/></svg>,
+  bookmarkFill: p=><svg viewBox="0 0 24 24" fill="currentColor" {...p}><path d="M6 4h12v17l-6-4-6 4z"/></svg>,
+  play:         p=><svg viewBox="0 0 24 24" fill="currentColor" {...p}><path d="M7 5v14l12-7z"/></svg>,
+  globe:        p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><circle cx="12" cy="12" r="9"/><path d="M2 12h20M12 2c-3 4-3 12 0 20M12 2c3 4 3 12 0 20"/></svg>,
+  user:         p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 5-6 8-6s7 2 8 6"/></svg>,
+  plus:         p=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" {...p}><path d="M12 5v14M5 12h14"/></svg>,
+};
+
+// ─── Nav ────────────────────────────────────────────────
+function Nav({ page, setPage, savedCount, unlocked, onPaywall, mobileMenuOpen, setMobileMenu }) {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 40);
+    window.addEventListener('scroll', fn, { passive: true });
+    return () => window.removeEventListener('scroll', fn);
+  }, []);
+  const isHeroPage = page === 'home';
+  const navOver = isHeroPage && !scrolled;
+
+  return (
+    <nav id="main-nav" style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+      background: scrolled ? 'rgba(245,242,236,0.96)' : (isHeroPage ? 'transparent' : 'rgba(245,242,236,0.96)'),
+      backdropFilter: scrolled || !isHeroPage ? 'blur(20px)' : 'none',
+      boxShadow: scrolled || !isHeroPage ? '0 1px 0 #E0DCCC' : 'none',
+      transition: 'all 300ms ease',
+    }}>
+      <div className="container" style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 32 }}>
+        {/* Logo */}
+        <button onClick={() => setPage('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+          <div className="serif" style={{ fontSize: 18, letterSpacing: '0.18em', fontWeight: 400, color: navOver ? '#F5F2EC' : '#0F0F0F' }}>
+            TENNIS · WORLD
+          </div>
+        </button>
+
+        {/* Desktop nav */}
+        <div className="hidden md:flex items-center gap-8">
+          {[['home','Home'],['map','Map'],['collections','Collections'],['journal','Journal']].map(([id,label]) => (
+            <button key={id} onClick={() => setPage(id)} className="nav-link btn" style={{
+              color: navOver ? 'rgba(245,242,236,0.85)' : (page === id ? '#0F0F0F' : '#6B6B6B'),
+              borderBottom: page === id && !navOver ? '1px solid currentColor' : 'none',
+              paddingBottom: page === id && !navOver ? 1 : 0,
+              height: 'auto', padding: '0',
+            }}>{label}</button>
+          ))}
+        </div>
+
+        {/* Right side */}
+        <div className="hidden md:flex items-center gap-4">
+          <button onClick={() => setPage('saved')} style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', color: navOver ? 'rgba(245,242,236,0.85)' : '#6B6B6B', padding: 8 }}>
+            <I.bookmark width="18" height="18" />
+            {savedCount > 0 && <div style={{ position: 'absolute', top: 4, right: 4, width: 8, height: 8, borderRadius: 999, background: '#B95C3A' }} />}
+          </button>
+          <button onClick={() => setPage('profile')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: navOver ? 'rgba(245,242,236,0.85)' : '#6B6B6B', padding: 8 }}>
+            <I.user width="18" height="18" />
+          </button>
+          {!unlocked && (
+            <button onClick={onPaywall} className="btn btn-primary" style={{ height: 40, padding: '0 20px', fontSize: 11, letterSpacing: '0.1em', background: navOver ? 'rgba(245,242,236,0.16)' : '#0F0F0F', border: navOver ? '1px solid rgba(245,242,236,0.5)' : 'none', color: navOver ? '#F5F2EC' : '#F5F2EC' }}>
+              Unlock Map
+            </button>
+          )}
+        </div>
+
+        {/* Mobile hamburger */}
+        <button className="md:hidden" onClick={() => setMobileMenu(!mobileMenuOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: navOver ? '#F5F2EC' : '#0F0F0F', padding: 8 }}>
+          <I.menu width="22" height="22" />
+        </button>
+      </div>
+
+      {/* Mobile dropdown */}
+      {mobileMenuOpen && (
+        <div style={{ background: '#F5F2EC', borderTop: '1px solid #E0DCCC', padding: '16px 24px 24px' }}>
+          {[['home','Home'],['map','Map'],['collections','Collections'],['journal','Journal'],['saved','Saved'],['profile','Profile']].map(([id,label]) => (
+            <button key={id} onClick={() => { setPage(id); setMobileMenu(false); }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '14px 0', borderBottom: '1px solid #E0DCCC', background: 'none', border: 'none', borderBottom: '1px solid #E7E2D4', cursor: 'pointer', color: '#0F0F0F' }} className="body-l">{label}</button>
+          ))}
+          {!unlocked && <button onClick={() => { onPaywall(); setMobileMenu(false); }} className="btn btn-primary" style={{ marginTop: 20, width: '100%', justifyContent: 'center' }}>Unlock Full Access — $29</button>}
+        </div>
+      )}
+    </nav>
+  );
+}
+
+// ─── Paywall modal ────────────────────────────────────────
+function Paywall({ onClose, onUnlock }) {
+  const benefits = [
+    { t:'Exact locations', s:'Pinpoint coordinates · 120+ courts' },
+    { t:'The full atlas', s:'Every hidden destination on the map' },
+    { t:'Premium collections', s:'Coastal, Desert, Hidden, Historic' },
+    { t:'Editorial guides', s:"Insider notes from those who've played" },
+    { t:'Concierge priority', s:'Skip the line on consultations' },
+    { t:'Lifetime access', s:'One payment · every future destination' },
+  ];
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ position: 'relative', width: '100%', maxWidth: 560, maxHeight: '95vh', overflowY: 'auto', background: '#0F0F0F' }} className="slide-up">
+        {/* Hero */}
+        <div style={{ position: 'relative', height: 320 }}>
+          <img src={U(IMG.maldives, 1200)} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.65 }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(15,15,15,0.3) 0%, rgba(15,15,15,0.85) 100%)' }} />
+          <button onClick={onClose} className="btn" style={{ position: 'absolute', top: 16, right: 16, width: 36, height: 36, borderRadius: 999, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff' }}>
+            <I.close width="16" height="16" />
+          </button>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', padding: '0 32px 32px', textAlign: 'center', color: '#F5F2EC' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <div style={{ width: 24, height: 1, background: '#B89968', opacity: 0.7 }} />
+              <div className="mono" style={{ fontSize: 10, letterSpacing: '0.28em', color: '#B89968' }}>MEMBERSHIP</div>
+              <div style={{ width: 24, height: 1, background: '#B89968', opacity: 0.7 }} />
+            </div>
+            <div className="display-l" style={{ color: '#F5F2EC' }}>The world, unlocked.</div>
+          </div>
+        </div>
+
+        {/* Benefits */}
+        <div style={{ padding: '28px 28px 0', borderTop: '1px solid rgba(184,153,104,0.3)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 24px' }}>
+            {benefits.map((b,i) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className="mono" style={{ fontSize: 9, color: '#B89968' }}>·{String(i+1).padStart(2,'0')}</span>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: '#F5F2EC' }}>{b.t}</div>
+                </div>
+                <div style={{ fontSize: 11, color: 'rgba(245,242,236,0.5)', lineHeight: 1.4, paddingLeft: 18 }}>{b.s}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Price + CTA */}
+          <div style={{ marginTop: 24, padding: '20px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(184,153,104,0.25)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div className="mono" style={{ fontSize: 9, letterSpacing: '0.24em', color: 'rgba(184,153,104,0.85)' }}>ONE-TIME · LIFETIME</div>
+                <div className="serif" style={{ fontSize: 38, fontWeight: 300, color: '#F5F2EC', letterSpacing: '-0.02em', marginTop: 4 }}>$29</div>
+              </div>
+              <button onClick={onUnlock} className="btn btn-gold">
+                Unlock <I.arrow width="13" height="13" />
+              </button>
+            </div>
+          </div>
+
+          <div className="mono" style={{ textAlign: 'center', fontSize: 9, letterSpacing: '0.18em', color: 'rgba(245,242,236,0.3)', padding: '16px 0 24px' }}>
+            RESTORE · TERMS · PRIVACY
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Footer ───────────────────────────────────────────────
+function Footer({ setPage }) {
+  return (
+    <footer>
+      <div className="container" style={{ paddingTop: 64, paddingBottom: 48 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 40, paddingBottom: 48, borderBottom: '1px solid rgba(245,242,236,0.12)' }}>
+          <div>
+            <div className="serif" style={{ fontSize: 20, letterSpacing: '0.16em', fontWeight: 400, color: '#F5F2EC', marginBottom: 16 }}>TENNIS · WORLD</div>
+            <p className="body-s" style={{ color: 'rgba(245,242,236,0.5)', maxWidth: 220 }}>A curated atlas of the world's most beautiful tennis courts.</p>
+          </div>
+          {[
+            ['Explore',[['Map','map.html'],['Collections','collections.html'],['Journal','journal.html']]],
+            ['Membership',[['Unlock — $29','#'],['Restore','#'],["What's included",'#']]],
+            ['Company',[['About','about.html'],['Contact','mailto:hello@tennisworld.app'],['Privacy','privacy.html'],['Terms','terms.html']]],
+          ].map(([title,links]) => (
+            <div key={title}>
+              <div className="eyebrow" style={{ color: 'rgba(245,242,236,0.45)', marginBottom: 16 }}>{title}</div>
+              {links.map(([label,href]) => <a key={label} href={href} style={{ display: 'block', color: 'rgba(245,242,236,0.65)', fontSize: 14, lineHeight: 1.8, cursor: 'pointer' }} onMouseEnter={e=>{e.target.style.color='#F5F2EC';}} onMouseLeave={e=>{e.target.style.color='rgba(245,242,236,0.65)';}}>{label}</a>)}
+            </div>
+          ))}
+        </div>
+        <div style={{ paddingTop: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <div className="eyebrow" style={{ color: 'rgba(245,242,236,0.3)' }}>&copy; 2026 Tennis World &middot; All rights reserved</div>
+          <div className="eyebrow" style={{ color: 'rgba(245,242,236,0.3)' }}>v 1.0</div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+
+
+// ─── Privacy Policy ─────────────────────────────────────────
+function StaticPage() {
+  const [paywall, setPaywall] = useState(false);
+  const [mobileMenu, setMobileMenu] = useState(false);
+  const [unlocked] = useState(false);
+  const [isLoggedIn] = useState(false);
+  const [savedSet] = useState(new Set(['tremezzo','residencia','soho']));
+  const navigate = href => { window.location.href = href; };
+
+  return (
+    <>
+      <Nav
+        page=""
+        setPage={p => navigate(p + '.html')}
+        savedCount={savedSet.size}
+        unlocked={unlocked}
+        isLoggedIn={isLoggedIn}
+        onPaywall={() => setPaywall(true)}
+        mobileMenuOpen={mobileMenu}
+        setMobileMenu={setMobileMenu}
+      />
+      <div style={{ paddingTop: 72 }}>
+
+        <div style={{ background: '#FAF8F3', borderBottom: '1px solid #E0DCCC', padding: 'clamp(40px,6vw,80px) clamp(24px,6vw,80px)' }}>
+          <div style={{ maxWidth: 760, margin: '0 auto' }}>
+            <div className="eyebrow" style={{ color: '#6B6B6B' }}>Legal</div>
+            <div className="display-l" style={{ marginTop: 12 }}>Privacy Policy</div>
+            <p className="body-m" style={{ color: '#6B6B6B', marginTop: 12 }}>Last updated: June 1, 2026</p>
+          </div>
+        </div>
+
+        <div className="section">
+          <div className="container">
+            <div style={{ maxWidth: 760, margin: '0 auto' }}>
+
+              <p className="body-l" style={{ color: '#2A2A2A', marginBottom: 32 }}>
+                This Privacy Policy describes how Tennis World ("we", "us", "our") collects, uses, and protects
+                information when you use our website and mobile application (together, the "Service"). This is
+                placeholder copy for design and development purposes — replace with counsel-reviewed language before launch.
+              </p>
+
+              {[
+                {
+                  h: '1. Information We Collect',
+                  p: [
+                    'Account information: name, email address, and authentication identifiers when you create an account or sign in via Apple, Google, or magic link.',
+                    'Usage data: courts viewed, saved, and searched; collections created; pages visited; and general interaction patterns within the Service.',
+                    'Device and technical data: IP address, browser type, device identifiers, and approximate location derived from IP address (used to personalize map defaults and currency, not to track precise location).',
+                    'Payment information: subscription and one-time purchase records are processed by our payment provider (e.g. RevenueCat/App Store/Play Store); we do not store full card numbers.',
+                    'Consultation requests: information you submit through our concierge form, including travel preferences, skill level, and contact details.',
+                  ],
+                },
+                {
+                  h: '2. How We Use Information',
+                  p: [
+                    'To provide and maintain the Service, including syncing saved courts and collections across devices.',
+                    'To process subscription purchases and manage entitlements.',
+                    'To respond to consultation requests and provide concierge recommendations.',
+                    'To improve the Service through aggregated, anonymized analytics.',
+                    'To communicate with you about your account, purchases, or material changes to this policy.',
+                  ],
+                },
+                {
+                  h: '3. Information Sharing',
+                  p: [
+                    'We do not sell personal information.',
+                    'We share information with service providers who help us operate the Service (payment processing, analytics, customer support, email delivery) under contractual confidentiality obligations.',
+                    'We may disclose information if required by law or to protect the rights, property, or safety of Tennis World, our users, or others.',
+                  ],
+                },
+                {
+                  h: '4. Data Retention',
+                  p: [
+                    'We retain account information for as long as your account is active. You may request deletion of your account and associated data at any time by contacting us.',
+                  ],
+                },
+                {
+                  h: '5. Your Rights',
+                  p: [
+                    'Depending on your jurisdiction, you may have the right to access, correct, export, or delete your personal information, and to object to or restrict certain processing. Contact us to exercise these rights.',
+                  ],
+                },
+                {
+                  h: '6. Children\'s Privacy',
+                  p: [
+                    'The Service is not directed to individuals under 16, and we do not knowingly collect personal information from children.',
+                  ],
+                },
+                {
+                  h: '7. Changes to This Policy',
+                  p: [
+                    'We may update this Privacy Policy from time to time. Material changes will be communicated through the Service or by email.',
+                  ],
+                },
+                {
+                  h: '8. Contact',
+                  p: [
+                    'Questions about this policy can be directed to privacy@tennisworld.app (placeholder address).',
+                  ],
+                },
+              ].map((section, i) => (
+                <div key={i} style={{ marginBottom: 36 }}>
+                  <div className="headline" style={{ marginBottom: 12 }}>{section.h}</div>
+                  {section.p.map((para, j) => (
+                    <p key={j} className="body-m" style={{ color: '#2A2A2A', marginBottom: 10, lineHeight: 1.75 }}>{para}</p>
+                  ))}
+                </div>
+              ))}
+
+            </div>
+          </div>
+        </div>
+
+        <Footer />
+      </div>
+      {paywall && <Paywall onClose={() => setPaywall(false)} onUnlock={() => setPaywall(false)} />}
+    </>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<StaticPage />);
+
+</script>
+</body>
+</html>

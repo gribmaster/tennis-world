@@ -1,0 +1,410 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Tennis World — Prisma schema (FINALIZED for Phase 2, Architecture Plan
+// Decision #13). Owned exclusively by apps/api (Decision #3).
+//
+// The disposable Phase-0 draft (`000_draft_do_not_build_on`) has been dropped and
+// the history reset to a single clean `init` migration (Feature 40). The models
+// here back the Phase-2 public discovery DTOs in `@tennis/contracts` and are
+// seeded from `@tennis/mock-data` by `prisma/seed.ts`.
+//
+// Entitlement now carries the Phase-5 provider-correlation + lifecycle columns
+// (Feature 61, Decision #12: startsAt, providerCustomerId/SubscriptionId/PurchaseId,
+// revokedAt, revokedReason, grantedByAdminId) plus the ProcessedWebhookEvent
+// idempotency ledger and User.stripeCustomerId — schema/contract groundwork ONLY;
+// no runtime reads or writes them yet (the EffectiveEntitlementService + Stripe
+// webhook arrive in Features 62/66). Auth/payment/admin/user-collection models are
+// otherwise present as FK targets only; no endpoint reads or writes them today.
+// No AnalyticsEvent model (Decision #10 — removed from MVP scope).
+//
+// Coordinate safety (Risk #17): exact `Court.lat`/`lng` are stored but MUST NOT be
+// exposed by any public response (no endpoints exist yet). `mapX`/`mapY` are
+// decorative screen coords, never geo.
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Surface {
+  Clay
+  Hard
+  Grass
+}
+
+enum AccessType {
+  Resort
+  Club
+  Academy
+  Private
+}
+
+enum IndoorOutdoor {
+  Indoor
+  Outdoor
+}
+
+enum CourtStatus {
+  draft
+  published
+}
+
+enum CollectionType {
+  editorial
+  system
+}
+
+enum SkillLevel {
+  Beginner
+  Intermediate
+  Advanced
+  Pro
+}
+
+enum GroupSize {
+  Solo
+  Couple
+  Family
+  Group
+}
+
+enum Continent {
+  Europe
+  Asia
+  Americas
+  Africa
+  Oceania
+}
+
+enum EntitlementKind {
+  lifetime_unlock
+  subscription
+  promo_unlock
+  manual_grant
+}
+
+enum EntitlementStatus {
+  active
+  revoked
+  refunded
+  expired
+}
+
+enum EntitlementSource {
+  stripe_web
+  iap_ios
+  iap_android
+  promo_code
+  admin
+}
+
+model Country {
+  id        String    @id @default(cuid())
+  name      String
+  isoCode   String    @unique
+  continent Continent
+  regions   Region[]
+  courts    Court[]
+}
+
+model Region {
+  id        String  @id @default(cuid())
+  countryId String
+  country   Country @relation(fields: [countryId], references: [id])
+  name      String
+  lat       Float
+  lng       Float
+  courts    Court[]
+}
+
+model Court {
+  id   String @id @default(cuid())
+  slug String @unique
+  name String
+
+  regionId  String
+  region    Region  @relation(fields: [regionId], references: [id])
+  countryId String // denormalized for fast world/country zoom queries
+  country   Country @relation(fields: [countryId], references: [id])
+
+  // Exact geo — server-only exposure, gated by entitlement check in Phase 4.
+  lat       Float
+  lng       Float
+  // ~10km jittered, always public.
+  approxLat Float
+  approxLng Float
+
+  // Decorative [x%, y%] screen position for the stylized map canvas — NOT geo
+  // (Risk #17). The serializer recombines these into the `mapCoords` tuple.
+  mapX Int
+  mapY Int
+
+  surface       Surface
+  setting       String
+  access        AccessType
+  indoorOutdoor IndoorOutdoor
+  isScenic      Boolean       @default(false)
+  isFeatured    Boolean       @default(false)
+  isLocked      Boolean       @default(false)
+  status        CourtStatus   @default(draft)
+  blurb         String
+
+  // Stable ordinal reproducing the mock-data COURTS array order for deterministic
+  // list/map output (so seeded API reads match the mock byte-for-byte).
+  seedOrder Int @default(0)
+
+  images          CourtImage[]
+  collections     CollectionCourt[]
+  savedBy         SavedCourt[]
+  userCollections UserCollectionCourt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([countryId])
+  @@index([regionId])
+  @@index([status, isFeatured])
+}
+
+model CourtImage {
+  id        String  @id @default(cuid())
+  courtId   String
+  court     Court   @relation(fields: [courtId], references: [id])
+  url       String
+  alt       String?
+  sortOrder Int     @default(0)
+  isHero    Boolean @default(false)
+}
+
+model Collection {
+  id            String            @id @default(cuid())
+  slug          String            @unique
+  name          String
+  description   String?
+  coverImageUrl String?
+  type          CollectionType    @default(editorial)
+  sortOrder     Int               @default(0)
+  isPublished   Boolean           @default(true)
+  courts        CollectionCourt[]
+}
+
+model CollectionCourt {
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id])
+  courtId      String
+  court        Court      @relation(fields: [courtId], references: [id])
+  sortOrder    Int        @default(0)
+
+  @@id([collectionId, courtId])
+}
+
+model Article {
+  id              String    @id @default(cuid())
+  slug            String    @unique
+  title           String
+  subtitle        String?
+  category        String
+  bodyRichText    String
+  heroImageUrl    String?
+  readTimeMinutes Int
+  publishedAt     DateTime?
+  // Optional byline (Feature 31 / 44). Mirrors the optional `ArticleDTO.author`
+  // and the mock `ARTICLES` byline ('Janet See'). Added as a forward migration
+  // (add_article_author) — the Feature-40 schema omitted it, so the seeded API
+  // could not reproduce the byline (Feature 43 parity gap). Nullable: a missing
+  // byline degrades gracefully, same as `subtitle`/`heroImageUrl`.
+  author          String?
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  authProvider String?
+  createdAt    DateTime @default(now())
+  // Phase-4 groundwork (Feature 51): a profile PATCH (/v1/me) will want a freshness
+  // marker. Additive and back-safe — `@updatedAt` is maintained by Prisma on write
+  // and is backfilled to `now()` for existing rows by the migration's column default.
+  // NOTE: passwordHash is deliberately ABSENT — the ratified auth method is email
+  // magic link (Feature 50 §3.3), so the User row stores no secret (the only secret
+  // is the single-use MagicLinkToken hash below). Add passwordHash only if/when
+  // email+password auth is adopted.
+  updatedAt    DateTime @updatedAt
+
+  // Phase-5 groundwork (Feature 61): one Stripe Customer per User, created lazily on
+  // first checkout and reused for the customer portal + future purchases. @unique so a
+  // webhook can resolve `customer` (cus_…) → User in one indexed read. Lives ONLY on
+  // the row — it is NEVER surfaced in any DTO. Nullable: users with no Stripe customer
+  // (everyone today) have null.
+  stripeCustomerId String? @unique
+
+  entitlements         Entitlement[]
+  savedCourts          SavedCourt[]
+  userCollections      UserCollection[]
+  consultationRequests ConsultationRequest[]
+}
+
+// Phase-5 groundwork (Feature 61, Decision #12). Provider-correlation + lifecycle
+// columns added on top of the Phase-0/2 stub. ALL additions are nullable or
+// defaulted, so the forward migration is back-safe on a populated table (the table
+// is empty today, but CI/prod may hold rows later). NO runtime reads/writes this
+// model yet — the EffectiveEntitlementService + Stripe webhook (Features 62/66) do.
+//
+//   - startsAt               : when access begins. Defaults to now() so existing
+//                              semantics (effective at createdAt) are preserved;
+//                              supports future-dated grants/trials. Effective-window
+//                              math reads startsAt/expiresAt.
+//   - providerCustomerId     : Stripe Customer id (cus_…) / IAP app-account token.
+//                              Indexed for webhook reconciliation.
+//   - providerSubscriptionId : Stripe Subscription id (sub_…) for kind=subscription;
+//                              null for one-time/lifetime. Indexed.
+//   - providerPurchaseId     : the idempotency anchor — Stripe PaymentIntent (pi_…) /
+//                              Checkout Session (cs_…) / IAP transaction id. @unique
+//                              so re-delivered fulfillment is a no-op upsert. Nullable
+//                              (not every source has a purchase id). Postgres allows
+//                              many NULLs under a UNIQUE index, so the @unique only
+//                              constrains the populated values — exactly what we want.
+//   - revokedAt/revokedReason: set when a refund/chargeback/admin-revoke flips status
+//                              away from active (audit trail; the row is never deleted).
+//   - grantedByAdminId       : AdminUser.id for kind=manual_grant (Phase-3 admin app
+//                              populates it later). Not a DB FK — AdminUser is a soft
+//                              ref; nullable, only set for admin grants.
+model Entitlement {
+  id        String            @id @default(cuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id])
+  kind      EntitlementKind
+  status    EntitlementStatus @default(active)
+  source    EntitlementSource
+  startsAt  DateTime          @default(now())
+  expiresAt DateTime?
+  // Provider correlation (Stripe today; IAP/promo/admin later) — never on the wire.
+  providerCustomerId     String?
+  providerSubscriptionId String?
+  providerPurchaseId     String? @unique
+  // Revocation / audit (status stays the source of truth; these explain who/why/when).
+  revokedAt        DateTime?
+  revokedReason    String?
+  grantedByAdminId String?
+  metadata  Json?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@index([userId, status])
+  @@index([providerCustomerId])
+  @@index([providerSubscriptionId])
+}
+
+// Phase-5 groundwork (Feature 61) — webhook idempotency ledger. The webhook handler
+// (Feature 66) records the provider event id FIRST, inside the same transaction as the
+// fulfillment; a re-delivered event hits the PK and is short-circuited as already-
+// processed (the canonical Stripe-recommended idempotency pattern). `id` IS the provider
+// event id (evt_… for Stripe) — no separate cuid. Also serves the future IAP server-
+// notification + CRM webhook handlers (a different `provider`). NO endpoint reads/writes
+// this yet.
+model ProcessedWebhookEvent {
+  id          String   @id // the provider event id (evt_… for Stripe)
+  provider    String // "stripe" | "apple" | "google"
+  type        String // event type, for triage
+  processedAt DateTime @default(now())
+}
+
+model SavedCourt {
+  userId  String
+  user    User     @relation(fields: [userId], references: [id])
+  courtId String
+  court   Court    @relation(fields: [courtId], references: [id])
+  savedAt DateTime @default(now())
+
+  @@id([userId, courtId])
+}
+
+model UserCollection {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  name   String
+  // Phase-4 groundwork (Feature 51): the routing key for the per-folder detail view
+  // (`/saved/collections/[slug]`); `UserCollectionDTO.slug` is a required contract
+  // field. The server derives it on create/rename with the SAME logic the web mock
+  // uses (`slugifyCollectionName` + `ensureUniqueSlug`), scoped per user. Uniqueness
+  // is PER USER, not global — two users may both have `summer-trip`
+  // (`@@unique([userId, slug])` below). `id` remains the mutation key
+  // (PATCH/DELETE `/v1/me/collections/:id`); `slug` is only the read/lookup key.
+  slug      String
+  createdAt DateTime              @default(now())
+  courts    UserCollectionCourt[]
+
+  @@unique([userId, slug])
+}
+
+model UserCollectionCourt {
+  userCollectionId String
+  userCollection   UserCollection @relation(fields: [userCollectionId], references: [id])
+  courtId          String
+  court            Court          @relation(fields: [courtId], references: [id])
+  sortOrder        Int            @default(0)
+
+  @@id([userCollectionId, courtId])
+}
+
+model ConsultationRequest {
+  id                  String      @id @default(cuid())
+  userId              String?
+  user                User?       @relation(fields: [userId], references: [id])
+  name                String?
+  email               String
+  destinationInterest String
+  travelStart         DateTime?
+  travelEnd           DateTime?
+  isFlexible          Boolean     @default(false)
+  skillLevel          SkillLevel?
+  groupSize           GroupSize?
+  additionalRequest   String?
+  source              String?
+  status              String      @default("new")
+  createdAt           DateTime    @default(now())
+
+  @@index([status, createdAt])
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         String   @default("editor")
+  createdAt    DateTime @default(now())
+}
+
+// Phase-4 groundwork (Feature 51) — single-use email magic-link tokens (the ratified
+// auth method, Feature 50 §3.3/§9). NO behavior is wired in this feature; this model
+// only stands the table up so the auth service (Feature 52) can create/consume tokens.
+//
+// Security shape (Feature 50 §9): only the HASH of the token is stored, never the raw
+// token (the raw value lives only in the emailed link); `expiresAt` enforces a short
+// TTL; `consumedAt` makes verification single-use (set in the same transaction that
+// mints the session). There is intentionally NO relation to `User` — a request-link
+// can be issued for an email that has no `User` row yet (the user is upserted on
+// verify), so coupling the token to a `User` FK would be wrong. Email normalization
+// (lower-casing) is the SERVICE's job at write time, not a schema constraint.
+model MagicLinkToken {
+  id        String    @id @default(cuid())
+  email     String
+  // SHA-256 (or similar) hash of the single-use token — unique so a verify lookup is
+  // an indexed point read and a collision is impossible. The raw token is never stored.
+  tokenHash String    @unique
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime  @default(now())
+  // Optional best-effort request context for abuse triage (Feature 50 §9 rate-limiting
+  // groundwork). `ipHash` is a hash, never a raw IP. Both nullable — never required.
+  userAgent String?
+  ipHash    String?
+
+  @@index([email])
+  @@index([expiresAt])
+}

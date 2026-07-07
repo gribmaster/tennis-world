@@ -1,0 +1,373 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Design foundation — ported from files/Claude_Design_Prompt_Tennis_Mobile.md and
+ * the HTML prototypes (files/*.html). These are the shared style primitives the
+ * luxury-editorial look depends on (serif display type, eyebrow captions, button
+ * variants, pills, meta-chips). They live here, in apps/web, not a packages/ui
+ * (Decision #6). Color/size tokens are defined in tailwind.config.ts; this file
+ * only composes them into the named primitives the prototypes already used.
+ */
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: theme('colors.bone'); /* warm off-white, never pure white */
+    color: theme('colors.ink');
+  }
+
+  /* Restrained, hairline scrollbar (from the prototypes). */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: theme('colors.mist');
+    border-radius: 2px;
+  }
+}
+
+@layer components {
+  /* ── Typography primitives ─────────────────────────────────────────────── */
+  /* Serif display family. The fluid clamp() sizing mirrors the prototypes so
+     headlines breathe on large screens while staying mobile-first. */
+  .serif {
+    font-family: theme('fontFamily.serif');
+  }
+  .eyebrow {
+    font-size: 11px;
+    line-height: 16px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .display-xl {
+    font-family: theme('fontFamily.serif');
+    font-size: clamp(36px, 5vw, 72px);
+    line-height: 1.06;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+  }
+  .display-l {
+    font-family: theme('fontFamily.serif');
+    font-size: clamp(28px, 3.5vw, 52px);
+    line-height: 1.1;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+  }
+  .display-m {
+    font-family: theme('fontFamily.serif');
+    font-size: clamp(22px, 2.5vw, 36px);
+    line-height: 1.2;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+  .headline {
+    font-family: theme('fontFamily.serif');
+    font-size: clamp(18px, 1.8vw, 26px);
+    line-height: 1.3;
+    font-weight: 500;
+  }
+  .body-l {
+    font-size: clamp(15px, 1.2vw, 18px);
+    line-height: 1.65;
+    font-weight: 400;
+  }
+  .body-m {
+    font-size: clamp(14px, 1vw, 16px);
+    line-height: 1.6;
+    font-weight: 400;
+  }
+  .body-s {
+    font-size: 13px;
+    line-height: 1.55;
+    font-weight: 400;
+  }
+
+  /* ── Layout helpers ────────────────────────────────────────────────────── */
+  /* Centered page gutter, mobile-first padding that widens on larger screens. */
+  .container-page {
+    width: 100%;
+    max-width: theme('maxWidth.container');
+    margin-inline: auto;
+    padding-inline: clamp(20px, 4vw, 64px);
+  }
+  /* Hairline divider tuned for the bone background. */
+  .hairline {
+    background-color: theme('colors.hairline');
+  }
+
+  /* ── Buttons (design prompt §Buttons) ──────────────────────────────────── */
+  /* Base resets shared by every variant. Variants set bg/text/border only. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    font-family: theme('fontFamily.sans');
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    height: 52px;
+    padding-inline: 28px;
+    transition:
+      opacity 150ms ease,
+      transform 150ms ease;
+  }
+  .btn:hover {
+    opacity: 0.88;
+  }
+  .btn:active {
+    transform: scale(0.97);
+    opacity: 0.82;
+  }
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .btn-primary {
+    background-color: theme('colors.ink');
+    color: theme('colors.bone');
+  }
+  .btn-secondary {
+    background-color: transparent;
+    color: theme('colors.ink');
+    border: 1px solid theme('colors.ink');
+  }
+  .btn-ghost {
+    background-color: transparent;
+    color: theme('colors.ink');
+    height: 44px;
+    padding-inline: 16px;
+    letter-spacing: 0.06em;
+  }
+  /* CTAs over photography. */
+  .btn-over-image {
+    background-color: transparent;
+    color: theme('colors.paper');
+    border: 1px solid theme('colors.paper');
+  }
+  /* Reserved for the paywall ONLY. */
+  .btn-premium {
+    background-color: theme('colors.gold');
+    color: theme('colors.ink');
+    font-weight: 600;
+  }
+
+  /* ── Pills & chips ─────────────────────────────────────────────────────── */
+  .pill {
+    border-radius: theme('borderRadius.pill');
+  }
+  /* Filter chip (map screen). Active state inverts to ink/bone. */
+  .filter-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 16px;
+    border-radius: theme('borderRadius.pill');
+    border: 1px solid theme('colors.mist');
+    background: transparent;
+    color: theme('colors.ink');
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+  .filter-pill:hover,
+  .filter-pill.is-active {
+    background-color: theme('colors.ink');
+    color: theme('colors.bone');
+    border-color: theme('colors.ink');
+  }
+  /* Metadata chip for surface/setting/access/indoor-outdoor (court cards/detail). */
+  .meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: theme('borderRadius.pill');
+    border: 1px solid theme('colors.mist');
+    color: theme('colors.graphite');
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  /* ── Map canvas (map screen) ───────────────────────────────────────────── */
+  /* Stylized, decorative-only "sea" for the map surface. This is NOT a real map
+     and carries no geographic meaning — the landmass silhouettes + graticule are
+     an inline SVG drawn by StylizedMapCanvas, and pins are positioned from each
+     court's [x%, y%] `mapCoords`, never from lat/lng (Architecture Plan §9 Risk
+     #17). The original ported gradient rendered near-flat against the bone page
+     (tiny blobs + sepia wash → an apparently empty block); this warm bone→stone
+     wash gives the sea real presence for the SVG land to sit on. */
+  .gmap {
+    background:
+      radial-gradient(130% 100% at 50% 0%, #eef0ea 0%, #e3e5dd 45%, #d9dcd2 100%);
+  }
+
+  /* Soft clay-tinted halo pulse for featured pins (ported from `.pin-pulse`). */
+  .pin-pulse {
+    animation: map-pin-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes map-pin-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(185, 92, 58, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 10px rgba(185, 92, 58, 0);
+    }
+  }
+
+  /* ── Real map (Leaflet, Feature 74) ────────────────────────────────────── */
+  /* The env-driven Leaflet map surface that REPLACES the abstract StylizedMapCanvas
+     for real map surfaces (/map, Wishlist Map, Court Detail preview). Markers are
+     plotted from approxLat/approxLng ONLY — exact lat/lng never reach the map layer
+     (Architecture Plan §9 Risk #17). These styles keep Leaflet restrained + on-brand:
+     custom divIcon markers (no default blue pins), compact/quiet controls. */
+
+  /* The frame owns sizing/border/rounding (set by the caller via className); it just
+     needs to be a positioned, clipping box for the absolutely-filled Leaflet canvas. */
+  .tw-map-frame {
+    background:
+      radial-gradient(130% 100% at 50% 0%, #eef0ea 0%, #e3e5dd 45%, #d9dcd2 100%);
+  }
+  /* Leaflet needs an explicit-height container; fill the frame. */
+  .tw-map-surface,
+  .tw-map-surface .leaflet-container {
+    height: 100%;
+    width: 100%;
+  }
+  .tw-map-surface .leaflet-container {
+    background: transparent;
+    font-family: inherit;
+  }
+
+  /* Custom marker: a ringed dot in the court's state color (--mk), optional halo.
+     Replaces Leaflet's default blue teardrop entirely. */
+  .tw-map-marker {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+  }
+  .tw-map-marker__dot {
+    display: block;
+    border-radius: theme('borderRadius.pill');
+    background: var(--mk);
+    border: 2px solid theme('colors.bone');
+    box-shadow: 0 1px 3px rgba(15, 15, 15, 0.35);
+  }
+  .tw-map-marker__halo {
+    position: absolute;
+    inset: 0;
+    border-radius: theme('borderRadius.pill');
+    background: var(--mk);
+    opacity: 0.28;
+    animation: map-pin-pulse 2.4s ease-in-out infinite;
+  }
+  .tw-map-marker-icon:hover .tw-map-marker__dot {
+    transform: scale(1.12);
+    transition: transform 150ms ease;
+  }
+
+  /* Restrained controls: quiet the default Leaflet chrome to match the editorial look. */
+  .tw-map-surface .leaflet-control-zoom {
+    border: 1px solid theme('colors.hairline');
+    border-radius: theme('borderRadius.md');
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(15, 15, 15, 0.08);
+  }
+  .tw-map-surface .leaflet-control-zoom a {
+    background: theme('colors.bone');
+    color: theme('colors.graphite');
+    border-color: theme('colors.hairline');
+  }
+  .tw-map-surface .leaflet-control-zoom a:hover {
+    background: #fff;
+    color: theme('colors.ink');
+  }
+  .tw-map-surface .leaflet-control-attribution {
+    background: rgba(245, 242, 236, 0.82);
+    color: theme('colors.stone');
+    font-size: 10px;
+  }
+  .tw-map-surface .leaflet-control-attribution a {
+    color: theme('colors.graphite');
+  }
+
+  /* ── Map layout (map screen) ───────────────────────────────────────────── */
+  /* Stacked on mobile (canvas over list), side-by-side on desktop. Ported from
+     `.map-layout` in files/map.html but sized against the REAL app chrome: the
+     72px AppHeader, the sticky filter bar, and the mobile BottomNavigation
+     (56px + safe-area). `--map-chrome` collapses the bottom-nav term at md+ where
+     the tab bar is hidden. */
+  .map-layout {
+    --map-header: 72px;
+    --map-filterbar: 69px;
+    --map-bottom-nav: calc(56px + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - var(--map-header) - var(--map-filterbar) - var(--map-bottom-nav));
+  }
+  .map-canvas-wrap {
+    position: relative;
+    flex: 0 0 55%;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .map-list-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+    background: theme('colors.bone');
+    border-top: 1px solid theme('colors.hairline');
+    overflow-y: hidden;
+  }
+  @media (min-width: 768px) {
+    .map-layout {
+      --map-bottom-nav: 0px;
+      flex-direction: row;
+    }
+    .map-canvas-wrap {
+      flex: 1 1 auto;
+    }
+    .map-list-panel {
+      flex: 0 0 380px;
+      border-top: none;
+      border-left: 1px solid theme('colors.hairline');
+      overflow-y: auto;
+    }
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbars on horizontal card strips while keeping them scrollable. */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}

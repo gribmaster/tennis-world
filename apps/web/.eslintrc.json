@@ -1,0 +1,79 @@
+{
+  "extends": "next/core-web-vitals",
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "@/domain",
+            "message": "Import repositories from '@/lib/repositories', not the domain factory. Only src/lib/repositories.ts may import '@/domain'."
+          },
+          {
+            "name": "@/domain/index",
+            "message": "Import repositories from '@/lib/repositories', not the domain factory. Only src/lib/repositories.ts may import '@/domain'."
+          }
+        ],
+        "patterns": [
+          {
+            "group": [
+              "@/domain/*/mock-*.repository",
+              "**/domain/*/mock-*.repository",
+              "**/mock-*.repository"
+            ],
+            "message": "Do not import a concrete mock repository. Import 'repositories' from '@/lib/repositories' instead."
+          },
+          {
+            "group": ["@/domain/*/*.repository", "**/domain/*/*.repository"],
+            "message": "Do not import a concrete repository implementation. Import 'repositories' from '@/lib/repositories' instead. (Repository TYPES are re-exported from each domain's index for typing only.)"
+          },
+          {
+            "group": ["@tennis/mock-data", "@tennis/mock-data/*"],
+            "message": "UI code must not import @tennis/mock-data directly. Go through a domain repository via '@/lib/repositories'. Only domain repository implementations (src/domain/**) may read mock data."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["src/domain/**"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": ["scripts/**"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": [
+        "src/lib/repositories.ts",
+        "src/lib/repositories.server.ts",
+        "src/lib/repositories.client.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/domain/*/mock-*.repository",
+                  "**/mock-*.repository",
+                  "@/domain/http/*",
+                  "**/domain/http/*",
+                  "@tennis/mock-data",
+                  "@tennis/mock-data/*"
+                ],
+                "message": "lib/repositories*.ts must go through the @/domain factory (and its re-exported types), not concrete repos, the http-client, or mock data."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
