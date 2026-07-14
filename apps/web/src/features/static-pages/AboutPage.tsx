@@ -15,10 +15,9 @@ import { PageContainer } from '@/components/layout';
 //
 // The hero/CTA imagery and the `mailto:` address mirror the prototype exactly.
 
-// Decorative hero photograph (Lake Como), ported from the prototype. A remote
-// Unsplash URL; the host is whitelisted in next.config.mjs.
-const HERO_IMAGE =
-  'https://images.unsplash.com/photo-1599391398131-cd12dfc6c24e?w=1800&q=80&auto=format&fit=crop';
+// Decorative hero photograph, served from a local placeholder (apps/web/public/
+// placeholders). Root-relative so it resolves on local, staging, and production.
+const HERO_IMAGE = '/placeholders/sam-hojati-w6-_hcmVhYA-unsplash.jpg';
 
 // Contact address, ported verbatim from the prototype's "Get in Touch" CTA.
 const CONTACT_EMAIL = 'hello@tennisworld.app';

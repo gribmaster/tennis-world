@@ -4,7 +4,14 @@
 // same data. DATA ONLY — no filtering/transformation logic lives here (that
 // belongs in the Phase-1 mock repository adapters).
 
-export { U, IMG } from './images';
+export {
+  U,
+  IMG,
+  PLACEHOLDER_FILES,
+  PLACEHOLDERS,
+  placeholder,
+  FALLBACK_COURT_IMAGE,
+} from './images';
 export { COURTS } from './courts';
 export { COLLECTIONS } from './collections';
 export { COLLECTION_COURTS, type CollectionCourtLink } from './collection-courts';

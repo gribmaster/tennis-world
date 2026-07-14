@@ -68,10 +68,9 @@ export const HOME_HERO_CONTENT: HomeHeroContent = {
     { value: '50', label: 'Countries' },
     { value: '6', label: 'Collections' },
   ],
-  // The prototype's hero photograph (Lake Como). A remote Unsplash URL, matching
-  // the rest of the mock imagery; the host is whitelisted in next.config.mjs.
-  imageUrl:
-    'https://images.unsplash.com/photo-1599391398131-cd12dfc6c24e?w=2000&q=80&auto=format&fit=crop',
+  // Hero photograph, served from a local placeholder in apps/web/public/placeholders.
+  // Root-relative so it resolves on local, staging, and production alike.
+  imageUrl: '/placeholders/maurits-bausenhart-XtcZbSPVJ3A-unsplash.jpg',
   imageAlt: '',
 };
 

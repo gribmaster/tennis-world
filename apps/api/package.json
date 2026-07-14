@@ -13,6 +13,7 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:migrate:reset": "prisma migrate reset",
     "db:seed": "prisma db seed",
+    "db:update-images": "tsx prisma/update-court-images.ts",
     "ci:issue-token": "tsx scripts/ci-issue-token.ts",
     "ci:clean-auth-fixtures": "tsx scripts/ci-clean-auth-fixtures.ts",
     "verify:effective-entitlement": "tsx scripts/verify-effective-entitlement.ts",

@@ -14,8 +14,13 @@ import type { ReactNode } from 'react';
 // save heart) is passed in as `children` and positioned by the caller — this keeps
 // CourtImage free of court-specific layout.
 //
-// Uses `next/image` with `fill` (the court image URLs are remote Unsplash URLs
-// whitelisted in next.config.mjs); the parent sets the box, this fills it.
+// Uses `next/image` with `fill` (court image URLs are root-relative local paths
+// under `/placeholders/…`, served from apps/web/public); the parent sets the box,
+// this fills it. If a caller passes an empty/missing `src`, we fall back to a real
+// placeholder file so the frame is never blank or broken.
+
+/** Fallback used when a court has no image. A real file in public/placeholders. */
+const FALLBACK_IMAGE = '/placeholders/ben-hershey-K9HgyI3qmqA-unsplash.jpg';
 
 export interface CourtImageProps {
   src: string;
@@ -53,7 +58,7 @@ export function CourtImage({
   return (
     <div className={classes}>
       <Image
-        src={src}
+        src={src || FALLBACK_IMAGE}
         alt={alt}
         fill
         sizes={sizes}

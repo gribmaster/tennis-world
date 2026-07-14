@@ -40,8 +40,8 @@ const PAYWALL_BAND_COPY: PaywallBandCopy = {
   valueProp: '120+ curated courts. Exact locations. Editorial guides. One-time $29.',
   primaryCtaLabel: 'Unlock Full Access',
   secondaryCtaLabel: 'Request Consultation',
-  backgroundImageUrl:
-    'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1600&q=80&auto=format&fit=crop',
+  // Local placeholder (apps/web/public/placeholders); root-relative for all envs.
+  backgroundImageUrl: '/placeholders/jorge-salazar-pY_GFZNKrrc-unsplash.jpg',
 };
 
 function ArrowGlyph() {

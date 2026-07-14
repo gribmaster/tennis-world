@@ -1,5 +1,5 @@
 import type { CourtDTO } from '@tennis/contracts';
-import { IMG, U } from './images';
+import { IMG, U, placeholder } from './images';
 
 // 12 courts ported verbatim from the HTML prototypes (`map.html` COURTS array).
 //
@@ -20,7 +20,7 @@ type CourtSeed = Omit<CourtDTO, 'images' | 'heroImageUrl'> & {
   images: CourtDTO['images'];
 };
 
-export const COURTS: CourtSeed[] = [
+const COURT_SEEDS: CourtSeed[] = [
   {
     id: 'tremezzo',
     slug: 'grand-hotel-tremezzo',
@@ -343,12 +343,36 @@ export const COURTS: CourtSeed[] = [
     lng: 7.115,
     approxLat: 43.55,
     approxLng: 7.12,
-    heroImageUrl: U(IMG.med),
+    // Distinct coastal hero so no two courts share a hero image (IMG.med is Belmond's).
+    heroImageUrl: U('/placeholders/darko-nesic-VZEnVM6c1lY-unsplash.jpg'),
     images: [
-      { url: U(IMG.med), isHero: true, sortOrder: 0 },
+      { url: U('/placeholders/darko-nesic-VZEnVM6c1lY-unsplash.jpg'), isHero: true, sortOrder: 0 },
       { url: U(IMG.clayCourt), isHero: false, sortOrder: 1 },
     ],
     blurb:
       "Five clay courts on the Cap d'Antibes, pine-shaded and salt-aired. The kind of place where time collapses gracefully.",
   },
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Image distribution.
+//
+// Each court's authored HERO (sortOrder 0) keeps its region-specific `IMG.*` image
+// so heroes stay distinct and thematically sensible. Every NON-hero gallery image is
+// then reassigned to a fresh image drawn from the whole placeholder pool via a single
+// global running counter — so no two gallery slots across all courts land on the same
+// file (until the 49-file pool is exhausted, after which `placeholder()` cycles). This
+// keeps the assignment deterministic (stable across re-seeds), gives every court at
+// least one image, and spreads the library across the catalogue rather than repeating
+// the same four gallery photos everywhere.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const COURTS: CourtSeed[] = (() => {
+  let galleryCursor = 0;
+  return COURT_SEEDS.map((court) => ({
+    ...court,
+    images: court.images.map((img) =>
+      img.isHero ? img : { ...img, url: placeholder(galleryCursor++) },
+    ),
+  }));
+})();

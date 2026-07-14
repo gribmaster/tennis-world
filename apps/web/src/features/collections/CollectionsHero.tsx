@@ -8,11 +8,10 @@ import Image from 'next/image';
 // (local constants, overridable via props) — NOT court/collection data — so this
 // component imports no repository and no @tennis/mock-data.
 
-// Decorative background — the aerial court photo the prototype uses, faded behind
-// the title. Kept here as page chrome (not a DTO field); `images.unsplash.com` is
-// whitelisted in next.config.mjs.
-const DEFAULT_HERO_IMAGE =
-  'https://images.unsplash.com/photo-1530915534234-66dcdb7e2f5d?w=1800&q=80&auto=format&fit=crop';
+// Decorative background — a court photo faded behind the title. Kept here as page
+// chrome (not a DTO field). Served from a local placeholder (apps/web/public/
+// placeholders); root-relative so it works on local, staging, and production.
+const DEFAULT_HERO_IMAGE = '/placeholders/olya-mn-sMv2NShIRa4-unsplash.jpg';
 const DEFAULT_EYEBROW = 'Collections';
 const DEFAULT_TITLE = 'Curated journeys, gathered by landscape and spirit.';
 
