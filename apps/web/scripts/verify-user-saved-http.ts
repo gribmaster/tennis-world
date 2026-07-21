@@ -144,7 +144,9 @@ async function verifyAuthedFlow(token: string): Promise<void> {
     typeof profile.id === 'string' &&
       typeof profile.name === 'string' &&
       typeof profile.initials === 'string' &&
-      (profile.membership === 'free' || profile.membership === 'lifetime'),
+      (profile.membership === 'free' ||
+        profile.membership === 'subscription' ||
+        profile.membership === 'lifetime'),
     `got: ${JSON.stringify(profile)}`,
   );
   expectTrue(

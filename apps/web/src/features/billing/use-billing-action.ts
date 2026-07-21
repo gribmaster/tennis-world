@@ -1,12 +1,13 @@
 'use client';
 
 // use-billing-action — the shared browser-side hook that drives a billing redirect
-// (Feature 67). Both the paywall "Unlock" button and the profile "Manage / Restore"
-// controls use it, so the loading/error/auth behavior lives in ONE place.
+// (Feature 67; plans reworked to monthly/quarterly/yearly). Both the paywall "Unlock"
+// buttons and the profile "Manage / Restore" controls use it, so the loading/error/auth
+// behavior lives in ONE place.
 //
 // WHAT IT DOES on click:
 //   1. flips to a `pending` state (the button shows a loading label + is disabled),
-//   2. calls the billing repo (`createCheckout('lifetime')` or `createPortalSession()`)
+//   2. calls the billing repo (`createCheckout(plan)` or `createPortalSession()`)
 //      through `getClientRepositories()` — whose billing repo sends the httpOnly session
 //      cookie via `credentials:'include'` in `api` mode,
 //   3. on success, navigates the whole browser to the returned hosted URL with
@@ -23,7 +24,11 @@
 // until the navigation happens (or the tab is closed). Only `error` returns control here.
 
 import { useCallback, useState } from 'react';
-import type { CheckoutSessionDTO, CustomerPortalSessionDTO } from '@tennis/contracts';
+import type {
+  BillingPlanKey,
+  CheckoutSessionDTO,
+  CustomerPortalSessionDTO,
+} from '@tennis/contracts';
 import { getClientRepositories } from '@/lib/repositories.client';
 import { AuthRequiredError } from '@/lib/repositories';
 
@@ -37,8 +42,8 @@ export interface UseBillingActionResult {
   pending: boolean;
   /** A safe, user-facing error message when `status === 'error'`; null otherwise. */
   error: string | null;
-  /** Start a lifetime checkout: creates the session and navigates to the hosted URL. */
-  startCheckout: () => Promise<void>;
+  /** Start a checkout for the given plan: creates the session and navigates to the hosted URL. */
+  startCheckout: (plan: BillingPlanKey) => Promise<void>;
   /** Open the customer portal: creates the session and navigates to the hosted URL. */
   openPortal: () => Promise<void>;
 }
@@ -108,9 +113,9 @@ export function useBillingAction(): UseBillingActionResult {
   );
 
   const startCheckout = useCallback(
-    () =>
+    (plan: BillingPlanKey) =>
       run(
-        () => getClientRepositories().billing.createCheckout('lifetime'),
+        () => getClientRepositories().billing.createCheckout(plan),
         'We couldn’t start checkout just now. Please try again in a moment.',
       ),
     [run],

@@ -178,9 +178,7 @@ export function CourtDetailCtaPanel({
           <p className="body-m mt-1.5 text-bone/85">
             Unlock exact locations + 120+ courts worldwide.
           </p>
-          <p className="serif mt-3 text-[28px] font-light text-bone">
-            $29 <span className="eyebrow align-middle text-bone/60">Lifetime</span>
-          </p>
+          <p className="serif mt-3 text-[22px] font-light text-bone">Choose your membership</p>
         </div>
       ) : null}
     </div>

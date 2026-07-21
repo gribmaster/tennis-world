@@ -138,7 +138,7 @@ export const termsContent: LegalContent = {
     {
       h: '4. Subscriptions & Payments',
       p: [
-        'Membership unlocks are billed as described at the time of purchase (currently a one-time lifetime fee; subject to change with notice).',
+        'Membership unlocks are billed as described at the time of purchase (currently recurring monthly, quarterly, or yearly plans; subject to change with notice).',
         'All purchases are processed through the Apple App Store, Google Play, or our website payment provider and are subject to their respective refund policies.',
       ],
     },

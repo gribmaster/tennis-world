@@ -7,7 +7,7 @@
 // plan KEY and navigates to an opaque hosted `url`.
 //
 // Public surface:
-//   • PaywallCheckoutButton — the paywall's primary "Unlock" CTA (starts lifetime checkout).
+//   • PaywallCheckoutButton — one per recurring plan (monthly/quarterly/yearly) on the paywall.
 //   • ManageBillingButton   — opens the Customer Portal (profile row + footer restore).
 //   • useBillingAction      — the shared hook both buttons use (loading/error/auth states).
 

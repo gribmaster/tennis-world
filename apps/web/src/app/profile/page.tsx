@@ -73,7 +73,8 @@ export default async function ProfilePage({
   // `unlocked` is derived from the (mock) membership — the User-shaped stub (Risk #7),
   // not a hardcoded stand-in. DEFAULT_MOCK_USER is "free", so this is false today and
   // the unlock card + header "Unlock Map" CTA both show, matching the prototype default.
-  const unlocked = user.membership === 'lifetime';
+  // Any non-free membership (subscription OR lifetime) counts as unlocked.
+  const unlocked = user.membership !== 'free';
 
   return (
     <AppShell unlocked={unlocked} signedIn>

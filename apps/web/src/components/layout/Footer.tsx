@@ -15,7 +15,7 @@ import { ManageBillingButton } from '@/features/billing';
 //   • "Company" links now point at REAL routes too: About → /about, Privacy →
 //     /privacy, Terms → /terms (the static pages built in Feature 29), and Contact →
 //     a `mailto:` (matching the prototype). None are placeholders anymore.
-//   • Membership "Unlock — $29" and "What's included" open the shared Paywall modal
+//   • Membership "Unlock" and "What's included" open the shared Paywall modal
 //     (whose primary CTA now starts a real hosted Stripe Checkout — Feature 67).
 //   • "Restore" now opens the hosted Stripe Customer Portal (Feature 67 — where a user
 //     restores/manages a purchase), via <ManageBillingButton>. A logged-out click routes
@@ -55,11 +55,12 @@ const COLUMNS: FooterColumn[] = [
   {
     title: 'Membership',
     links: [
-      // "Unlock — $29" and "What's included" both open the shared Paywall modal — the
-      // modal already lists the membership benefits, so "What's included" is
-      // membership/paywall info, not a static page. "Restore" opens the hosted Stripe
-      // Customer Portal (Feature 67), where a returning user restores/manages a purchase.
-      { label: 'Unlock — $29', href: '#', paywall: true },
+      // "Unlock" and "What's included" both open the shared Paywall modal — the
+      // modal already lists the membership benefits + the real recurring plan prices, so
+      // "What's included" is membership/paywall info, not a static page. "Restore" opens
+      // the hosted Stripe Customer Portal (Feature 67), where a returning user
+      // restores/manages a purchase.
+      { label: 'Unlock', href: '#', paywall: true },
       { label: 'Restore', href: '#', portal: true },
       { label: "What's included", href: '#', paywall: true },
     ],

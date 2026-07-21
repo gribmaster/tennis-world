@@ -21,12 +21,13 @@
 //   TOKEN-GATED (need a running API + a minted session; SKIPPED when absent — same shape
 //   as verify-web-exact-location.ts). These prove the return page's membership logic
 //   WITHOUT Stripe, because the page state is a pure function of what `/v1/me` returns:
-//     5. FREE_BEARER_TOKEN      → /v1/me membership === 'free'     → return page "processing".
-//     6. ENTITLED_BEARER_TOKEN  → /v1/me membership === 'lifetime' → return page "success".
-//        (Seed the Entitlement exactly as the API exact-location/webhook harnesses do.)
+//     5. FREE_BEARER_TOKEN      → /v1/me membership === 'free'         → return page "processing".
+//     6. ENTITLED_BEARER_TOKEN  → /v1/me membership !== 'free'         → return page "success".
+//        (subscription OR lifetime — the return page's success state doesn't distinguish them.
+//        Seed the Entitlement exactly as the API exact-location/webhook harnesses do.)
 //
 //   OPTIONAL with real Stripe test keys (SKIPPED unless RUN_STRIPE_CHECKOUT=1 AND a token):
-//     7. billing.createCheckout('lifetime') returns a hosted https URL via the API.
+//     7. billing.createCheckout('monthly') returns a hosted https URL via the API.
 //        We DO NOT follow the redirect and DO NOT fake success — we only assert the repo
 //        returns a `{ url }` the browser action would navigate to.
 //
@@ -187,7 +188,7 @@ async function main(): Promise<void> {
     // Mock mode must NOT fabricate a redirect — both methods throw BillingNotAvailableError.
     let checkoutThrew: unknown;
     try {
-      await mockBilling.createCheckout('lifetime');
+      await mockBilling.createCheckout('monthly');
     } catch (err) {
       checkoutThrew = err;
     }
@@ -216,6 +217,36 @@ async function main(): Promise<void> {
     expectTrue('billing return route exists (src/app/billing/return/page.tsx)', existsSync(returnPage));
   }
 
+  // ── 5. ProfileHeader's cancellation label includes date AND time, with a safe fallback ──
+  // Regression guard for the "Cancels on {date}" ambiguity: a date-only label can show a
+  // different calendar day than Stripe's Customer Portal once the UTC `activeUntil` instant
+  // is converted to the browser's local time (e.g. Europe/Kyiv rolls late-UTC into the next
+  // day). We don't render React here (no DOM harness in this file) — we assert directly on
+  // the ProfileHeader source: it must format with both date and time parts, word the line as
+  // "Access until ..." (describing access expiry, not Stripe's calendar label), and fall back
+  // to a neutral message instead of ever rendering "Invalid Date".
+  {
+    const headerSrc = readRepoFile('apps/web/src/features/profile/ProfileHeader.tsx');
+    expectTrue(
+      'ProfileHeader formats activeUntil with Intl.DateTimeFormat including hour+minute',
+      /Intl\.DateTimeFormat/.test(headerSrc) &&
+        /hour:\s*['"]2-digit['"]/.test(headerSrc) &&
+        /minute:\s*['"]2-digit['"]/.test(headerSrc),
+    );
+    expectTrue(
+      'ProfileHeader uses browser locale (no hardcoded locale/timeZone arg)',
+      !/Intl\.DateTimeFormat\(\s*['"]/.test(headerSrc) && !/timeZone:/.test(headerSrc),
+    );
+    expectTrue(
+      'ProfileHeader words the line as "Access until ..." (not a bare Stripe-style date)',
+      /Access until/.test(headerSrc),
+    );
+    expectTrue(
+      'ProfileHeader falls back to a neutral message for missing/invalid activeUntil (never "Invalid Date")',
+      /Cancellation scheduled/.test(headerSrc) && !/Invalid Date/.test(headerSrc),
+    );
+  }
+
   // ── Token-gated: return-page membership logic via /v1/me (no Stripe) ────────────────
   console.log('\nToken-gated checks (/v1/me membership — no Stripe)');
 
@@ -228,12 +259,14 @@ async function main(): Promise<void> {
     'free',
     'free /v1/me → return page shows "processing" (membership=free)',
   );
-  await meMembershipCheck(
+  // ENTITLED_BEARER_TOKEN may belong to a lifetime OR a subscription entitlement — the
+  // return page's success state is keyed off `membership !== 'free'` (BillingReturn.tsx),
+  // not off a specific membership value, so either is a valid "success" fixture.
+  await entitledMeMembershipCheck(
     apiReachable,
     process.env.ENTITLED_BEARER_TOKEN?.trim(),
     'ENTITLED_BEARER_TOKEN',
-    'lifetime',
-    'entitled /v1/me → return page shows "success" (membership=lifetime)',
+    'entitled /v1/me → return page shows "success" (membership=subscription|lifetime)',
   );
 
   // ── Optional: real Stripe hosted checkout URL (needs API configured with test keys) ──
@@ -249,7 +282,7 @@ async function main(): Promise<void> {
   } else {
     const billing = getRepositories('api', { bearerToken: entitledToken } as HttpAuthOptions).billing;
     try {
-      const session = await billing.createCheckout('lifetime');
+      const session = await billing.createCheckout('monthly');
       expectTrue(
         'createCheckout returns a hosted https url (not followed, not faked)',
         typeof session.url === 'string' && session.url.startsWith('https://'),
@@ -294,6 +327,33 @@ async function meMembershipCheck(
   try {
     const user = await getRepositories('api', { bearerToken: token } as HttpAuthOptions).user.getCurrentUser();
     expectTrue(name, user.membership === expected, `membership=${user.membership} (expected ${expected})`);
+  } catch (err) {
+    expectTrue(name, false, `read /v1/me threw: ${describeError(err)}`);
+  }
+}
+
+/**
+ * Assert /v1/me membership is any non-'free' value (subscription OR lifetime) — the
+ * generic "entitled user" fixture used for the return page's success state, which is
+ * keyed off `membership !== 'free'`, not a specific membership value.
+ */
+async function entitledMeMembershipCheck(
+  apiReachable: boolean,
+  token: string | undefined,
+  envName: string,
+  name: string,
+): Promise<void> {
+  if (!token) {
+    skip(name, `set ${envName} to a signed-in entitled user's bearer token.`);
+    return;
+  }
+  if (!apiReachable) {
+    skip(name, `API not reachable at ${API_BASE}; start it to run this.`);
+    return;
+  }
+  try {
+    const user = await getRepositories('api', { bearerToken: token } as HttpAuthOptions).user.getCurrentUser();
+    expectTrue(name, user.membership !== 'free', `membership=${user.membership} (expected subscription or lifetime)`);
   } catch (err) {
     expectTrue(name, false, `read /v1/me threw: ${describeError(err)}`);
   }

@@ -24,10 +24,12 @@ interface MembershipCardCopy {
   ctaLabel: string;
 }
 
-// Copy ported from profile.html's membership block ("The world, unlocked. $29.").
+// Copy ported from profile.html's membership block, updated for recurring plans
+// (Monthly/Quarterly/Yearly) — no more stale one-time "$29" price point here; the
+// real prices live in the Paywall modal's plan CTAs (feature-local paywall-copy.ts).
 const MEMBERSHIP_CARD_COPY: MembershipCardCopy = {
   eyebrow: 'Membership',
-  headline: 'The world, unlocked. $29.',
+  headline: 'Choose your membership.',
   ctaLabel: 'See Membership',
 };
 

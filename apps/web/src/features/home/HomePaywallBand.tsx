@@ -37,7 +37,7 @@ interface PaywallBandCopy {
 const PAYWALL_BAND_COPY: PaywallBandCopy = {
   eyebrow: 'Membership',
   headline: 'The world, unlocked.',
-  valueProp: '120+ curated courts. Exact locations. Editorial guides. One-time $29.',
+  valueProp: '120+ curated courts. Exact locations. Editorial guides. Choose your plan.',
   primaryCtaLabel: 'Unlock Full Access',
   secondaryCtaLabel: 'Request Consultation',
   // Local placeholder (apps/web/public/placeholders); root-relative for all envs.

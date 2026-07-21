@@ -178,7 +178,7 @@ export function AppHeader({
           })}
           {!unlocked ? (
             <Link href="/map" className="btn btn-primary mt-5 w-full">
-              Unlock Full Access — $29
+              Unlock Full Access
             </Link>
           ) : null}
         </div>

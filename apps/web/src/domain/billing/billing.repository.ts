@@ -29,9 +29,9 @@ import type {
 
 export interface BillingRepository {
   /**
-   * Start a hosted Stripe Checkout for the authed user and the given plan key
-   * (`'lifetime'` | `'subscription'`). Resolves to `{ url }` — the hosted Checkout
-   * redirect the browser should navigate to. Throws `AuthRequiredError` on 401
+   * Start a hosted Stripe Checkout for the authed user and the given recurring plan key
+   * (`'monthly'` | `'quarterly'` | `'yearly'`). Resolves to `{ url }` — the hosted
+   * Checkout redirect the browser should navigate to. Throws `AuthRequiredError` on 401
    * (logged out / expired session); throws `HttpError` on any other non-2xx
    * (e.g. a 500 when the API's Stripe env is unconfigured, or a 400 for an unoffered
    * plan). The client never sends a price id — only the plan key (intake §5.1).

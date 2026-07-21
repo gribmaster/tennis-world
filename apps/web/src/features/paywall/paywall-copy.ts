@@ -18,16 +18,26 @@
 //
 // PRESENTATIONAL ONLY — no price is charged, no entitlement is read or mutated.
 
+import type { BillingPlanKey } from '@tennis/contracts';
+
 export interface PaywallBenefit {
   title: string;
   subtitle: string;
 }
 
 export interface PaywallPrice {
-  /** Human-readable price, e.g. "$29". */
+  /** Human-readable price, e.g. "$9/mo". */
   display: string;
-  /** e.g. "One-time · Lifetime". */
+  /** e.g. "Billed monthly". */
   cadence: string;
+}
+
+/** One of the three recurring plan choices the paywall CTA row offers. */
+export interface PaywallPlanOption {
+  plan: BillingPlanKey;
+  /** Button label, e.g. "Monthly — $9/mo". */
+  label: string;
+  price: PaywallPrice;
 }
 
 export interface PaywallCopy {
@@ -37,9 +47,8 @@ export interface PaywallCopy {
   /** One-line value proposition under the headline. */
   valueProp: string;
   benefits: PaywallBenefit[];
-  /** One-time price copy. Optional — modal renders without it if absent. */
-  price?: PaywallPrice;
-  primaryCtaLabel: string;
+  /** The three recurring plan choices, each rendered as its own checkout CTA. */
+  plans: PaywallPlanOption[];
   /** Secondary "not now" / close action label. */
   secondaryCtaLabel: string;
 }
@@ -49,19 +58,18 @@ export interface PaywallCopy {
 export const PAYWALL_COPY: PaywallCopy = {
   eyebrow: 'Membership',
   headline: 'The world, unlocked.',
-  valueProp: '120+ curated courts. Exact locations. Editorial guides. One payment, forever.',
+  valueProp: '120+ curated courts. Exact locations. Editorial guides. Choose your plan.',
   benefits: [
     { title: 'Exact locations', subtitle: 'Pinpoint coordinates · 120+ courts' },
     { title: 'The full atlas', subtitle: 'Every hidden destination on the map' },
     { title: 'Premium collections', subtitle: 'Coastal, Desert, Hidden, Historic' },
     { title: 'Editorial guides', subtitle: "Insider notes from those who've played" },
     { title: 'Concierge priority', subtitle: 'Skip the line on consultations' },
-    { title: 'Lifetime access', subtitle: 'One payment · every future destination' },
   ],
-  price: {
-    display: '$29',
-    cadence: 'One-time · Lifetime',
-  },
-  primaryCtaLabel: 'Unlock Full Access',
+  plans: [
+    { plan: 'monthly', label: 'Monthly', price: { display: '$9', cadence: 'Billed monthly' } },
+    { plan: 'quarterly', label: 'Quarterly', price: { display: '$24', cadence: 'Billed every 3 months' } },
+    { plan: 'yearly', label: 'Yearly', price: { display: '$79', cadence: 'Billed annually' } },
+  ],
   secondaryCtaLabel: 'Not now',
 };

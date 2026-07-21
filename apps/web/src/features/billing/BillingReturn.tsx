@@ -5,16 +5,16 @@
 // After a hosted Stripe Checkout, Stripe redirects the browser back to the configured
 // success URL. Point `STRIPE_SUCCESS_URL` at `${WEB_APP_URL}/billing/return` (see the
 // route file). This island then re-reads `/v1/me` to see whether the purchase has been
-// fulfilled — membership flips `free → lifetime` when the signature-verified webhook
-// (Feature 66) has created the Entitlement.
+// fulfilled — membership flips `free → subscription` (or `lifetime`) when the
+// signature-verified webhook (Feature 66) has created the Entitlement.
 //
 // THE RACE (task 6): the browser redirect and the Stripe webhook are INDEPENDENT and can
 // arrive in either order. So on the first read membership may still be `free` even though
 // the payment succeeded — the webhook just hasn't landed yet. We therefore POLL `/v1/me`
-// a small, BOUNDED number of times with a short delay; the moment it reports `lifetime`
-// we show success. If it's still `free` after the last attempt we show a calm
-// "payment is processing" state (NOT a failure) with a manual re-check + links out. There
-// is NO infinite polling — the loop stops after `MAX_ATTEMPTS`.
+// a small, BOUNDED number of times with a short delay; the moment it reports anything
+// other than `free` we show success. If it's still `free` after the last attempt we show a
+// calm "payment is processing" state (NOT a failure) with a manual re-check + links out.
+// There is NO infinite polling — the loop stops after `MAX_ATTEMPTS`.
 //
 // CANCEL (task 6): a cancelled Checkout comes back with `?status=cancelled` (the route's
 // documented cancel target). That's handled up-front — no polling, a neutral "checkout
@@ -46,7 +46,7 @@ const POLL_INTERVAL_MS = 2000;
 
 type ReturnState =
   | 'checking' // reading /v1/me (initial or a poll in flight)
-  | 'success' // membership === 'lifetime'
+  | 'success' // membership !== 'free' (subscription or lifetime)
   | 'processing' // still 'free' after MAX_ATTEMPTS (webhook race — not a failure)
   | 'cancelled' // ?status=cancelled
   | 'signed-out' // /v1/me 401 (no session)
@@ -68,8 +68,9 @@ export function BillingReturn() {
   const cancelledRef = useRef(false);
 
   // The bounded poll. Reads /v1/me up to MAX_ATTEMPTS times; resolves to success the moment
-  // membership is 'lifetime', else settles into 'processing'. A 401 → 'signed-out'; any
-  // other throw → 'error'. Runs immediately, then spaced by POLL_INTERVAL_MS.
+  // membership is no longer 'free' (subscription or lifetime), else settles into
+  // 'processing'. A 401 → 'signed-out'; any other throw → 'error'. Runs immediately, then
+  // spaced by POLL_INTERVAL_MS.
   const runPoll = useCallback(async () => {
     cancelledRef.current = false;
     setState('checking');
@@ -81,7 +82,7 @@ export function BillingReturn() {
       try {
         const user = await getClientRepositories().user.getCurrentUser();
         if (cancelledRef.current) return;
-        if (user.membership === 'lifetime') {
+        if (user.membership !== 'free') {
           setState('success');
           return;
         }

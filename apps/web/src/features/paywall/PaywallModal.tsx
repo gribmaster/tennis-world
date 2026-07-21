@@ -10,12 +10,13 @@ import type { PaywallCopy } from './paywall-copy';
 // HomePaywallBand (ink background, gold "Membership" eyebrow flanked by hairline
 // rules, serif headline, gold `btn-premium` primary CTA).
 //
-// CHECKOUT (Feature 67): the primary CTA is now the <PaywallCheckoutButton> island —
-// clicking it starts a hosted Stripe Checkout for the 'lifetime' plan and navigates the
-// browser to the returned hosted URL (loading/error/auth states handled inside the
-// button). There is still NO Stripe.js, NO publishable key, NO price id in the browser —
-// only the plan KEY is sent and an opaque hosted `url` is received. The rest of the modal
-// stays presentational (copy/benefits/price display come from the feature-local copy).
+// CHECKOUT (Feature 67; plans reworked to monthly/quarterly/yearly): one
+// <PaywallCheckoutButton> per recurring plan — clicking one starts a hosted Stripe
+// Checkout for THAT plan and navigates the browser to the returned hosted URL
+// (loading/error/auth states handled inside each button). There is still NO Stripe.js,
+// NO publishable key, NO price id in the browser — only the plan KEY is sent and an
+// opaque hosted `url` is received. The rest of the modal stays presentational
+// (copy/benefits/plan prices come from the feature-local copy).
 //
 // State: this component is fully controlled (`open` + `onClose`). Open/close state
 // lives in PaywallTrigger (per the feature brief), not here and not in any global
@@ -184,20 +185,27 @@ export function PaywallModal({ open, onClose, copy = PAYWALL_COPY, source }: Pay
           ))}
         </ul>
 
-        {/* One-time price copy (rendered only if present). */}
-        {copy.price ? (
-          <p className="serif mt-7 text-[28px] font-light text-bone">
-            {copy.price.display}{' '}
-            <span className="eyebrow align-middle text-bone/60">{copy.price.cadence}</span>
-          </p>
-        ) : null}
-
-        {/* Actions. */}
+        {/* Plan CTAs — one hosted-checkout button per recurring plan (Feature 67).
+            Each owns its own loading/error/auth-redirect states via useBillingAction;
+            no Stripe.js / price id ever reaches the browser. */}
         <div className="mt-8 flex flex-col gap-2.5">
-          {/* PRIMARY CTA — real checkout (Feature 67). Starts a hosted Stripe Checkout
-              for the 'lifetime' plan and navigates to the returned URL; owns its own
-              loading/error/auth-redirect states. No Stripe.js / price id in the browser. */}
-          <PaywallCheckoutButton label={copy.primaryCtaLabel} />
+          {copy.plans.map((option) => (
+            <PaywallCheckoutButton
+              key={option.plan}
+              plan={option.plan}
+              label={
+                <span className="flex w-full items-center justify-between gap-2">
+                  <span>{option.label}</span>
+                  <span className="text-bone/70">
+                    {option.price.display}{' '}
+                    <span className="eyebrow align-middle text-bone/55">
+                      {option.price.cadence}
+                    </span>
+                  </span>
+                </span>
+              }
+            />
+          ))}
 
           {/* SECONDARY — "not now" closes the modal (the only real behavior here). */}
           <button
