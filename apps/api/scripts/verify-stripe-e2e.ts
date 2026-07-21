@@ -4,6 +4,12 @@
 // synthetic webhook). This is the ONE harness that drives the whole payment loop against a
 // LIVE Stripe TEST-MODE account and the real API in a single run.
 //
+// Reworked (post-Feature-71 billing-plan rework) to the current recurring-subscription plan
+// model — monthly/quarterly/yearly, Checkout `mode: 'subscription'` — replacing the retired
+// one-time `lifetime` plan / `mode: 'payment'` flow. Plan resolution reuses the SAME
+// `BillingPlanKey` contract + `resolvePlan`/`BillingConfig` production code (no duplicated
+// plan-to-price mapping here).
+//
 // ── WHAT IS REAL vs SYNTHETIC (read this — the honesty rule, prompt tasks 3/6/13) ────────
 //   REAL Stripe test-mode API calls (prove BillingService's actual Stripe integration):
 //     • POST /v1/billing/checkout → the API calls stripe.checkout.sessions.create AND
@@ -13,15 +19,16 @@
 //     • POST /v1/billing/portal → the API calls stripe.billingPortal.sessions.create for
 //       real; we assert a hosted `url` comes back.
 //     • We also read the created Checkout Session back from Stripe (a real retrieve) to pull
-//       the customer + payment_intent identifiers that a genuine completion would carry.
+//       the customer identifier that a genuine completion would carry.
 //
 //   SYNTHETIC (but SIGNED with the real webhook secret) fulfillment:
 //     • Stripe test mode NEVER delivers `checkout.session.completed` without a browser + a
 //       test card entered on the hosted page (or the Stripe CLI `stripe trigger`), so this
 //       harness cannot receive a real completion event unattended. Instead it hand-builds a
-//       `checkout.session.completed` event carrying the REAL session/customer/payment-intent
-//       ids from the real session above, signs it with `stripe.webhooks.generateTestHeaderString`
-//       (the exact HMAC the API's `constructEvent` verifies), and POSTs it to the real
+//       `checkout.session.completed` event (mode='subscription') carrying the REAL
+//       session/customer id from the real session above plus a namespaced synthetic
+//       subscription id, signs it with `stripe.webhooks.generateTestHeaderString` (the exact
+//       HMAC the API's `constructEvent` verifies), and POSTs it to the real
 //       `POST /v1/webhooks/stripe`. This is a HYBRID: real Stripe checkout objects + a signed
 //       synthetic delivery. It is NOT full Stripe-CLI event delivery — for that, run:
 //         stripe listen --forward-to localhost:3001/v1/webhooks/stripe
@@ -29,11 +36,12 @@
 //       (documented in the intake note; hard to automate in CI without the Stripe CLI binary).
 //
 // After the signed fulfillment we assert the DOWNSTREAM PRODUCT behavior, all real:
-//     • an active lifetime Entitlement exists (anchored on the real payment_intent),
-//     • /v1/me flips 'free' → 'lifetime',
+//     • an active subscription Entitlement exists (kind=subscription, anchored on the
+//       synthetic subscription id — the same anchor BillingService's webhook uses),
+//     • /v1/me flips 'free' → 'subscription',
 //     • the protected exact-location endpoint unlocks (200) for a real seeded court,
-//     • a signed synthetic charge.refunded (real payment_intent) revokes it → /v1/me 'free',
-//       exact-location 403 again,
+//     • a signed synthetic customer.subscription.deleted (same subscription id) revokes it →
+//       /v1/me 'free', exact-location 403 again,
 //     • NO provider id (cus_/sub_/pi_/cs_) leaks in any /v1/me or exact-location response.
 //
 // Optionally (WEB_APP_URL set + Next running) we fetch /billing/return and assert the page
@@ -45,11 +53,13 @@
 // ── OPT-IN / CI SAFETY (prompt tasks 2/5/10) ─────────────────────────────────────────────
 // Required env for a real run:
 //     STRIPE_SECRET_KEY=sk_test_…        (a TEST key; a live key is refused, see below)
-//     STRIPE_PRICE_LIFETIME=price_…      (a real test-mode lifetime price)
 //     STRIPE_WEBHOOK_SECRET=whsec_…      (the SAME value the running API is configured with)
+//     A Stripe price id for the chosen plan — one of:
+//       STRIPE_PRICE_MONTHLY=price_…  STRIPE_PRICE_QUARTERLY=price_…  STRIPE_PRICE_YEARLY=price_…
 //     NEXT_PUBLIC_API_BASE_URL / API base (defaults to http://localhost:3001/v1)
 //     DATABASE_URL                        (to seed the user + read entitlements/customer id)
 // Optional:
+//     STRIPE_E2E_PLAN=monthly|quarterly|yearly   (which recurring plan to exercise; default 'monthly')
 //     WEB_APP_URL / NEXT base            (enables the structural /billing/return render check)
 //
 // Gate:
@@ -68,11 +78,23 @@
 // CLEANUP: every user/entitlement/token/event is namespaced (`f68-…@tennis.test`, event ids
 // `evt_f68_…`). Deleted at the end + defensively at the start. The REAL Stripe TEST customers
 // + checkout sessions this creates are left in the test account (disposable test data; the
-// prior F65 harness makes the same trade-off — deleting them is out of scope).
+// prior F65 harness makes the same trade-off — deleting them is out of scope). This harness
+// never mutates any pre-existing real subscribed test user — it only ever touches its own
+// namespaced `f68-…@tennis.test` user.
+//
+// SUBSCRIPTION-SPECIFIC NOTE: a real Checkout Session in `mode: 'subscription'` has no
+// `payment_intent` until a hosted page actually completes payment (which this unattended
+// harness cannot drive), so there is nothing to retrieve there. Revocation for a subscription
+// is therefore exercised via a signed `customer.subscription.deleted` event (the same event
+// StripeWebhookService uses to lapse a real subscription), not `charge.refunded` — the latter
+// anchors on a PaymentIntent, which a one-time/lifetime purchase has but a bare subscription
+// checkout does not.
 
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import Stripe from 'stripe';
+import { BillingPlanKey } from '@tennis/contracts';
+import { loadBillingConfig } from '../src/billing/billing.config';
 
 const prisma = new PrismaClient();
 
@@ -80,11 +102,22 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://localhost:3001/v1';
 
 const SECRET_KEY = process.env.STRIPE_SECRET_KEY?.trim() ?? '';
-const PRICE_LIFETIME = process.env.STRIPE_PRICE_LIFETIME?.trim() ?? '';
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET?.trim() ?? '';
 const WEB_APP_URL =
   process.env.WEB_APP_URL?.trim() || process.env.NEXT_APP_URL?.trim() || '';
 const FORCE = process.env.RUN_STRIPE_E2E === '1';
+
+// Which recurring plan this run exercises (task 2). Default 'monthly'; override via
+// STRIPE_E2E_PLAN. Validated against the SAME BillingPlanKey contract production code uses —
+// an unrecognised value is a hard config error, not a silent fallback.
+const RAW_PLAN = process.env.STRIPE_E2E_PLAN?.trim() || 'monthly';
+const PLAN_PARSE = BillingPlanKey.safeParse(RAW_PLAN);
+const PLAN: BillingPlanKey = PLAN_PARSE.success ? PLAN_PARSE.data : 'monthly';
+
+// Reuse the production billing config reader — the SAME per-plan price map BillingService
+// resolves against — rather than re-declaring a plan→env-var mapping here.
+const billingConfig = loadBillingConfig(process.env);
+const PLAN_PRICE = billingConfig.prices[PLAN];
 
 const EMAIL_PREFIX = 'f68-';
 const EMAIL_DOMAIN = '@tennis.test';
@@ -310,17 +343,19 @@ async function preflight(): Promise<void> {
 function missingRequiredEnv(): string[] {
   const missing: string[] = [];
   if (!SECRET_KEY) missing.push('STRIPE_SECRET_KEY');
-  if (!PRICE_LIFETIME) missing.push('STRIPE_PRICE_LIFETIME');
   if (!WEBHOOK_SECRET) missing.push('STRIPE_WEBHOOK_SECRET');
+  if (!PLAN_PARSE.success) missing.push(`STRIPE_E2E_PLAN (invalid value: ${RAW_PLAN})`);
+  else if (!PLAN_PRICE) missing.push(`STRIPE_PRICE_${PLAN.toUpperCase()}`);
   return missing;
 }
 
 async function main(): Promise<void> {
   console.log('Feature 68 — Stripe test-mode E2E smoke (hybrid: real Stripe API + signed webhook)');
-  console.log(`API base: ${API_BASE}\n`);
+  console.log(`API base: ${API_BASE}`);
+  console.log(`Plan under test: ${PLAN}\n`);
 
   const missing = missingRequiredEnv();
-  const anyStripeEnv = Boolean(SECRET_KEY || PRICE_LIFETIME || WEBHOOK_SECRET);
+  const anyStripeEnv = Boolean(SECRET_KEY || WEBHOOK_SECRET || PLAN_PRICE);
 
   // Gate (task 2). RUN_STRIPE_E2E=1 forces a real run and turns missing env into a hard fail.
   if (missing.length > 0) {
@@ -328,7 +363,8 @@ async function main(): Promise<void> {
       console.error(
         `\x1b[31mRUN_STRIPE_E2E=1 but required Stripe env is missing:\x1b[0m ${missing.join(', ')}\n` +
           '  This flag DEMANDS a real Stripe test-mode run — refusing to skip. Provide:\n' +
-          '    STRIPE_SECRET_KEY=sk_test_…  STRIPE_PRICE_LIFETIME=price_…  STRIPE_WEBHOOK_SECRET=whsec_…\n' +
+          '    STRIPE_SECRET_KEY=sk_test_…  STRIPE_WEBHOOK_SECRET=whsec_…\n' +
+          `    STRIPE_PRICE_${PLAN.toUpperCase()}=price_…  (or set STRIPE_E2E_PLAN to a plan you HAVE configured)\n` +
           '  (and run the API with the SAME STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET).\n',
       );
       process.exit(1);
@@ -368,13 +404,13 @@ async function main(): Promise<void> {
   let firstCustomerId: string | null = null;
   let checkoutUrl: string | null = null;
   {
-    const { status, body } = await postBilling('/billing/checkout', token, { plan: 'lifetime' });
+    const { status, body } = await postBilling('/billing/checkout', token, { plan: PLAN });
     expectTrue(
-      '1 lifetime checkout → 200 (real Stripe checkout.sessions.create)',
-      status === 200,
+      `1 ${PLAN} checkout → 201 (real Stripe checkout.sessions.create, mode=subscription)`,
+      status === 201,
       `got ${status}: ${JSON.stringify(body)}`,
     );
-    assertUrlDto('1 lifetime checkout', body);
+    assertUrlDto(`1 ${PLAN} checkout`, body);
     checkoutUrl = (body as { url?: string } | undefined)?.url ?? null;
 
     const afterFirst = await prisma.user.findUnique({
@@ -391,8 +427,8 @@ async function main(): Promise<void> {
 
   // ── 2. Second checkout reuses the SAME real customer ────────────────────────────────
   {
-    const { status } = await postBilling('/billing/checkout', token, { plan: 'lifetime' });
-    expectTrue('2 second checkout → 200', status === 200, `got ${status}`);
+    const { status } = await postBilling('/billing/checkout', token, { plan: PLAN });
+    expectTrue('2 second checkout → 201', status === 201, `got ${status}`);
     const afterSecond = await prisma.user.findUnique({
       where: { email },
       select: { stripeCustomerId: true },
@@ -408,8 +444,8 @@ async function main(): Promise<void> {
   {
     const { status, body } = await postBilling('/billing/portal', token);
     expectTrue(
-      '3 portal → 200 (real Stripe billingPortal.sessions.create)',
-      status === 200,
+      '3 portal → 201 (real Stripe billingPortal.sessions.create)',
+      status === 201,
       `got ${status}: ${JSON.stringify(body)}`,
     );
     assertUrlDto('3 portal', body);
@@ -433,15 +469,15 @@ async function main(): Promise<void> {
     );
   }
 
-  // ── 5. Pull REAL identifiers from the real checkout session ──────────────────────────
+  // ── 5. Pull the REAL customer id from the real checkout session ─────────────────────
   // The real session id is embedded in the hosted URL (…/c/pay/cs_test_…#…). We retrieve
-  // the session from Stripe to read its real customer + (usually null pre-payment)
-  // payment_intent. Because test mode never completes the payment unattended, the
-  // payment_intent is typically absent — so we mint a namespaced pi_f68_… anchor for the
-  // signed synthetic event. The customer + session ids ARE the real ones from Stripe.
+  // the session from Stripe to confirm its real customer. A subscription-mode Checkout
+  // Session has no payment_intent until a hosted page actually completes payment (which
+  // this unattended harness cannot drive), so the fulfillment anchor below is the
+  // subscription id instead — a namespaced synthetic one, since Stripe never allocates a
+  // real `sub_…` without a completed payment either. The customer + session ids ARE real.
   const realCustomerId = firstCustomerId as string;
   let realSessionId = extractSessionId(checkoutUrl);
-  let realPaymentIntentId: string | null = null;
   {
     if (realSessionId) {
       try {
@@ -451,7 +487,6 @@ async function main(): Promise<void> {
           session.id === realSessionId && stringId(session.customer) === realCustomerId,
           `session=${session.id} customer=${String(stringId(session.customer))}`,
         );
-        realPaymentIntentId = stringId(session.payment_intent);
       } catch (err) {
         expectTrue('5 retrieved the REAL checkout session from Stripe', false, describeError(err));
       }
@@ -464,18 +499,20 @@ async function main(): Promise<void> {
         `could not parse a cs_… id from the hosted URL (${String(checkoutUrl)}); using a synthetic session id. Customer is still real.`,
       );
     }
-    // Anchor for the lifetime unlock: prefer the real payment_intent, else a namespaced id.
-    if (!realPaymentIntentId) realPaymentIntentId = `pi_f68_${randomBytes(6).toString('hex')}`;
   }
+  // Anchor for the subscription grant: a namespaced synthetic subscription id — the same
+  // anchor StripeWebhookService uses for a subscription checkout (providerSubscriptionId /
+  // providerPurchaseId = the subscription id).
+  const syntheticSubscriptionId = `sub_f68_${randomBytes(6).toString('hex')}`;
 
-  // ── 6. Signed synthetic checkout.session.completed → real fulfillment ───────────────
+  // ── 6. Signed synthetic checkout.session.completed (mode=subscription) → real fulfillment ─
   const checkoutEvent = makeEvent('checkout.session.completed', {
     id: realSessionId,
     object: 'checkout.session',
-    mode: 'payment',
+    mode: 'subscription',
     customer: realCustomerId, // the REAL customer → webhook resolves the user by it too
     client_reference_id: userId,
-    payment_intent: realPaymentIntentId,
+    subscription: syntheticSubscriptionId,
   });
   {
     const { status } = await postSignedWebhook(checkoutEvent);
@@ -486,16 +523,17 @@ async function main(): Promise<void> {
     );
     const ents = await prisma.entitlement.findMany({ where: { userId } });
     expectTrue(
-      '6 one active lifetime entitlement created',
+      '6 one active subscription entitlement created',
       ents.length === 1 &&
-        ents[0]?.kind === 'lifetime_unlock' &&
+        ents[0]?.kind === 'subscription' &&
         ents[0]?.status === 'active',
       `ents: ${JSON.stringify(ents.map((e) => ({ k: e.kind, s: e.status })))}`,
     );
     expectTrue(
-      '6 entitlement anchored on the payment_intent',
-      ents[0]?.providerPurchaseId === realPaymentIntentId,
-      `providerPurchaseId: ${ents[0]?.providerPurchaseId}`,
+      '6 entitlement anchored on the subscription id',
+      ents[0]?.providerPurchaseId === syntheticSubscriptionId &&
+        ents[0]?.providerSubscriptionId === syntheticSubscriptionId,
+      `providerPurchaseId: ${ents[0]?.providerPurchaseId} providerSubscriptionId: ${ents[0]?.providerSubscriptionId}`,
     );
   }
 
@@ -506,14 +544,14 @@ async function main(): Promise<void> {
     expectTrue('7 duplicate delivery → still exactly one entitlement', count === 1, `count: ${count}`);
   }
 
-  // ── 8. /v1/me flips to 'lifetime' + exact-location unlocks + no leak ─────────────────
+  // ── 8. /v1/me flips to 'subscription' + exact-location unlocks + no leak ────────────
   {
     const { status, body } = await getMe(token);
     const membership = (body as { membership?: string } | undefined)?.membership;
     expectTrue('8 /v1/me → 200', status === 200, `got ${status}`);
     expectTrue(
-      "8 /v1/me flips 'free' → 'lifetime' after fulfillment",
-      membership === 'lifetime',
+      "8 /v1/me flips 'free' → 'subscription' after fulfillment",
+      membership === 'subscription',
       `membership: ${String(membership)}`,
     );
     assertNoProviderLeak('8 /v1/me', body);
@@ -523,20 +561,24 @@ async function main(): Promise<void> {
     assertNoProviderLeak('8 exact-location', exact.body);
   }
 
-  // ── 9. Signed synthetic refund → revoke; /v1/me 'free', exact-location 403 ──────────
+  // ── 9. Signed synthetic customer.subscription.deleted → revoke; /v1/me 'free',
+  //      exact-location 403 ────────────────────────────────────────────────────────────
+  // A subscription checkout has no PaymentIntent to anchor a `charge.refunded` revoke on
+  // (that anchor belongs to a one-time purchase); ending a subscription is expressed as
+  // `customer.subscription.deleted` — the SAME event StripeWebhookService uses to lapse a
+  // real cancelled/ended subscription — matched by providerSubscriptionId.
   {
-    const refundEvent = makeEvent('charge.refunded', {
-      id: `ch_f68_${randomBytes(6).toString('hex')}`,
-      object: 'charge',
-      payment_intent: realPaymentIntentId,
+    const deletedEvent = makeEvent('customer.subscription.deleted', {
+      id: syntheticSubscriptionId,
+      object: 'subscription',
       customer: realCustomerId,
-      refunded: true,
+      status: 'canceled',
     });
-    const { status } = await postSignedWebhook(refundEvent);
-    expectTrue('9 signed charge.refunded → 200', status === 200, `got ${status}`);
+    const { status } = await postSignedWebhook(deletedEvent);
+    expectTrue('9 signed customer.subscription.deleted → 200', status === 200, `got ${status}`);
 
     const ent = await prisma.entitlement.findFirst({ where: { userId } });
-    expectTrue('9 entitlement revoked (status=refunded)', ent?.status === 'refunded', `status: ${ent?.status}`);
+    expectTrue('9 entitlement revoked (status=expired)', ent?.status === 'expired', `status: ${ent?.status}`);
 
     const me = await getMe(token);
     const membership = (me.body as { membership?: string } | undefined)?.membership;
@@ -606,9 +648,10 @@ function summarize(): void {
     process.exit(1);
   }
   console.log(
-    '\n\x1b[32mVERIFICATION PASSED — real Stripe test-mode checkout/portal/customer + signed-webhook ' +
-      'fulfillment, /v1/me flip, exact-location unlock, and refund revoke all hold ' +
-      '(hybrid: real Stripe API objects + signed synthetic delivery — NOT full Stripe CLI event delivery).\x1b[0m\n',
+    `\n\x1b[32mVERIFICATION PASSED — real Stripe test-mode checkout/portal/customer (${PLAN}, ` +
+      'mode=subscription) + signed-webhook fulfillment, /v1/me flip, exact-location unlock, and ' +
+      'subscription-cancellation revoke all hold (hybrid: real Stripe API objects + signed ' +
+      'synthetic delivery — NOT full Stripe CLI event delivery).\x1b[0m\n',
   );
   if (skipped) {
     console.log(

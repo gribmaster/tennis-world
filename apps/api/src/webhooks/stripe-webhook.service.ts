@@ -35,6 +35,15 @@ import { BILLING_CONFIG, type BillingConfig } from '../billing/billing.config';
 // PRIVACY: provider ids (cus_/sub_/pi_/cs_) are written ONLY to server-only Entitlement
 // columns + a minimal `metadata` blob (event id + type). They are NEVER surfaced by any
 // DTO — EntitlementsService doesn't even select them. No secret is ever persisted.
+//
+// `customer.subscription.updated` (Feature 71) keeps a subscription entitlement's
+// `status`/`expiresAt` in sync with Stripe's own subscription lifecycle (dunning, cancel-
+// at-period-end, plan/period changes) WITHOUT inventing a new billing policy: it reuses the
+// exact same "live status → active, lapsed status → expired" split that
+// `checkout.session.completed`/`invoice.paid`/`customer.subscription.deleted` already
+// encode, and the SAME time-window rule in EntitlementsService (`expiresAt > now`) that
+// already makes `cancel_at_period_end=true` fall off access at the right moment — no early
+// revoke is needed, `status` legitimately stays `active` until Stripe's period end.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Provider tag for the ProcessedWebhookEvent ledger (shared table, future IAP/CRM differ). */
@@ -45,9 +54,35 @@ const SUPPORTED_EVENTS = new Set<Stripe.Event['type']>([
   'checkout.session.completed',
   'invoice.paid',
   'invoice.payment_succeeded',
+  'customer.subscription.updated',
   'customer.subscription.deleted',
   'charge.refunded',
   'charge.dispute.created',
+]);
+
+/**
+ * Stripe subscription statuses that mean "the subscription is currently paid up" — the
+ * entitlement stays/becomes active with `expiresAt` = current_period_end (Feature-66/70
+ * rule, unchanged): `trialing` counts too since Stripe already treats a trial as access-
+ * granting. `active` covers the `cancel_at_period_end=true` case as well — Stripe keeps
+ * `status='active'` right up to the period end, so no special-casing is needed: the
+ * existing time-window rule in EntitlementsService already drops access the moment
+ * `expiresAt` passes, which IS `current_period_end`.
+ */
+const LIVE_SUBSCRIPTION_STATUSES = new Set<Stripe.Subscription.Status>(['active', 'trialing']);
+
+/**
+ * Stripe subscription statuses that mean "no longer owed access" — mirrors the existing
+ * `customer.subscription.deleted` → `expired` policy (onSubscriptionDeleted). Applied here
+ * too so a status transition to one of these via `customer.subscription.updated` (which
+ * Stripe sends before/instead of a `.deleted` event for some paths, e.g. `unpaid` after
+ * exhausting retries, or `incomplete_expired` when the first payment never completes)
+ * revokes access the same way. No new policy invented — same target state, same reason.
+ */
+const LAPSED_SUBSCRIPTION_STATUSES = new Set<Stripe.Subscription.Status>([
+  'canceled',
+  'unpaid',
+  'incomplete_expired',
 ]);
 
 @Injectable()
@@ -182,6 +217,9 @@ export class StripeWebhookService {
       case 'invoice.payment_succeeded':
         await this.onInvoicePaid(tx, event.data.object);
         break;
+      case 'customer.subscription.updated':
+        await this.onSubscriptionUpdated(tx, event.data.object);
+        break;
       case 'customer.subscription.deleted':
         await this.onSubscriptionDeleted(tx, event.data.object);
         break;
@@ -303,7 +341,107 @@ export class StripeWebhookService {
     );
   }
 
-  // ── C. customer.subscription.deleted → lapse ──────────────────────────────────
+  // ── C. customer.subscription.updated → sync ───────────────────────────────────
+
+  /**
+   * A subscription's status, `cancel_at_period_end`, or `current_period_end` changed —
+   * this fires for cancel-at-period-end toggles, plan changes, dunning transitions
+   * (`active` → `past_due`), and terminal statuses Stripe sometimes reports here instead
+   * of (or before) a `customer.subscription.deleted` event. Matched by
+   * `providerSubscriptionId`; an unknown subscription (e.g. it belongs to a customer with
+   * no entitlement row yet) is a no-op — there's nothing to sync.
+   *
+   * Policy (reuses the existing rules — no new billing policy):
+   *   - live status (`active`/`trialing`) → keep/restore `active`, sync `expiresAt` to the
+   *     current `current_period_end`. This is ALSO the `cancel_at_period_end=true` path:
+   *     Stripe keeps `status='active'` until the period actually ends, so no extra branch
+   *     is needed — EntitlementsService's existing `expiresAt > now` window already drops
+   *     access exactly at period end. `cancel_at_period_end` itself is stashed in
+   *     `metadata` (display-only; see class header) since the schema has no dedicated
+   *     column and this step does not add one.
+   *   - lapsed status (`canceled`/`unpaid`/`incomplete_expired`) → same effect as
+   *     `onSubscriptionDeleted`: flip to `expired`.
+   *   - any other status (`past_due`, `incomplete`, `paused`) → access-affecting rules for
+   *     these aren't defined anywhere else in the codebase either; we conservatively leave
+   *     `status` untouched (Stripe's own dunning/retry flow governs what happens next) but
+   *     still refresh `expiresAt`/metadata so a later read reflects the latest period info.
+   */
+  private async onSubscriptionUpdated(
+    tx: Prisma.TransactionClient,
+    subscription: Stripe.Subscription,
+  ): Promise<void> {
+    const existing = await tx.entitlement.findFirst({
+      where: { providerSubscriptionId: subscription.id },
+      select: { id: true, status: true },
+    });
+    if (!existing) {
+      this.logger.log(
+        `subscription ${subscription.id} updated: no matching entitlement — no-op.`,
+      );
+      return;
+    }
+
+    const periodEnd = readSubscriptionPeriodEnd(subscription);
+    const expiresAt = periodEnd ? new Date(periodEnd * 1000) : null;
+    const metadata = this.baseMetadata(subscription.id, 'customer.subscription.updated', {
+      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      subscriptionStatus: subscription.status,
+    });
+
+    if (LIVE_SUBSCRIPTION_STATUSES.has(subscription.status)) {
+      await tx.entitlement.update({
+        where: { id: existing.id },
+        data: {
+          status: 'active',
+          expiresAt,
+          metadata,
+          // A live status is, by definition, not revoked — clear any stale audit so a
+          // dunning recovery (past_due → active) reads as a clean active row again.
+          revokedAt: null,
+          revokedReason: null,
+        },
+      });
+      this.logger.log(
+        `subscription ${subscription.id} updated (status=${subscription.status}, ` +
+          `cancel_at_period_end=${String(subscription.cancel_at_period_end)}) — entitlement synced active.`,
+      );
+      return;
+    }
+
+    if (LAPSED_SUBSCRIPTION_STATUSES.has(subscription.status)) {
+      if (existing.status !== 'active') {
+        // Already lapsed/revoked (e.g. the .deleted event beat this one, or a retry) —
+        // no-op, matching onSubscriptionDeleted's "only flip active rows" guard.
+        return;
+      }
+      await tx.entitlement.update({
+        where: { id: existing.id },
+        data: {
+          status: 'expired',
+          revokedAt: new Date(),
+          revokedReason: 'subscription_deleted',
+          metadata,
+        },
+      });
+      this.logger.log(
+        `subscription ${subscription.id} updated (status=${subscription.status}) — entitlement expired.`,
+      );
+      return;
+    }
+
+    // Transitional status (past_due/incomplete/paused/…) — no access-rule change, but
+    // keep expiresAt/metadata current so it's accurate the moment status resolves.
+    await tx.entitlement.update({
+      where: { id: existing.id },
+      data: { expiresAt, metadata },
+    });
+    this.logger.log(
+      `subscription ${subscription.id} updated (status=${subscription.status}) — ` +
+        'transitional status, entitlement status left unchanged.',
+    );
+  }
+
+  // ── D. customer.subscription.deleted → lapse ──────────────────────────────────
 
   /**
    * A cancelled/ended subscription. Flip the matching entitlement to `expired` so it is no
@@ -327,7 +465,7 @@ export class StripeWebhookService {
     );
   }
 
-  // ── D. charge.refunded / charge.dispute.created → revoke ──────────────────────
+  // ── E. charge.refunded / charge.dispute.created → revoke ──────────────────────
 
   /**
    * A refunded charge. Revoke the entitlement whose providerPurchaseId is the charge's
@@ -492,9 +630,17 @@ export class StripeWebhookService {
     }
   }
 
-  /** Minimal, secret-free metadata: which Stripe object + event drove this write. */
-  private baseMetadata(objectId: string, eventType: string): Prisma.InputJsonValue {
-    return { stripeObjectId: objectId, eventType };
+  /**
+   * Minimal, secret-free metadata: which Stripe object + event drove this write, plus any
+   * caller-supplied EXTRA fields (e.g. `cancelAtPeriodEnd` — display-only, coarse booleans/
+   * enums, never a provider id — the same privacy bar as the rest of this blob).
+   */
+  private baseMetadata(
+    objectId: string,
+    eventType: string,
+    extra?: Record<string, Prisma.InputJsonValue>,
+  ): Prisma.InputJsonValue {
+    return { stripeObjectId: objectId, eventType, ...extra };
   }
 
   /** Prisma P2002 = unique-constraint violation (duplicate event id, or purchase race). */

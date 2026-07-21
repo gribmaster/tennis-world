@@ -8,13 +8,15 @@
 // `stripe.webhooks.generateTestHeaderString(payload, secret)` — the same HMAC scheme the
 // API verifies with `stripe.webhooks.constructEvent`. It proves the SIGNATURE + IDEMPOTENCY
 // + FULFILLMENT paths (unsigned→400, bad-sig→400, unsupported→200 recorded, duplicate→200
-// once, checkout→grant, refund→revoke, /v1/me flip, no provider-id leak).
+// once, checkout→grant, refund→revoke, /v1/me flip, no provider-id leak) — and, as of
+// Feature 71, `customer.subscription.updated` (live-status sync, cancel_at_period_end
+// staying effective until period end, current_period_end changes, and lapsed-status expiry).
 //
 // It is NOT a full Stripe API event delivery: the payloads are hand-built (not fetched from
-// Stripe), and the flows chosen (lifetime unlock + refund) require NO outbound Stripe call,
-// so no live Stripe account/network is touched. That means it runs with a FAKE test key
-// (any `sk_test_…` string) + a chosen `STRIPE_WEBHOOK_SECRET` — do not read a green run as
-// "the live Stripe integration works"; for that use the Stripe CLI
+// Stripe), and the flows chosen (lifetime unlock + refund + subscription sync) require NO
+// outbound Stripe call, so no live Stripe account/network is touched. That means it runs
+// with a FAKE test key (any `sk_test_…` string) + a chosen `STRIPE_WEBHOOK_SECRET` — do not
+// read a green run as "the live Stripe integration works"; for that use the Stripe CLI
 // (`stripe listen --forward-to localhost:3001/v1/webhooks/stripe` + `stripe trigger …`).
 //
 // ── OPT-IN / CI SAFETY (prompt task 9/13) ────────────────────────────────────────────
@@ -48,7 +50,19 @@
 //   H. exact-location becomes available (200) for a real court after the grant
 //   I. refund event (charge.refunded) → the entitlement is revoked (status=refunded)
 //   J. after revoke, /v1/me is 'free' again and exact-location is 403
-//   K. no provider id (cus_/sub_/pi_/cs_) appears in /v1/me or the exact-location response
+//   (no provider id (cus_/sub_/pi_/cs_) appears in /v1/me or the exact-location response —
+//    checked inline via assertNoProviderLeak at each relevant step, not a standalone scenario)
+//
+//   customer.subscription.updated (Feature 71):
+//   K. seed an active subscription entitlement (checkout.session.completed, mode=subscription)
+//   L. still-active update → entitlement stays active, expiresAt = current_period_end
+//   M. cancel_at_period_end=true (status still 'active') → entitlement STAYS active/effective
+//      until period end (existing time-window rule); cancelAtPeriodEnd recorded in metadata
+//   N. current_period_end changes → expiresAt is updated to the new value
+//   O. duplicate delivery of the same event → 200 no-op, no duplicate entitlement rows
+//   P. status becomes 'canceled' → entitlement expires (same effect as .deleted), /v1/me
+//      flips to 'free', exact-location 403 again
+//   Q. a further update after an already-lapsed status is a safe no-op
 //
 // CLEANUP: every user/entitlement/token/event this script creates is namespaced
 // (`f66-…@tennis.test`, customer `cus_f66_…`, purchase ids `pi_f66_…`, event ids `evt_f66_…`).
@@ -373,6 +387,156 @@ async function main(): Promise<void> {
     expectTrue("J /v1/me is 'free' after revoke", membership === 'free', `membership: ${String(membership)}`);
     const exact = await getExactLocation(token, REAL_SLUG);
     expectTrue('J exact-location → 403 after revoke', exact.status === 403, `got ${exact.status}`);
+  }
+
+  // ── customer.subscription.updated scenarios (separate subscription purchase anchor,
+  //    seeded via checkout.session.completed mode='subscription' so we start from a real
+  //    active subscription entitlement rather than reaching into Prisma directly) ────────
+
+  const subscriptionId = `sub_f66_${randomBytes(6).toString('hex')}`;
+  const subPurchaseId = subscriptionId; // BillingService anchors subscriptions on the sub id.
+  const initialPeriodEnd = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60; // +30d
+
+  function makeSubscriptionObject(overrides: Record<string, unknown>): Record<string, unknown> {
+    return {
+      id: subscriptionId,
+      object: 'subscription',
+      customer: customerId,
+      status: 'active',
+      cancel_at_period_end: false,
+      current_period_end: initialPeriodEnd,
+      ...overrides,
+    };
+  }
+
+  // K. seed an active subscription (checkout.session.completed, mode=subscription).
+  {
+    const evt = makeEvent('checkout.session.completed', {
+      id: `cs_f66_${randomBytes(6).toString('hex')}`,
+      object: 'checkout.session',
+      mode: 'subscription',
+      customer: customerId,
+      client_reference_id: userId,
+      subscription: subscriptionId,
+    });
+    const { status } = await postWebhook(evt);
+    expectTrue('K seed subscription checkout → 200', status === 200, `got ${status}`);
+    const ent = await prisma.entitlement.findUnique({ where: { providerPurchaseId: subPurchaseId } });
+    expectTrue(
+      'K subscription entitlement created (active, kind=subscription)',
+      ent?.kind === 'subscription' && ent?.status === 'active',
+      `ent: ${JSON.stringify(ent && { k: ent.kind, s: ent.status })}`,
+    );
+  }
+
+  // L. customer.subscription.updated, still active → entitlement stays active,
+  //    expiresAt reflects current_period_end.
+  {
+    const evt = makeEvent('customer.subscription.updated', makeSubscriptionObject({}));
+    const { status } = await postWebhook(evt);
+    expectTrue('L customer.subscription.updated (active) → 200', status === 200, `got ${status}`);
+    const ent = await prisma.entitlement.findUnique({ where: { providerPurchaseId: subPurchaseId } });
+    expectTrue('L entitlement remains active', ent?.status === 'active', `status: ${ent?.status}`);
+    expectTrue(
+      'L expiresAt matches current_period_end',
+      ent?.expiresAt?.getTime() === initialPeriodEnd * 1000,
+      `expiresAt: ${ent?.expiresAt?.toISOString()} expected: ${new Date(initialPeriodEnd * 1000).toISOString()}`,
+    );
+    const me = await getMe(token);
+    const membership = (me.body as { membership?: string } | undefined)?.membership;
+    expectTrue("L /v1/me is 'subscription' while active", membership === 'subscription', `membership: ${String(membership)}`);
+  }
+
+  // M. cancel_at_period_end=true (status still 'active') → entitlement STAYS active/
+  //    effective right up to expiresAt (no early revoke) — the existing time-window rule,
+  //    not a new one. cancelAtPeriodEnd itself is recorded in metadata (display-only; no
+  //    schema change in this step).
+  {
+    const evt = makeEvent(
+      'customer.subscription.updated',
+      makeSubscriptionObject({ cancel_at_period_end: true }),
+    );
+    const { status } = await postWebhook(evt);
+    expectTrue('M cancel_at_period_end=true → 200', status === 200, `got ${status}`);
+    const ent = await prisma.entitlement.findUnique({ where: { providerPurchaseId: subPurchaseId } });
+    expectTrue('M entitlement still active (access continues until period end)', ent?.status === 'active', `status: ${ent?.status}`);
+    const meta = ent?.metadata as Record<string, unknown> | null;
+    expectTrue('M metadata records cancelAtPeriodEnd=true', meta?.cancelAtPeriodEnd === true, `metadata: ${JSON.stringify(meta)}`);
+    const me = await getMe(token);
+    const membership = (me.body as { membership?: string } | undefined)?.membership;
+    expectTrue("M /v1/me still 'subscription' (effective until period end)", membership === 'subscription', `membership: ${String(membership)}`);
+    assertNoProviderLeak('M /v1/me', me.body);
+  }
+
+  // N. current_period_end changes (e.g. Stripe extended/renewed the period without a
+  //    separate invoice.paid in this synthetic run) → expiresAt is updated to the new value.
+  const extendedPeriodEnd = initialPeriodEnd + 30 * 24 * 60 * 60; // +30 more days
+  {
+    const evt = makeEvent(
+      'customer.subscription.updated',
+      makeSubscriptionObject({ cancel_at_period_end: false, current_period_end: extendedPeriodEnd }),
+    );
+    const { status } = await postWebhook(evt);
+    expectTrue('N current_period_end change → 200', status === 200, `got ${status}`);
+    const ent = await prisma.entitlement.findUnique({ where: { providerPurchaseId: subPurchaseId } });
+    expectTrue(
+      'N expiresAt updated to the new current_period_end',
+      ent?.expiresAt?.getTime() === extendedPeriodEnd * 1000,
+      `expiresAt: ${ent?.expiresAt?.toISOString()} expected: ${new Date(extendedPeriodEnd * 1000).toISOString()}`,
+    );
+    expectTrue('N entitlement still active', ent?.status === 'active', `status: ${ent?.status}`);
+  }
+
+  // O. duplicate delivery of the SAME event id → 200 no-op, no duplicate entitlement rows,
+  //    state unchanged (idempotency via ProcessedWebhookEvent).
+  {
+    const evt = makeEvent(
+      'customer.subscription.updated',
+      makeSubscriptionObject({ cancel_at_period_end: false, current_period_end: extendedPeriodEnd }),
+    );
+    const first = await postWebhook(evt);
+    const second = await postWebhook(evt);
+    expectTrue('O duplicate customer.subscription.updated → 200 both', first.status === 200 && second.status === 200, `${first.status}/${second.status}`);
+    const count = await prisma.entitlement.count({ where: { providerSubscriptionId: subscriptionId } });
+    expectTrue('O still exactly one entitlement row for the subscription', count === 1, `count: ${count}`);
+    const processedCount = await prisma.processedWebhookEvent.count({ where: { id: evt.id as string } });
+    expectTrue('O event recorded exactly once in ProcessedWebhookEvent', processedCount === 1, `count: ${processedCount}`);
+  }
+
+  // P. status becomes 'canceled' → entitlement expires (same effect as customer.subscription.deleted),
+  //    /v1/me flips back to 'free', exact-location 403 again.
+  {
+    const evt = makeEvent(
+      'customer.subscription.updated',
+      makeSubscriptionObject({ status: 'canceled', cancel_at_period_end: true }),
+    );
+    const { status } = await postWebhook(evt);
+    expectTrue('P status=canceled → 200', status === 200, `got ${status}`);
+    const ent = await prisma.entitlement.findUnique({ where: { providerPurchaseId: subPurchaseId } });
+    expectTrue('P entitlement status is expired', ent?.status === 'expired', `status: ${ent?.status}`);
+    expectTrue(
+      'P revokedReason = subscription_deleted, revokedAt set',
+      ent?.revokedReason === 'subscription_deleted' && ent?.revokedAt !== null,
+      `reason: ${ent?.revokedReason}`,
+    );
+    const me = await getMe(token);
+    const membership = (me.body as { membership?: string } | undefined)?.membership;
+    expectTrue("P /v1/me is 'free' after cancellation", membership === 'free', `membership: ${String(membership)}`);
+    const exact = await getExactLocation(token, REAL_SLUG);
+    expectTrue('P exact-location → 403 after cancellation', exact.status === 403, `got ${exact.status}`);
+  }
+
+  // Q. a further update after an already-lapsed status is a safe no-op (doesn't resurrect
+  //    or double-revoke) — re-sends 'canceled' again with a distinct event id.
+  {
+    const evt = makeEvent(
+      'customer.subscription.updated',
+      makeSubscriptionObject({ status: 'canceled', cancel_at_period_end: true }),
+    );
+    const { status } = await postWebhook(evt);
+    expectTrue('Q repeat canceled update (distinct event id) → 200', status === 200, `got ${status}`);
+    const count = await prisma.entitlement.count({ where: { providerSubscriptionId: subscriptionId } });
+    expectTrue('Q still exactly one entitlement row (no resurrection/duplicate)', count === 1, `count: ${count}`);
   }
 
   await cleanup();

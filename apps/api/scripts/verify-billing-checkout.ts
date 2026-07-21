@@ -17,8 +17,8 @@
 //
 //   # apps/api/.env (test mode):
 //   STRIPE_SECRET_KEY=sk_test_…
-//   STRIPE_PRICE_LIFETIME=price_…            # required
-//   STRIPE_PRICE_SUBSCRIPTION=price_…        # optional (enables the subscription check)
+//   STRIPE_PRICE_MONTHLY=price_…             # required
+//   STRIPE_PRICE_QUARTERLY=price_…           # optional (enables the quarterly check)
 //   pnpm db:up && pnpm --filter @tennis/api prisma:migrate:deploy && pnpm --filter @tennis/api db:seed
 //   pnpm --filter @tennis/api dev            # API on :3001 (loads the same .env)
 //   DATABASE_URL=… NEXT_PUBLIC_API_BASE_URL=http://localhost:3001/v1 \
@@ -26,12 +26,12 @@
 //
 // Scenarios:
 //   A. no auth → 401 (both checkout + portal, AuthGuard before handler)
-//   B. lifetime checkout → 200 { url } (a hosted checkout.stripe.com URL); NO provider
+//   B. monthly checkout → 201 { url } (a hosted checkout.stripe.com URL); NO provider
 //      id (cus_/sub_/pi_/cs_) in the body
 //   C. user.stripeCustomerId is now stored (created lazily on first checkout)
 //   D. second checkout REUSES the same customer (stripeCustomerId unchanged)
-//   E. portal → 200 { url }
-//   F. subscription: 200 { url } if STRIPE_PRICE_SUBSCRIPTION is set, else 400 (disabled)
+//   E. portal → 201 { url }
+//   F. quarterly: 200 { url } if STRIPE_PRICE_QUARTERLY is set, else 400 (disabled)
 //   G. unknown plan → 400 (DTO @IsIn)
 //   H. NO Entitlement row was created for the user (checkout ≠ fulfillment)
 //   I. /v1/me still reports membership 'free' (no webhook grant yet)
@@ -218,13 +218,13 @@ async function main(): Promise<void> {
     console.log(
       '\x1b[33mSKIPPED\x1b[0m — STRIPE_SECRET_KEY is not set. This harness is opt-in and\n' +
         '          needs Stripe TEST-MODE config (see the header of this file).\n' +
-        '          Set STRIPE_SECRET_KEY + STRIPE_PRICE_LIFETIME (and run the API with the\n' +
+        '          Set STRIPE_SECRET_KEY + STRIPE_PRICE_MONTHLY (and run the API with the\n' +
         '          same env) to exercise checkout/portal. Exiting 0 (not a failure).\n',
     );
     process.exit(0);
   }
 
-  const hasSubscriptionPrice = Boolean(process.env.STRIPE_PRICE_SUBSCRIPTION?.trim());
+  const hasQuarterlyPrice = Boolean(process.env.STRIPE_PRICE_QUARTERLY?.trim());
 
   await preflight();
   await cleanup();
@@ -233,7 +233,7 @@ async function main(): Promise<void> {
 
   // A. No auth → 401 (both endpoints).
   {
-    const checkout = await postBilling('/billing/checkout', undefined, { plan: 'lifetime' });
+    const checkout = await postBilling('/billing/checkout', undefined, { plan: 'monthly' });
     expectTrue('A no-auth checkout → 401', checkout.status === 401, `got ${checkout.status}`);
     const portal = await postBilling('/billing/portal', undefined);
     expectTrue('A no-auth portal → 401', portal.status === 401, `got ${portal.status}`);
@@ -243,11 +243,11 @@ async function main(): Promise<void> {
   const email = `${EMAIL_PREFIX}buyer${EMAIL_DOMAIN}`;
   const token = await seedUserAndSignIn(email);
 
-  // B. lifetime checkout → 200 { url }.
+  // B. monthly checkout → 201 { url }.
   {
-    const { status, body } = await postBilling('/billing/checkout', token, { plan: 'lifetime' });
-    expectTrue('B lifetime checkout → 200', status === 200, `got ${status}: ${JSON.stringify(body)}`);
-    assertUrlDto('B lifetime checkout', body);
+    const { status, body } = await postBilling('/billing/checkout', token, { plan: 'monthly' });
+    expectTrue('B monthly checkout → 201', status === 201, `got ${status}: ${JSON.stringify(body)}`);
+    assertUrlDto('B monthly checkout', body);
   }
 
   // C. stripeCustomerId is now stored on the user.
@@ -263,8 +263,8 @@ async function main(): Promise<void> {
 
   // D. second checkout reuses the SAME customer (id unchanged).
   {
-    const { status } = await postBilling('/billing/checkout', token, { plan: 'lifetime' });
-    expectTrue('D second checkout → 200', status === 200, `got ${status}`);
+    const { status } = await postBilling('/billing/checkout', token, { plan: 'monthly' });
+    expectTrue('D second checkout → 201', status === 201, `got ${status}`);
     const afterSecond = await prisma.user.findUnique({
       where: { email },
       select: { stripeCustomerId: true },
@@ -276,22 +276,22 @@ async function main(): Promise<void> {
     );
   }
 
-  // E. portal → 200 { url }.
+  // E. portal → 201 { url }.
   {
     const { status, body } = await postBilling('/billing/portal', token);
-    expectTrue('E portal → 200', status === 200, `got ${status}: ${JSON.stringify(body)}`);
+    expectTrue('E portal → 201', status === 201, `got ${status}: ${JSON.stringify(body)}`);
     assertUrlDto('E portal', body);
   }
 
-  // F. subscription: 200 if configured, else clean 400.
+  // F. quarterly: 200 if configured, else clean 400.
   {
-    const { status, body } = await postBilling('/billing/checkout', token, { plan: 'subscription' });
-    if (hasSubscriptionPrice) {
-      expectTrue('F subscription checkout → 200 (price configured)', status === 200, `got ${status}: ${JSON.stringify(body)}`);
-      if (status === 200) assertUrlDto('F subscription checkout', body);
+    const { status, body } = await postBilling('/billing/checkout', token, { plan: 'quarterly' });
+    if (hasQuarterlyPrice) {
+      expectTrue('F quarterly checkout → 201 (price configured)', status === 201, `got ${status}: ${JSON.stringify(body)}`);
+      if (status === 201) assertUrlDto('F quarterly checkout', body);
     } else {
       expectTrue(
-        'F subscription checkout → 400 (price NOT configured, disabled plan)',
+        'F quarterly checkout → 400 (price NOT configured, disabled plan)',
         status === 400,
         `got ${status}: ${JSON.stringify(body)}`,
       );

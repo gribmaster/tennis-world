@@ -230,12 +230,20 @@ public court page never crashes; a real 5xx propagates (a fault must not masquer
   and 500s so Stripe retries safely.
 - **Events → lifecycle:** `checkout.session.completed` → grant lifetime (anchor = PaymentIntent) or
   subscription (anchor = subscription id, `expiresAt` = period end); `invoice.paid` /
-  `invoice.payment_succeeded` → renew (push `expiresAt`, re-activate); `customer.subscription.deleted`
-  → `expired`; `charge.refunded` → `refunded`; `charge.dispute.created` → `revoked`. Any other event →
-  recorded 200 no-op. Well-formed-but-unresolvable events are logged + no-op'd, not 500'd.
+  `invoice.payment_succeeded` → renew (push `expiresAt`, re-activate); `customer.subscription.updated`
+  (Feature 71) → sync: live status (`active`/`trialing`) keeps the entitlement `active` and refreshes
+  `expiresAt` to `current_period_end` (this is also the `cancel_at_period_end=true` path — Stripe keeps
+  `status='active'` until the period ends, so the existing `expiresAt > now` window in
+  `EntitlementsService` already drops access at the right moment with no early revoke; `cancelAtPeriodEnd`
+  is recorded in `metadata` for display, no schema change); lapsed status (`canceled`/`unpaid`/
+  `incomplete_expired`) → `expired`, same as `.deleted`; other transitional statuses (`past_due`/
+  `incomplete`/`paused`) refresh `expiresAt`/metadata only, status untouched.
+  `customer.subscription.deleted` → `expired`; `charge.refunded` → `refunded`; `charge.dispute.created`
+  → `revoked`. Any other event → recorded 200 no-op. Well-formed-but-unresolvable events are logged +
+  no-op'd, not 500'd.
 - **Write centralization** — all row writes live in `StripeWebhookService`; `EntitlementsService`
   stays read-only. Provider ids are written **only** to server-only `Entitlement` columns + a minimal
-  secret-free `metadata` blob (`{ stripeObjectId, eventType }`), never selected into any DTO.
+  secret-free `metadata` blob (`{ stripeObjectId, eventType, ...extra }`), never selected into any DTO.
 
 ---
 

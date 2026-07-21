@@ -149,9 +149,9 @@ async function postBilling(
   };
 }
 
-/** A checkout POST for a token — the body is a valid lifetime plan. */
+/** A checkout POST for a token — the body is a valid monthly plan. */
 const checkout = (token: string): Promise<BillingResponse> =>
-  postBilling('/billing/checkout', token, { plan: 'lifetime' });
+  postBilling('/billing/checkout', token, { plan: 'monthly' });
 /** A portal POST for a token — no body. */
 const portal = (token: string): Promise<BillingResponse> =>
   postBilling('/billing/portal', token);
@@ -211,7 +211,7 @@ async function main(): Promise<void> {
 
   // A. No auth → 401 (auth runs BEFORE the limiter; a 401 is never masked by a 429).
   {
-    const c = await postBilling('/billing/checkout', undefined, { plan: 'lifetime' });
+    const c = await postBilling('/billing/checkout', undefined, { plan: 'monthly' });
     expectTrue('A no-auth checkout → 401 (not 429)', c.status === 401, `got ${c.status}`);
     const p = await postBilling('/billing/portal', undefined);
     expectTrue('A no-auth portal → 401 (not 429)', p.status === 401, `got ${p.status}`);

@@ -18,9 +18,13 @@
 //   5.  status=revoked  (would-be effective)    → free
 //   6.  status=refunded (would-be effective)    → free
 //   7.  status=expired  (would-be effective)    → free
-//   8.  active subscription, expiresAt future   → lifetime
+//   8.  active subscription, expiresAt future   → subscription
 //   9.  multiple rows: non-expiring wins over a future-expiring row → lifetime, activeUntil null, reason lifetime_unlock
-//   10. multiple expiring rows: the LATEST expiresAt wins (deterministic) → activeUntil = the later date
+//   10. multiple expiring rows: the LATEST expiresAt wins (deterministic) → subscription, activeUntil = the later date
+//   11. active subscription, metadata.cancelAtPeriodEnd=true  → /v1/me cancelAtPeriodEnd=true, activeUntil=expiresAt, no raw metadata
+//   12. active subscription, metadata.cancelAtPeriodEnd=false → /v1/me cancelAtPeriodEnd=false, activeUntil=expiresAt
+//   13. lifetime member                                       → /v1/me has neither cancelAtPeriodEnd nor activeUntil
+//   14. free user                                              → /v1/me has neither cancelAtPeriodEnd nor activeUntil
 // Plus invariants on EVERY response: no provider id (cus_/sub_/pi_), no `email`, no
 // exact `lat`/`lng`, and verify-vs-/v1/me membership AGREE.
 //
@@ -163,6 +167,7 @@ async function seedUserAndSignIn(
     source: EntitlementSource;
     startsAt?: Date;
     expiresAt?: Date | null;
+    metadata?: Record<string, unknown>;
   }>,
 ): Promise<VerifyResult> {
   // Ensure the user exists FIRST so we can attach entitlements before signing in (the
@@ -184,6 +189,7 @@ async function seedUserAndSignIn(
         source: r.source,
         ...(r.startsAt ? { startsAt: r.startsAt } : {}),
         expiresAt: r.expiresAt ?? null,
+        ...(r.metadata ? { metadata: r.metadata } : {}),
       },
     });
   }
@@ -244,7 +250,7 @@ async function scenario(
   label: string,
   emailLocal: string,
   rows: Parameters<typeof seedUserAndSignIn>[1],
-  expectMembership: 'free' | 'lifetime',
+  expectMembership: 'free' | 'subscription' | 'lifetime',
 ): Promise<unknown> {
   const email = `${EMAIL_PREFIX}${emailLocal}${EMAIL_DOMAIN}`;
   const { accessToken, verifyMembership, verifyBody } = await seedUserAndSignIn(email, rows);
@@ -389,12 +395,13 @@ async function main(): Promise<void> {
     'free',
   );
 
-  // 8. Active subscription, expiresAt in the future → lifetime (badge maps subs→lifetime).
+  // 8. Active subscription, expiresAt in the future → subscription (badge distinguishes
+  //    a recurring subscription from a lifetime unlock).
   await scenario(
     '8 active-subscription',
     'subscription',
     [{ kind: 'subscription', status: 'active', source: 'stripe_web', expiresAt: future }],
-    'lifetime',
+    'subscription',
   );
 
   // 9. Multiple rows: a non-expiring row wins over a future-expiring one → lifetime,
@@ -419,8 +426,8 @@ async function main(): Promise<void> {
   );
 
   // 10. Multiple expiring rows: the later expiresAt wins. Both active subscriptions; the
-  //     effective answer is still 'lifetime' (badge), but this asserts the rule doesn't
-  //     mis-resolve to free when several expiring rows coexist (determinism smoke test).
+  //     effective answer is 'subscription' (badge), asserting the rule doesn't mis-resolve
+  //     to free when several expiring rows coexist (determinism smoke test).
   await scenario(
     '10 latest-expiry-wins',
     'twoexpiring',
@@ -428,7 +435,105 @@ async function main(): Promise<void> {
       { kind: 'subscription', status: 'active', source: 'stripe_web', expiresAt: future },
       { kind: 'subscription', status: 'active', source: 'stripe_web', expiresAt: farFuture },
     ],
+    'subscription',
+  );
+
+  // 11. Scheduled-cancellation display (follow-up to Feature 66/71): an active
+  //     subscription with `metadata.cancelAtPeriodEnd=true` surfaces BOTH
+  //     `cancelAtPeriodEnd: true` and `activeUntil` (= expiresAt) on /v1/me, without
+  //     exposing the raw metadata blob (only the two derived fields).
+  const body11 = (await scenario(
+    '11 subscription-cancel-at-period-end',
+    'cancelling',
+    [
+      {
+        kind: 'subscription',
+        status: 'active',
+        source: 'stripe_web',
+        expiresAt: future,
+        metadata: { cancelAtPeriodEnd: true, subscriptionStatus: 'active' },
+      },
+    ],
+    'subscription',
+  )) as { cancelAtPeriodEnd?: boolean; activeUntil?: string | null; metadata?: unknown };
+  expectTrue(
+    '11 cancelling: /v1/me cancelAtPeriodEnd === true',
+    body11.cancelAtPeriodEnd === true,
+    `got ${JSON.stringify(body11.cancelAtPeriodEnd)}`,
+  );
+  expectTrue(
+    '11 cancelling: /v1/me activeUntil === seeded expiresAt',
+    body11.activeUntil === future.toISOString(),
+    `got ${JSON.stringify(body11.activeUntil)} expected ${future.toISOString()}`,
+  );
+  expectTrue(
+    '11 cancelling: /v1/me does not expose raw metadata',
+    body11.metadata === undefined,
+    `metadata leaked: ${JSON.stringify(body11.metadata)}`,
+  );
+
+  // 12. Active subscription WITHOUT a scheduled cancellation: cancelAtPeriodEnd is false;
+  //     activeUntil still carries the current paid-through date (existing DTO convention
+  //     — the same field an auto-renewing subscription would show).
+  const body12 = (await scenario(
+    '12 subscription-not-cancelling',
+    'notcancelling',
+    [
+      {
+        kind: 'subscription',
+        status: 'active',
+        source: 'stripe_web',
+        expiresAt: future,
+        metadata: { cancelAtPeriodEnd: false, subscriptionStatus: 'active' },
+      },
+    ],
+    'subscription',
+  )) as { cancelAtPeriodEnd?: boolean; activeUntil?: string | null };
+  expectTrue(
+    '12 not-cancelling: /v1/me cancelAtPeriodEnd === false',
+    body12.cancelAtPeriodEnd === false,
+    `got ${JSON.stringify(body12.cancelAtPeriodEnd)}`,
+  );
+  expectTrue(
+    '12 not-cancelling: /v1/me activeUntil === seeded expiresAt',
+    body12.activeUntil === future.toISOString(),
+    `got ${JSON.stringify(body12.activeUntil)} expected ${future.toISOString()}`,
+  );
+
+  // 13. Lifetime member: no cancellation notice, no misleading expiration date — neither
+  //     field appears on /v1/me even though a lifetime row could (in principle) carry
+  //     leftover metadata.
+  const body13 = (await scenario(
+    '13 lifetime-no-cancellation-fields',
+    'lifetimeclean',
+    [{ kind: 'lifetime_unlock', status: 'active', source: 'stripe_web', expiresAt: null }],
     'lifetime',
+  )) as { cancelAtPeriodEnd?: boolean; activeUntil?: string | null };
+  expectTrue(
+    '13 lifetime: /v1/me has no cancelAtPeriodEnd field',
+    body13.cancelAtPeriodEnd === undefined,
+    `got ${JSON.stringify(body13.cancelAtPeriodEnd)}`,
+  );
+  expectTrue(
+    '13 lifetime: /v1/me has no activeUntil field (no misleading expiry)',
+    body13.activeUntil === undefined,
+    `got ${JSON.stringify(body13.activeUntil)}`,
+  );
+
+  // 14. Free user: no cancellation notice.
+  const body14 = (await scenario('14 free-no-cancellation-fields', 'freeclean', [], 'free')) as {
+    cancelAtPeriodEnd?: boolean;
+    activeUntil?: string | null;
+  };
+  expectTrue(
+    '14 free: /v1/me has no cancelAtPeriodEnd field',
+    body14.cancelAtPeriodEnd === undefined,
+    `got ${JSON.stringify(body14.cancelAtPeriodEnd)}`,
+  );
+  expectTrue(
+    '14 free: /v1/me has no activeUntil field',
+    body14.activeUntil === undefined,
+    `got ${JSON.stringify(body14.activeUntil)}`,
   );
 
   await cleanup();
