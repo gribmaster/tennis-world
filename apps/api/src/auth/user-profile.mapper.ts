@@ -15,7 +15,8 @@ import type { MembershipStatus, UserProfileDTO } from '@tennis/contracts';
 //                   (Feature 50 §5.3: the shared profile DTO carries no `email`).
 //   - initials    : DERIVED from the resolved name (first letters of up to two words,
 //                   upper-cased), mirroring the mock's "Eleanor Morgan" → "EM".
-//   - membership  : a REQUIRED ARGUMENT (Feature 62). The mapper no longer decides
+//   - membership  : a REQUIRED ARGUMENT (Feature 62, values extended in the F62-follow-up
+//                   subscription-vs-lifetime fix). The mapper no longer decides
 //                   entitlement — its caller derives `membership` from the
 //                   EntitlementsService (`getEffectiveEntitlement().membership`) and
 //                   passes it in. It defaults to 'free' ONLY so a caller with no
@@ -56,20 +57,44 @@ function deriveInitials(displayName: string): string {
 }
 
 /**
+ * The slice of `EffectiveEntitlement` (entitlements.types.ts) needed to fill in the
+ * DTO's cancellation fields. Kept as a narrow structural type (not an import of the
+ * full type) so this mapper doesn't need to depend on the entitlements module — the
+ * caller already has the full `EffectiveEntitlement` and passes the relevant fields.
+ */
+export interface EntitlementDisplayInfo {
+  activeUntil: string | null;
+  cancelAtPeriodEnd: boolean;
+}
+
+/**
  * Map a User row to the public `UserProfileDTO` (no email). `membership` is supplied by
  * the caller (entitlement-derived — Feature 62); it defaults to 'free' for callers with
- * no entitlement context. The shape is identical to before — only the membership
- * derivation moved to the EntitlementsService.
+ * no entitlement context. `entitlement` (optional, scheduled-cancellation follow-up)
+ * supplies the raw `activeUntil`/`cancelAtPeriodEnd` from the effective entitlement — the
+ * mapper decides HOW those surface on the DTO:
+ *   - membership 'subscription': `activeUntil` passes through (the current paid-through
+ *     date, whether or not it's cancelling) and `cancelAtPeriodEnd` passes through.
+ *   - membership 'lifetime' or 'free': neither field is set (no expiry to report for a
+ *     lifetime member — never a misleading date — and nothing to report for a free user).
+ * Omitting `entitlement` (e.g. the no-entitlement-context default) leaves both fields
+ * unset, matching the pre-existing DTO shape exactly.
  */
 export function toUserProfileDTO(
   user: UserProfileSource,
   membership: MembershipStatus = 'free',
+  entitlement?: EntitlementDisplayInfo,
 ): UserProfileDTO {
   const name = resolveDisplayName(user.name, user.email);
-  return {
+  const dto: UserProfileDTO = {
     id: user.id,
     name,
     initials: deriveInitials(name),
     membership,
   };
+  if (membership === 'subscription' && entitlement) {
+    dto.activeUntil = entitlement.activeUntil;
+    dto.cancelAtPeriodEnd = entitlement.cancelAtPeriodEnd;
+  }
+  return dto;
 }

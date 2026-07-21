@@ -1,8 +1,11 @@
+import type { BillingPlanKey } from '@tennis/contracts';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Billing configuration — a single typed read of the Stripe-relevant environment
-// (Feature 65, intake §5.1/§5.4). Same lightweight idiom as `auth.config.ts`: a
-// plain function (not a Nest provider) that reads `process.env` once at module
-// wiring, so the service never re-parses env and the defaults live in ONE place.
+// (Feature 65, intake §5.1/§5.4; plans reworked to monthly/quarterly/yearly). Same
+// lightweight idiom as `auth.config.ts`: a plain function (not a Nest provider) that
+// reads `process.env` once at module wiring, so the service never re-parses env and
+// the defaults live in ONE place.
 //
 // SECRETS LIVE HERE ONLY (intake §5.4 / §12). `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
 // and the price ids are server-only — NEVER behind a `NEXT_PUBLIC_*` prefix (they'd ship
@@ -14,14 +17,17 @@
 // the API boots with neither, and the webhook fails cleanly at request time when unset
 // (§9), never at boot. Checkout still works if only the checkout config is present.
 //
-// "CONFIGURED FOR REAL CHECKOUT" gate (prompt task 3): `STRIPE_SECRET_KEY` +
-// `STRIPE_PRICE_LIFETIME` are the minimum for a working lifetime checkout. When they
-// are absent the module still boots (so lint/typecheck/build/dev and the non-Stripe
-// harnesses run with no Stripe env) — but a checkout/portal REQUEST fails cleanly at
-// call time (§9), never at boot. `STRIPE_PRICE_SUBSCRIPTION` is optional: a
-// subscription checkout is a clean 400 when it isn't configured (task 5), while
-// lifetime still works.
+// PLAN MODEL: three recurring subscription plans — monthly/quarterly/yearly — each with
+// its own Stripe Price id (`STRIPE_PRICE_MONTHLY` / `STRIPE_PRICE_QUARTERLY` /
+// `STRIPE_PRICE_YEARLY`). There is no lifetime (one-time) plan and no single generic
+// "subscription" price anymore; `STRIPE_PRICE_LIFETIME` / `STRIPE_PRICE_SUBSCRIPTION`
+// are no longer read. `configuredForCheckout` is a PER-PLAN check (task 4): a plan is
+// checkout-ready when the secret key, the return URLs, and THAT plan's price id are all
+// present — a missing price for one plan never blocks the other two.
 // ─────────────────────────────────────────────────────────────────────────────
+
+/** Per-plan Stripe Price id map. A missing entry means that plan isn't offered yet. */
+export type BillingPriceMap = Record<BillingPlanKey, string | undefined>;
 
 /** Parsed, defaulted billing configuration derived from `process.env`. */
 export interface BillingConfig {
@@ -34,13 +40,12 @@ export interface BillingConfig {
    * lint/typecheck/build/dev and the non-Stripe harnesses still run with no Stripe env.
    */
   stripeWebhookSecret: string;
-  /** Stripe Price id (`price_…`) for the one-time lifetime unlock. Empty when unset. */
-  priceLifetime: string;
   /**
-   * Stripe Price id for the recurring subscription plan. Optional (undefined when
-   * unset) — a `subscription` checkout is a 400 until this is configured (task 5).
+   * Stripe Price id per plan (`STRIPE_PRICE_MONTHLY` / `_QUARTERLY` / `_YEARLY`).
+   * Undefined for a plan whose price isn't configured — that plan's checkout is a clean
+   * 400/500 (see `isPlanConfigured`), the other plans are unaffected.
    */
-  priceSubscription: string | undefined;
+  prices: BillingPriceMap;
   /**
    * Where Stripe redirects after a successful Checkout. Falls back to
    * `${webAppUrl}/profile?checkout=success` when `STRIPE_SUCCESS_URL` is unset.
@@ -58,9 +63,11 @@ export interface BillingConfig {
   /** The web origin (shared with auth config); the URL fallbacks derive from it. */
   webAppUrl: string;
   /**
-   * True when the minimum for a REAL lifetime checkout is present (secret key +
-   * lifetime price). Derived, not an env var — the service reads it to decide whether
-   * to attempt Stripe at all (a missing config is a server-misconfig 500, §9).
+   * True when the account-level checkout prerequisites are present: secret key + both
+   * return URLs (success/cancel). Derived, not an env var. This does NOT check any
+   * specific plan's price — that's `isPlanConfigured` (task 4's per-plan validation).
+   * The service checks both: this gate first (server-misconfig 500), then the
+   * requested plan's price (clean per-plan error).
    */
   configuredForCheckout: boolean;
   /**
@@ -122,21 +129,24 @@ function positiveIntEnv(raw: string | undefined, fallback: number): number {
 export function loadBillingConfig(env: NodeJS.ProcessEnv = process.env): BillingConfig {
   const stripeSecretKey = strEnv(env.STRIPE_SECRET_KEY) ?? '';
   const stripeWebhookSecret = strEnv(env.STRIPE_WEBHOOK_SECRET) ?? '';
-  const priceLifetime = strEnv(env.STRIPE_PRICE_LIFETIME) ?? '';
-  const priceSubscription = strEnv(env.STRIPE_PRICE_SUBSCRIPTION);
   const webAppUrl = strEnv(env.WEB_APP_URL) ?? 'http://localhost:3000';
+  const successUrl = strEnv(env.STRIPE_SUCCESS_URL) ?? `${webAppUrl}/profile?checkout=success`;
+  const cancelUrl = strEnv(env.STRIPE_CANCEL_URL) ?? `${webAppUrl}/profile?checkout=cancelled`;
 
   return {
     stripeSecretKey,
     stripeWebhookSecret,
-    priceLifetime,
-    priceSubscription,
-    successUrl: strEnv(env.STRIPE_SUCCESS_URL) ?? `${webAppUrl}/profile?checkout=success`,
-    cancelUrl: strEnv(env.STRIPE_CANCEL_URL) ?? `${webAppUrl}/profile?checkout=cancelled`,
+    prices: {
+      monthly: strEnv(env.STRIPE_PRICE_MONTHLY),
+      quarterly: strEnv(env.STRIPE_PRICE_QUARTERLY),
+      yearly: strEnv(env.STRIPE_PRICE_YEARLY),
+    },
+    successUrl,
+    cancelUrl,
     portalReturnUrl: strEnv(env.STRIPE_PORTAL_RETURN_URL) ?? `${webAppUrl}/profile`,
     webAppUrl,
     configuredForCheckout:
-      stripeSecretKey.length > 0 && priceLifetime.length > 0,
+      stripeSecretKey.length > 0 && successUrl.length > 0 && cancelUrl.length > 0,
     configuredForWebhook:
       stripeSecretKey.length > 0 && stripeWebhookSecret.length > 0,
     rateLimit: {
@@ -145,6 +155,15 @@ export function loadBillingConfig(env: NodeJS.ProcessEnv = process.env): Billing
       portalMax: positiveIntEnv(env.BILLING_PORTAL_RATE_LIMIT_MAX, 10),
     },
   };
+}
+
+/**
+ * Per-plan checkout readiness (task 4): true only when that specific plan's Stripe
+ * Price id is configured. Checked by the service AFTER `configuredForCheckout` (the
+ * account-level gate) — a missing price for one plan never blocks the other two.
+ */
+export function isPlanConfigured(config: BillingConfig, plan: BillingPlanKey): boolean {
+  return Boolean(config.prices[plan]);
 }
 
 /** DI token for the singleton {@link BillingConfig} provided by BillingModule. */

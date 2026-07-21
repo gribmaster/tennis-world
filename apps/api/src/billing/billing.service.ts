@@ -65,8 +65,8 @@ export class BillingService {
     userId: string,
     body: CheckoutRequestClass,
   ): Promise<CheckoutSessionDTO> {
-    // Missing secret key / lifetime price → the billing surface is misconfigured on
-    // the SERVER, not a client error → 500 (task 9). Guarded before any Stripe call.
+    // Missing secret key / return URLs → the billing surface is misconfigured on the
+    // SERVER, not a client error → 500 (task 9). Guarded before any Stripe call.
     this.assertConfigured();
 
     // Map the plan KEY to a price id + mode (never a client-supplied price). A
@@ -151,11 +151,15 @@ export class BillingService {
 
   // ── Internals ───────────────────────────────────────────────────────────────
 
-  /** Server-misconfig guard: no secret key / no lifetime price → 500 (task 9). */
+  /**
+   * Account-level server-misconfig guard: no secret key / no return URLs → 500
+   * (task 9). Does NOT check any specific plan's price — that's the per-plan
+   * `resolvePlan` check the caller runs right after this (task 4).
+   */
   private assertConfigured(): void {
     if (!this.config.configuredForCheckout) {
       this.logger.error(
-        'Billing is not configured (STRIPE_SECRET_KEY / STRIPE_PRICE_LIFETIME missing).',
+        'Billing is not configured (STRIPE_SECRET_KEY / return URLs missing).',
       );
       throw new InternalServerErrorException('Billing is not configured.');
     }

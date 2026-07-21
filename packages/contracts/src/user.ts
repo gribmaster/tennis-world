@@ -12,8 +12,13 @@ import { EntitlementKind, EntitlementSource, EntitlementStatus } from './enums';
 // grantedByAdminId, refund flows) is Phase 4 work (Decision #12).
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Membership badge state surfaced in the UI (mocked in Phase 1). */
-export const MembershipStatus = z.enum(['free', 'lifetime']);
+/**
+ * Membership badge state surfaced in the UI. `subscription` is a currently-active
+ * recurring Stripe subscription; `lifetime` is a one-time/lifetime unlock (kept for
+ * back-compat with existing lifetime entitlement data — do NOT collapse it into
+ * `subscription`). `free` is the no-entitlement default.
+ */
+export const MembershipStatus = z.enum(['free', 'subscription', 'lifetime']);
 export type MembershipStatus = z.infer<typeof MembershipStatus>;
 
 /** Minimal profile shape consumed by the Phase-1 mock user repository. */
@@ -22,6 +27,20 @@ export const UserProfileSchema = z.object({
   name: z.string(),
   initials: z.string(),
   membership: MembershipStatus,
+  /**
+   * Whether the user's currently-active `subscription` is scheduled to end at
+   * `activeUntil` rather than auto-renew (Stripe `cancel_at_period_end`). OPTIONAL and
+   * present only for an active subscription — omitted (not `false`) for `free`/`lifetime`
+   * so the UI never renders a cancellation notice for a plan that isn't ending. Derived
+   * server-side from the effective entitlement; never a raw entitlement-metadata blob.
+   */
+  cancelAtPeriodEnd: z.boolean().optional(),
+  /**
+   * ISO-8601 date the current paid access ends — the subscription's current period end
+   * (same value whether or not it's set to auto-renew). OPTIONAL/null: absent for `free`
+   * (nothing to show) and `lifetime` (no expiration to report, never a misleading date).
+   */
+  activeUntil: z.string().nullable().optional(),
 });
 export type UserProfileDTO = z.infer<typeof UserProfileSchema>;
 

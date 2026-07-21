@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   type EffectiveEntitlement,
@@ -38,8 +39,11 @@ export class EntitlementsService {
    *   2. otherwise the one with the LATEST `expiresAt`,
    *   3. final tie-break on `id` so the result is fully deterministic.
    *
-   * `membership` is 'lifetime' when entitled, else 'free' (the contract enum has only
-   * those two — a `kind=subscription` still surfaces as 'lifetime' for the badge).
+   * `membership` is derived from the winning row's `kind`: not entitled → 'free';
+   * `kind=subscription` → 'subscription'; any other kind (lifetime_unlock/promo_unlock/
+   * manual_grant) → 'lifetime'. If effective rows of both kinds exist, the "strongest"
+   * pick above already prefers a non-expiring (lifetime-shaped) row, so lifetime takes
+   * precedence over subscription when both are present.
    */
   async getEffectiveEntitlement(userId: string): Promise<EffectiveEntitlement> {
     const now = new Date();
@@ -50,7 +54,14 @@ export class EntitlementsService {
     // NOT selected — this result never carries them (privacy, intake §6).
     const rows = await this.prisma.entitlement.findMany({
       where: { userId, status: 'active' },
-      select: { id: true, kind: true, source: true, startsAt: true, expiresAt: true },
+      select: {
+        id: true,
+        kind: true,
+        source: true,
+        startsAt: true,
+        expiresAt: true,
+        metadata: true,
+      },
     });
 
     // Apply the effective-window filter (startsAt has reached `now`; not yet expired).
@@ -70,10 +81,12 @@ export class EntitlementsService {
 
     return {
       isEntitled: true,
-      membership: 'lifetime',
+      membership: winner.kind === 'subscription' ? 'subscription' : 'lifetime',
       reason: winner.kind,
       source: winner.source,
       activeUntil: winner.expiresAt === null ? null : winner.expiresAt.toISOString(),
+      cancelAtPeriodEnd:
+        winner.kind === 'subscription' && readCancelAtPeriodEnd(winner.metadata),
     };
   }
 
@@ -114,4 +127,17 @@ export class EntitlementsService {
     if (candMs !== incMs) return candMs > incMs;
     return candidate.id < incumbent.id;
   }
+}
+
+/**
+ * Read the `cancelAtPeriodEnd` flag stashed in `Entitlement.metadata` by
+ * `StripeWebhookService.onSubscriptionUpdated` (a display-only boolean set alongside
+ * `subscriptionStatus`; see that class's header). Defensive on shape — `metadata` is an
+ * untyped `Json?` column, so anything other than a literal `true` reads as `false`
+ * (never-cancelling is the safe default, and this value is only surfaced when
+ * `membership === 'subscription'` in the first place).
+ */
+function readCancelAtPeriodEnd(metadata: Prisma.JsonValue | null): boolean {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return false;
+  return (metadata as Record<string, unknown>).cancelAtPeriodEnd === true;
 }

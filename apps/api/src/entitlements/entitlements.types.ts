@@ -24,10 +24,9 @@ export interface EffectiveEntitlement {
   /** The one boolean every gate reads: does ANY of the user's rows currently apply? */
   isEntitled: boolean;
   /**
-   * The badge `UserProfileDTO.membership` needs. Maps directly off `isEntitled`:
-   * entitled → 'lifetime', not entitled → 'free'. `MembershipStatus` has only those
-   * two members today (no 'subscriber' — intake open question #1), so even a
-   * `kind=subscription` row surfaces as 'lifetime' for the badge.
+   * The badge `UserProfileDTO.membership` needs, derived from the winning row's
+   * `kind`: not entitled → 'free'; `kind=subscription` → 'subscription'; any other
+   * (`lifetime_unlock`/`promo_unlock`/`manual_grant`) → 'lifetime'.
    */
   membership: MembershipStatus;
   /** Which kind of entitlement won (the strongest effective row), or null if none. */
@@ -40,6 +39,14 @@ export interface EffectiveEntitlement {
    * `isEntitled` to tell those two null cases apart.)
    */
   activeUntil: string | null;
+  /**
+   * Whether the winning row is a `subscription` scheduled to end at `activeUntil`
+   * instead of auto-renewing (Stripe `cancel_at_period_end`, stashed in the webhook's
+   * `Entitlement.metadata` blob — see stripe-webhook.service.ts). Only ever `true` for
+   * `membership === 'subscription'`; `false` for a subscription still auto-renewing,
+   * and `false` (not meaningful) for `lifetime`/`free`.
+   */
+  cancelAtPeriodEnd: boolean;
 }
 
 /** The constant "nobody home" result — no effective row → free, with everything null. */
@@ -49,4 +56,5 @@ export const NOT_ENTITLED: EffectiveEntitlement = {
   reason: null,
   source: null,
   activeUntil: null,
+  cancelAtPeriodEnd: false,
 };

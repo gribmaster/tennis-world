@@ -1,26 +1,24 @@
 import type { BillingPlanKey } from '@tennis/contracts';
-import type { BillingConfig } from './billing.config';
+import { isPlanConfigured, type BillingConfig } from './billing.config';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Server-side plan registry (Feature 65, intake §5.1). The ONE place a client
-// `plan` key ('lifetime' | 'subscription') is mapped to the Stripe price id + the
-// Checkout `mode`. The client NEVER sends a price id (it can't pick an arbitrary
-// price — intake §5.1); it sends only the plan KEY, resolved here against
-// server-only env (`BillingConfig`).
+// Server-side plan registry (Feature 65, intake §5.1; reworked for the
+// monthly/quarterly/yearly plan model). The ONE place a client `plan` key is mapped
+// to the Stripe price id + the Checkout `mode`. The client NEVER sends a price id (it
+// can't pick an arbitrary price — intake §5.1); it sends only the plan KEY, resolved
+// here against server-only env (`BillingConfig.prices`).
 //
-//   lifetime     → mode 'payment'      (one-time, EntitlementKind lifetime_unlock)
-//   subscription → mode 'subscription' (recurring)
+//   monthly / quarterly / yearly → mode 'subscription' (recurring), ALWAYS — there is
+//   no one-time/lifetime plan in this model.
 //
-// A `subscription` request when `STRIPE_PRICE_SUBSCRIPTION` is unset is NOT a
-// crash and NOT a 500 — the registry returns a typed "disabled plan" result the
-// service turns into a clean 400 (task 5/9). A `lifetime` request with no
-// `STRIPE_PRICE_LIFETIME` means the whole billing surface is misconfigured, so the
-// service treats that as a server-misconfig 500 (guarded by `configuredForCheckout`
-// BEFORE we get here). The union below makes the caller handle both outcomes.
+// A request for a plan whose price id isn't configured is NOT a crash and NOT a 500 —
+// the registry returns a typed "disabled plan" result the service turns into a clean
+// 400 (task 4/9), naming the specific plan. Each of the three plans is validated
+// independently, so a missing price for one never blocks the other two.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Stripe Checkout mode per plan — 'payment' for one-time, 'subscription' for recurring. */
-export type CheckoutMode = 'payment' | 'subscription';
+/** Stripe Checkout mode per plan — all current plans are recurring 'subscription'. */
+export type CheckoutMode = 'subscription';
 
 /** A fully-resolved plan ready to build a Checkout Session line item + mode. */
 export interface ResolvedPlan {
@@ -32,7 +30,7 @@ export interface ResolvedPlan {
 /**
  * Result of resolving a plan key against the current config. `ok: false` carries a
  * client-safe `reason` string (no Stripe internals) for the 400 the service raises
- * when the plan is recognised but not currently offered (subscription price unset).
+ * when the plan is recognised but not currently offered (its price id is unset).
  */
 export type PlanResolution =
   | { readonly ok: true; readonly resolved: ResolvedPlan }
@@ -40,42 +38,32 @@ export type PlanResolution =
 
 /**
  * Resolve a validated plan key to its Stripe price id + Checkout mode using the
- * server-only config. The key itself is already validated to the `'lifetime' |
- * 'subscription'` union by the request DTO, so the `default` branch is defensive.
+ * server-only config. The key itself is already validated to the `'monthly' |
+ * 'quarterly' | 'yearly'` union by the request DTO, so the `default` branch is
+ * defensive.
  *
- *   - lifetime     → { priceId: config.priceLifetime, mode: 'payment' }
- *   - subscription → { priceId: config.priceSubscription, mode: 'subscription' }
- *                    but a 400-style `ok: false` when the subscription price is unset.
- *
- * NOTE: a missing `priceLifetime` is NOT handled here (it's a server-misconfig the
- * service catches via `config.configuredForCheckout` before calling this) — this
- * registry only decides the plan-level "offered / not offered" question.
+ * A plan with no configured price id is a clean 400-style `ok: false` — "Stripe price
+ * is not configured for plan: <plan>" — never a crash. This registry only decides the
+ * plan-level "offered / not offered" question; the account-level gate (secret key +
+ * return URLs) is `BillingConfig.configuredForCheckout`, checked by the service first.
  */
 export function resolvePlan(
   plan: BillingPlanKey,
   config: BillingConfig,
 ): PlanResolution {
   switch (plan) {
-    case 'lifetime':
-      return {
-        ok: true,
-        resolved: { plan, priceId: config.priceLifetime, mode: 'payment' },
-      };
-    case 'subscription':
-      if (!config.priceSubscription) {
+    case 'monthly':
+    case 'quarterly':
+    case 'yearly': {
+      if (!isPlanConfigured(config, plan)) {
         return {
           ok: false,
-          reason: 'The subscription plan is not currently available.',
+          reason: `Stripe price is not configured for plan: ${plan}`,
         };
       }
-      return {
-        ok: true,
-        resolved: {
-          plan,
-          priceId: config.priceSubscription,
-          mode: 'subscription',
-        },
-      };
+      // Non-null: `isPlanConfigured` just verified `config.prices[plan]` is truthy.
+      return { ok: true, resolved: { plan, priceId: config.prices[plan]!, mode: 'subscription' } };
+    }
     default:
       // Unreachable given the DTO validation; kept exhaustive + client-safe.
       return { ok: false, reason: 'Unknown billing plan.' };

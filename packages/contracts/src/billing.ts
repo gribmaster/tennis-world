@@ -20,11 +20,11 @@ import { MembershipStatus } from './user';
 /**
  * The billable plan key the CLIENT sends. The server maps it to a Stripe price id
  * (server-only env) — the client NEVER sees or sends a price id (intake §5.1), so it
- * can't pick an arbitrary price. `'lifetime'` = the one-time unlock; `'subscription'`
- * = the recurring plan. Kept as a shared enum so the request/plan DTOs don't redeclare
- * the literal union.
+ * can't pick an arbitrary price. All three are recurring subscription plans that differ
+ * only in billing cadence (and Stripe price); they grant the same premium entitlement.
+ * Kept as a shared enum so the request/plan DTOs don't redeclare the literal union.
  */
-export const BillingPlanKey = z.enum(['lifetime', 'subscription']);
+export const BillingPlanKey = z.enum(['monthly', 'quarterly', 'yearly']);
 export type BillingPlanKey = z.infer<typeof BillingPlanKey>;
 
 /**

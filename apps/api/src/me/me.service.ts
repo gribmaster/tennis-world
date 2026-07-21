@@ -27,8 +27,8 @@ import type { UpdateProfileRequestDTO } from './me.dto';
 //
 // MEMBERSHIP is entitlement-derived (Feature 62): both GET and PATCH resolve it via the
 // EntitlementsService (the one place the effective rule lives) and pass it to the mapper.
-// A user with no entitlement rows (everyone today) resolves to 'free' — so the response
-// is unchanged for them; an entitled user gets 'lifetime'. No DB write on GET.
+// A user with no entitlement rows (everyone today) resolves to 'free'; an entitled user
+// gets 'subscription' or 'lifetime' depending on the winning entitlement's kind. No DB write on GET.
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Injectable()
@@ -48,8 +48,8 @@ export class MeService {
       // Valid token, but the identity it names is gone → the auth context is stale.
       throw new UnauthorizedException('Session is no longer valid.');
     }
-    const { membership } = await this.entitlements.getEffectiveEntitlement(userId);
-    return toUserProfileDTO(user, membership);
+    const entitlement = await this.entitlements.getEffectiveEntitlement(userId);
+    return toUserProfileDTO(user, entitlement.membership, entitlement);
   }
 
   /**
@@ -80,8 +80,8 @@ export class MeService {
       });
       // Membership is entitlement-derived, not affected by a name edit — but we still
       // resolve and return the REAL value so PATCH and GET agree (Feature 62).
-      const { membership } = await this.entitlements.getEffectiveEntitlement(userId);
-      return toUserProfileDTO(user, membership);
+      const entitlement = await this.entitlements.getEffectiveEntitlement(userId);
+      return toUserProfileDTO(user, entitlement.membership, entitlement);
     } catch (err) {
       // P2025 = "record to update not found": the authed user row was deleted since
       // the token was minted → stale auth context, same 401 rule as GET (not a 500).

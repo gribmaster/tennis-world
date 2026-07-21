@@ -198,15 +198,15 @@ export class AuthService {
    *
    * `membership` is entitlement-derived (Feature 62): the EntitlementsService collapses
    * the user's `Entitlement` rows into one effective answer. A user with no rows (every
-   * user today) resolves to 'free' — so verify is unchanged for them; an entitled user
-   * (seeded/future-paid) gets 'lifetime' in the same `AuthSessionDTO.user.membership`.
+   * user today) resolves to 'free'; an entitled user gets 'subscription' or 'lifetime'
+   * (by entitlement kind) in the same `AuthSessionDTO.user.membership`.
    */
   private async issueSession(
     userId: string,
     email: string,
     name: string | null,
   ): Promise<AuthSessionDTO> {
-    const { membership } = await this.entitlements.getEffectiveEntitlement(userId);
+    const entitlement = await this.entitlements.getEffectiveEntitlement(userId);
     const payload: AccessTokenPayload = { sub: userId, email };
     const accessToken = this.jwt.sign(payload, {
       secret: this.config.jwtSecret,
@@ -217,7 +217,7 @@ export class AuthService {
     ).toISOString();
 
     return {
-      user: toUserProfileDTO({ id: userId, name, email }, membership),
+      user: toUserProfileDTO({ id: userId, name, email }, entitlement.membership, entitlement),
       accessToken,
       expiresAt,
     };
