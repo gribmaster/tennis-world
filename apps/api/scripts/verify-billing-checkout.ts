@@ -31,7 +31,7 @@
 //   C. user.stripeCustomerId is now stored (created lazily on first checkout)
 //   D. second checkout REUSES the same customer (stripeCustomerId unchanged)
 //   E. portal → 201 { url }
-//   F. quarterly: 200 { url } if STRIPE_PRICE_QUARTERLY is set, else 400 (disabled)
+//   F. quarterly: 201 { url } if STRIPE_PRICE_QUARTERLY is set, else 400 (disabled)
 //   G. unknown plan → 400 (DTO @IsIn)
 //   H. NO Entitlement row was created for the user (checkout ≠ fulfillment)
 //   I. /v1/me still reports membership 'free' (no webhook grant yet)
@@ -283,7 +283,7 @@ async function main(): Promise<void> {
     assertUrlDto('E portal', body);
   }
 
-  // F. quarterly: 200 if configured, else clean 400.
+  // F. quarterly: 201 if configured, else clean 400.
   {
     const { status, body } = await postBilling('/billing/checkout', token, { plan: 'quarterly' });
     if (hasQuarterlyPrice) {
