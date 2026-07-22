@@ -1,0 +1,6 @@
+name:"MONTE - CARLO COUNTRY CLUB"
+location: ROQUEBRUNE-CAP-MARTIN, FRANCE
+map link: https://maps.app.goo.gl/FRTr7PPxs9KPt7JN9?g_st=ic
+description: "Monte-Carlo Country Club opened in 1928 on the edge of Monaco, though technically it sits just across the border in Roquebrune-Cap-Martin, France. That small geographical twist is part of its charm: it belongs to the Monaco myth, but its clay courts are carved into the French Riviera hillside above the Mediterranean.
+The club became the permanent home of the Monte-Carlo tournament, now the Rolex Monte-Carlo Masters, one of the most elegant stops of the clay season. Its terraced courts, sea views and old Riviera atmosphere make tennis here feel less like a simple sport and more like a ritual of spring: red clay, white lines, cypress trees, and the Mediterranean just beyond the baseline."
+type: "FRENCH RIVIERA, clay court  · riviera · private club"

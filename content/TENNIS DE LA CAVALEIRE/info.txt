@@ -1,0 +1,5 @@
+name:"TENNIS DE LA CAVALEIRE"
+location:PARIS, FRANCE
+map link: https://maps.app.goo.gl/XVBfxP4sBFTvekyS8?g_st=ic
+description: Hidden inside a discreet Art Deco building just steps from the Eiffel Tower, Tennis de la Cavalerie is one of Paris’s most secretive and cinematic tennis locations. Built in 1924, the private indoor court sits beneath a rare wooden structure that has been protected as a historic monument. What makes it unforgettable is the contrast: outside, the rhythm of Paris; inside, a quiet court under warm timber arches, with the Eiffel Tower visible from the terrace. It feels less like entering a sports club and more like discovering a private chapter of Parisian tennis history.
+type: hard court · indoor court · art deco · private club

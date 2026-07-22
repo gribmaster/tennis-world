@@ -1,0 +1,7 @@
+name:CHÂTEAU DE LA MESSARDIÈRE
+location:SAINT-TROPEZ, FRANCE
+map link: https://maps.app.goo.gl/fcZsLCn2HEvbzLoTA?g_st=ic
+description: "Câteau de la Messardière sits on a hill above Saint-Tropez, between the village, the vineyards of Ramatuelle, and Pampelonne Beach. Originally a 19th-century private château built as a wedding gift, today it feels like a separate world above the busiest part of the Riviera.
+Its tennis court is interesting because of the contrast: below, Saint-Tropez is all yachts, parties, and summer noise; above, the court feels quiet and private, set inside a large estate with gardens and warm southern air. Not a tournament legend, but a modern Riviera fantasy: morning tennis before the village wakes up, and the feeling that Saint-Tropez can still be discreet."
+type: "FRENCH RIVIERA, grass court · saint-tropez hills ·
+luxury hotel"

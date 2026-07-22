@@ -1,0 +1,8 @@
+name:"LAGARDERE PARIS RACING"
+location:PARIS, FRANCE
+map link: https://maps.app.goo.gl/CNcFowWjj5Dm1kEN9?g_st=ic
+description: "Hidden in the Bois de Boulogne, Lagardère Paris Racing sits on the historic Croix-Catelan site, once home to the legendary Racing Club de France. Tennis has been played here since the late 19th century, and the place still carries the atmosphere of old Parisian sport: private, elegant, and quietly elite.
+
+Today, with dozens of courts and a long sporting legacy, it feels less like a simple tennis club and more like a discreet athletic world inside Paris — where heritage, discipline, and classic French style meet."
+type: "clay courts · heritage club ·
+private club"

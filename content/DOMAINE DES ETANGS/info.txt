@@ -1,0 +1,8 @@
+name:"DOMAINE DES ETANGS"
+location:MASSIGNAC, FRANCE
+map link: https://maps.app.goo.gl/qqzJ67ib9tRjwn6n9?g_st=ic
+description: "Domaine des Etangs is a 13th-century château set inside a vast private estate in the French countryside, surrounded by forests, pastures, ponds, and contemporary art. It feels less like a hotel and more like a quiet world built around nature and time.
+
+Its tennis court is the detail that makes the place unforgettable: a floating court set on the water. Instead of a classic country-club setting, tennis here feels almost surreal — red clay, still ponds, old stone, and the silence of a château estate. A location where sport becomes part of the landscape, not separate from it."
+type: "hard court · floating court · lake estate ·
+luxury hotel"

@@ -1,0 +1,6 @@
+name:MOURATOGLOU TENNIS ACADEMY
+location:BIOT, FRANCE
+map link: https://maps.app.goo.gl/gQoGGkrhNZKMs6Ns9?g_st=ic
+description: Patrick Mouratoglou founded his tennis academy in 1996 near Paris, with the idea of creating a place where players were not only trained, but shaped into future champions. In 2016, the academy moved to the French Riviera, between Nice and Cannes, and became one of the most recognized tennis centers in Europe. Its story is especially connected to Serena Williams: after she began working with Mouratoglou in 2012, she won 10 more Grand Slam titles and returned to the top of world tennis. Today, the academy feels like a next-generation tennis campus: courts, young talents from around the world, professional discipline, and the feeling that a career could begin here any day.
+type: "FRENCH RIVIERA, clay + hard courts · elite training ·
+tennis academy"

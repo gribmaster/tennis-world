@@ -1,0 +1,8 @@
+name:TENNIS DU JARDIN DU LUXEMBOURG
+location:PARIS, FRANCE
+map link: https://maps.app.goo.gl/n3UMFU8qPPPL9qdw9?g_st=ic
+description: "The Jardin du Luxembourg was created in the 17th century for Marie de Médicis, who wanted to bring the atmosphere of the Italian gardens of her childhood to Paris. Over time, it became one of the most recognizable places on the Left Bank: a garden for writers, politicians, students, and the Parisian public who came not only to walk, but also to watch one another.
+
+The tennis courts inside the garden appeared as early as the 19th century and still feel like a small urban secret. This is not a luxury club, but a rare Parisian scene: tennis among palace alleys, old trees, and the formal garden of the French Senate. A place with history, character, and the very quiet feeling of old Paris."
+type: "hard court · garden court · historic park ·
+public court"

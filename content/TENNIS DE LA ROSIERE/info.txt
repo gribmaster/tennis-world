@@ -1,0 +1,8 @@
+name:"TENNIS DE LA ROSIERE"
+location:MONTVALEZAN, FRANCE
+map link: https://maps.app.goo.gl/mDzxXn1eRYPz3Uft6?g_st=ic
+description: "Tennis de La Rosière is not by the sea and not inside an old private club, but high in the Savoy Alps, at the La Rosière 1850 resort near the French-Italian border. In winter, the village belongs to skiing, but in summer its tennis court becomes an almost surreal scene: a bright pink-and-blue court set against mountain valleys and Alpine peaks.
+
+It has even been named among the most beautiful courts in France, precisely because of this unexpected contrast: no classic clay, no cypress trees, but color, altitude, clean mountain air, and the feeling that tennis has stepped into an Alpine postcard."
+type: "hard court · alpine view ·
+mountain resort"

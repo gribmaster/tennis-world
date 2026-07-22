@@ -1,0 +1,5 @@
+name:"HOTEL DU CAP - EDEN - ROC"
+location:ANTIBES, FRANCE
+map link: https://maps.app.goo.gl/wVpHM7DhzQ6km3xn9?g_st=ic
+description: Since 1923, the tennis courts of Hôtel du Cap-Eden-Roc have been part of the special rhythm of Cap d’Antibes. Here, tennis was never just an activity between breakfast and the sea. It was a sign of status, a habit of people who knew how to rest beautifully and without explanation. Five clay courts are hidden among pine, palm, and olive trees, slightly away from the hotel’s famous pool and social scene. That is their quiet intrigue: while the Riviera watched the stars arriving after Cannes, another kind of luxury happened more privately — on red clay, behind the greenery, in a place where discretion has always mattered more than attention.
+type: "FRENCH RIVIERA, clay court · sea view · luxury hotel"

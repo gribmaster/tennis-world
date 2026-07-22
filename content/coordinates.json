@@ -1,0 +1,120 @@
+{
+  "chateau-de-la-messardiere": {
+    "lat": 43.2537188,
+    "lng": 6.6582397,
+    "source": "openstreetmap",
+    "query": "Château de la Messardière",
+    "displayName": "Château de la Messardière, 2, Route de Tahiti, Saint-Tropez, France",
+    "matchLevel": "venue-level",
+    "evidenceUrl": "https://nominatim.openstreetmap.org/search?q=Ch%C3%A2teau+de+la+Messardi%C3%A8re&format=jsonv2",
+    "notes": "Two OSM points exist for this hotel ~40m apart (a building way on Route de Tahiti and a node on Chemin de Valfere). Selected the Route de Tahiti point because it matches the exact street address in the Google Maps redirect ('2 Rte de Tahiti, 83990 Saint-Tropez'). Both OSM points are tagged tourism=hotel (the property), not a tennis-court object, so this is venue-level, not exact-court."
+  },
+  "domaine-des-etangs": {
+    "lat": 45.7758818,
+    "lng": 0.6426941,
+    "source": "nominatim",
+    "query": "DOMAINE DES ETANGS, MASSIGNAC, FRANCE",
+    "displayName": "Domaine des Étangs, Route de la Rochefoucauld, Quartier de la Vilette, Massignac, Confolens, Charente, Nouvelle-Aquitaine, France métropolitaine, 16310, France",
+    "matchLevel": "venue-level",
+    "evidenceUrl": "https://nominatim.openstreetmap.org/search?q=DOMAINE+DES+ETANGS%2C+MASSIGNAC%2C+FRANCE&format=jsonv2",
+    "notes": "Unchanged from the prior automated Nominatim resolution (no clearly better source found this session). Multiple travel-press sources (Robb Report, Auberge Resorts official site, City Style and Living) confirm the floating tennis court sits on the property's pond, but none publish separate coordinates for the court itself, so the château/estate point remains venue-level."
+  },
+  "epi-baie-de-pampelonne": {
+    "lat": 43.2217165,
+    "lng": 6.6542826,
+    "source": "manual-google-maps",
+    "query": "EPI Baie de Pampelonne, 1128 Route de l'Épi, 83350 Ramatuelle, France",
+    "displayName": "EPI Baie de Pampelonne, Route de l'Épi, Ramatuelle, France",
+    "matchLevel": "venue-level",
+    "notes": "Venue-area coordinates from the address in the info.txt Google Maps link."
+  },
+  "grand-hotel-du-cap-ferrat-a-four-seasons": {
+    "lat": 43.6769597,
+    "lng": 7.3315163,
+    "source": "openstreetmap",
+    "query": "Grand Hotel du Cap Ferrat",
+    "displayName": "Grand Hôtel du Cap Ferrat, Avenue Dehouve - Voyenne, Saint-Jean-Cap-Ferrat, France",
+    "matchLevel": "venue-level",
+    "evidenceUrl": "https://nominatim.openstreetmap.org/search?q=Grand+Hotel+du+Cap+Ferrat&format=jsonv2",
+    "notes": "The full name including 'A Four Seasons' returns no OSM result; dropping that qualifier finds a single, unambiguous, high-importance tourism=hotel match in the correct village (Saint-Jean-Cap-Ferrat). This is the property itself, not a separate tennis-court object, so venue-level."
+  },
+  "hotel-cap-estel": {
+    "lat": 43.7183141,
+    "lng": 7.3741887,
+    "source": "nominatim",
+    "query": "Hôtel Cap-Estel, 1312 Av. Raymond Poincaré, 06360 Èze, France",
+    "displayName": "Cap Estel, 1312, Avenue Raymond Poincaré, Èze-Bord-de-Mer, Èze, Nice, Alpes-Maritimes, Provence-Alpes-Côte d'Azur, France métropolitaine, 06360, France",
+    "matchLevel": "venue-level",
+    "evidenceUrl": "https://nominatim.openstreetmap.org/search?q=H%C3%B4tel+Cap-Estel%2C+1312+Av.+Raymond+Poincar%C3%A9%2C+06360+%C3%88ze%2C+France&format=jsonv2",
+    "notes": "Unchanged from the prior automated Nominatim resolution — no clearly better source found this session."
+  },
+  "hotel-du-cap-eden-roc": {
+    "lat": 43.5484489,
+    "lng": 7.1215745,
+    "source": "nominatim",
+    "query": "HOTEL DU CAP - EDEN - ROC, ANTIBES, FRANCE",
+    "displayName": "Hôtel du Cap-Eden-Roc, 165, Boulevard John Fitzgerald Kennedy, Cap d'Antibes, Antibes, Grasse, Alpes-Maritimes, Provence-Alpes-Côte d'Azur, France métropolitaine, 06160, France",
+    "matchLevel": "venue-level",
+    "evidenceUrl": "https://nominatim.openstreetmap.org/search?q=HOTEL+DU+CAP+-+EDEN+-+ROC%2C+ANTIBES%2C+FRANCE&format=jsonv2",
+    "notes": "Unchanged from the prior automated Nominatim resolution — no clearly better source found this session."
+  },
+  "lagardere-paris-racing": {
+    "lat": 48.8643180,
+    "lng": 2.2548387,
+    "source": "manual-google-maps",
+    "query": "Lagardère Paris Racing, 1 Chem. de la Croix Catelan, 75016 Paris, France",
+    "displayName": "Lagardère Paris Racing, Chemin de la Croix Catelan, Paris, France",
+    "matchLevel": "venue-level",
+    "notes": "Venue-area coordinates from the address in the info.txt Google Maps link."
+  },
+  "monte-carlo-country-club": {
+    "lat": 43.7521951,
+    "lng": 7.4413448,
+    "source": "openstreetmap",
+    "query": "Monte-Carlo Country Club",
+    "displayName": "Monte-Carlo Country Club, Avenue de France, Roquebrune-Cap-Martin, France",
+    "matchLevel": "venue-level",
+    "evidenceUrl": "https://nominatim.openstreetmap.org/search?q=Monte-Carlo+Country+Club&format=jsonv2",
+    "notes": "Of 3 Nominatim candidates: the selected one is tagged leisure=sports_centre on Avenue de France — the actual club grounds. The other two (~280m away, on Sentier des Douaniers) are tagged railway=stop/station — a coastal-path rail halt that happens to share the club's name, not the club itself, so they were rejected. Cross-checked: the club's official address (155 Av. Princesse Grace, per the Google Maps redirect) resolves ~120m from the selected point, consistent with the same property. Venue-level (sports-centre polygon centroid, not a specific court)."
+  },
+  "mouratoglou-tennis-academy": {
+    "lat": 43.6198219,
+    "lng": 7.0612058,
+    "source": "openstreetmap",
+    "query": "Mouratoglou Academy",
+    "displayName": "Mouratoglou Academy, Route des Dolines, Éganaude, Sophia Antipolis, Biot, France",
+    "matchLevel": "venue-level",
+    "evidenceUrl": "https://nominatim.openstreetmap.org/search?q=Mouratoglou+Academy&format=jsonv2",
+    "notes": "Nominatim's search is not fuzzy, so the query including 'Tennis' (as in the source name 'Mouratoglou Tennis Academy') returns nothing; dropping that word finds a single unambiguous leisure=sports_centre match in Biot on Route des Dolines, matching the Google Maps redirect address ('3550 Rte des Dolines, 06410 Biot') exactly. This is the actual academy campus, not a distant office, so venue-level (no separate per-court POI exists)."
+  },
+  "tennis-de-la-cavaleire": {
+    "lat": 48.8497479,
+    "lng": 2.3002684,
+    "source": "openstreetmap",
+    "query": "6 Rue de la Cavalerie, Paris",
+    "displayName": "6, Rue de la Cavalerie, Quartier de Grenelle, Paris 15e Arrondissement, France",
+    "matchLevel": "venue-level",
+    "evidenceUrl": "https://nominatim.openstreetmap.org/search?q=6+Rue+de+la+Cavalerie+Paris&format=jsonv2",
+    "notes": "This is the exact building address point (place=house at house number 6) matching the Google Maps redirect exactly ('Tennis De La Cavalerie, 6-8 Rue de la Cavalerie, 75015 Paris'), not merely a bare road centroid. The court occupies the 7th floor of this single Art Deco building per its official site, so the building address is the correct venue-level point; no separate indoor-court POI exists in OSM."
+  },
+  "tennis-de-la-rosiere": {
+    "lat": 45.6264776,
+    "lng": 6.8478344,
+    "source": "openstreetmap",
+    "query": "Tennis La Rosière Montvalezan",
+    "displayName": "Tennis La Rosière, Rue du Gollet, La Rosière, Montvalezan, France",
+    "matchLevel": "exact-court",
+    "evidenceUrl": "https://nominatim.openstreetmap.org/search?q=Tennis+La+Rosi%C3%A8re+Montvalezan&format=jsonv2",
+    "notes": "Of 2 candidates: 'Tennis La Rosière' is tagged leisure=pitch (an actual playing-surface object) — this is the exact-court point for the photographed pink-and-blue court. The other candidate, 'Club house tennis' (~40m away), is tagged building=yes — the clubhouse building, not the court — and was rejected."
+  },
+  "tennis-du-jardin-du-luxembourg": {
+    "lat": 48.8473189,
+    "lng": 2.3341831,
+    "source": "openstreetmap",
+    "query": "Tennis du Luxembourg",
+    "displayName": "Tennis du Luxembourg, Rue de Vaugirard, Quartier de l'Odéon, Paris 6e Arrondissement, France",
+    "matchLevel": "exact-court",
+    "evidenceUrl": "https://nominatim.openstreetmap.org/search?q=Tennis+du+Luxembourg&format=jsonv2",
+    "notes": "Rejected the whole park's geometric centroid (leisure=park, ~250m away) per instructions to locate the tennis area specifically. 'Tennis du Luxembourg' is tagged leisure=pitch — an actual court object inside the garden's southwest corner, distinct from the park centroid and matching the courts' known position near Rue Guynemer/Rue de Vaugirard."
+  }
+}

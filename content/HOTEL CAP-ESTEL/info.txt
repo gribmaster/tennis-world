@@ -1,0 +1,5 @@
+name:"HOTEL CAP-ESTEL"
+location:ZE-SUR-MER, FRANCE
+map link: https://maps.app.goo.gl/6LD5K5Kuosxsddrf6?g_st=ic
+description: Cap-Estel did not begin as an ordinary hotel, but as a private world on a small peninsula between Nice and Monaco. In the early 20th century, the place was discovered by Irish writer Frank Harris, a close friend of Oscar Wilde, and later became one of the Riviera’s most discreet addresses. After the war, Cap-Estel became a refuge for those who wanted privacy more than attention. Greta Garbo, The Beatles, Anthony Quinn, U2, and The Rolling Stones all passed through its hidden world. Its magic is exactly that: not a grand hotel made to be seen,  but a seaside villa where famous guests could disappear from the social pages and become unreachable.
+type: "FRENCH RIVIERA, hard court · sea view · luxury hotel"

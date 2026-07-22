@@ -1,0 +1,5 @@
+name:"EPI BAIE DE PAMPELONNE"
+location:SAINT-TROPEZ, FRANCE
+map link: https://maps.app.goo.gl/xRxB8hC6URwQGGEX6?g_st=ic
+description: Epi began in 1959, when Pampelonne was becoming the summer playground of Saint-Tropez. From Audrey Hepburn to Alain Delon and Brigitte Bardot, the place became part of the Riviera’s golden-age mythology: beach, privacy, music, and beautiful people arriving quietly behind the dunes. Its tennis courts continue that same spirit. Hidden just behind Pampelonne Beach, they feel less like a formal club and more like a private Saint-Tropez ritual: clay courts, bamboo, sea air, and the soft sound of tennis replacing the noise of the beach. A place where the Riviera feels relaxed, discreet, and very 1960s.
+type: "FRENCH RIVIERA, clay courts · pampelonne beach · boutique hotel"

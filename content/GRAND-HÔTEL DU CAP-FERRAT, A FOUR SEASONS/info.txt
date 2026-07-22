@@ -1,0 +1,5 @@
+name:GRAND-HÔTEL DU CAP-FERRAT, A FOUR SEASONS
+location:SAINT-JEAN-CAP-FERRAT, FRANCE
+map link: https://maps.app.goo.gl/q2MX5CjPPn3iGaqn6?g_st=ic
+description: Opened in 1908, Grand-Hôtel du Cap-Ferrat is one of the great icons of the French Riviera — a white Belle Époque palace set above the Mediterranean, between Nice and Monaco. For more than a century, it has carried the rare Côte d’Azur atmosphere of formal gardens, sea air, clipped pines, and quiet terraces. Its tennis courts sit tucked into the greenery, surrounded by cypress trees, Riviera gardens, and glimpses of blue sea — less “sports club,” more private summer ritual inside one of the Riviera’s most legendary addresses.
+type: "FRENCH RIVIERA, clay court · sea view · luxury hotel"
