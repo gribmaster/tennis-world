@@ -1534,7 +1534,7 @@ async function runReplace(plans: CourtPlan[]): Promise<void> {
           });
         }
       }
-    });
+    }, { timeout: 30000, maxWait: 10000 });
 
     console.log('Database transaction committed.');
 
