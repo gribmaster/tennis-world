@@ -141,7 +141,7 @@ export function CourtDetailLocationPreview({
           <LeafletMap
             markers={marker ? [marker] : []}
             center={[marker!.lat, marker!.lng]}
-            zoom={entitled ? 13 : 6}
+            zoom={entitled ? 17 : 6}
             interactive
             className="h-full w-full"
           />

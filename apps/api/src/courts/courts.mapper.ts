@@ -92,6 +92,7 @@ export const courtExactLocationSelect = {
   status: true,
   lat: true,
   lng: true,
+  mapLinkUrl: true,
 } satisfies Prisma.CourtSelect;
 
 // ── Row payload types (derived from the selects → cannot contain lat/lng) ─────
@@ -194,9 +195,11 @@ export function toMapPinDTO(row: MapPinRow): MapPinDTO {
 /**
  * Build the entitled-viewer exact-location payload (Feature 63). The ONLY mapper that
  * carries exact `lat`/`lng` — fed exclusively by `courtExactLocationSelect` from the
- * protected handler. `directionsUrl` is assembled SERVER-side from the exact coords
- * (intake §4.4) so the client never re-derives geo and the masking boundary stays
- * server-owned; it is a plain Google Maps directions deep link with no external call.
+ * protected handler. `directionsUrl` prefers the court's own original Google Maps link
+ * (`mapLinkUrl`, imported verbatim from content/<folder>/info.txt's "map link:") so the
+ * entitled viewer opens the SAME link the content author supplied — never a different,
+ * server-generated place link. Falls back to a coordinate-derived deep link only for
+ * courts with no stored `mapLinkUrl` (e.g. older seeded/mock courts predating this field).
  */
 export function toExactLocationDTO(row: CourtExactLocationRow): ExactLocationDTO {
   return {
@@ -204,6 +207,7 @@ export function toExactLocationDTO(row: CourtExactLocationRow): ExactLocationDTO
     slug: row.slug,
     lat: row.lat,
     lng: row.lng,
-    directionsUrl: `https://www.google.com/maps/dir/?api=1&destination=${row.lat},${row.lng}`,
+    directionsUrl:
+      row.mapLinkUrl ?? `https://www.google.com/maps/dir/?api=1&destination=${row.lat},${row.lng}`,
   };
 }

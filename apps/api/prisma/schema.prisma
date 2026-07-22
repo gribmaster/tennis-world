@@ -138,6 +138,13 @@ model Court {
   approxLat Float
   approxLng Float
 
+  // Original Google Maps link supplied for this court (content/<folder>/info.txt
+  // "map link:"), preserved verbatim so the entitled-viewer directions link is the
+  // SAME link the content author supplied — never a server-derived lat/lng deep
+  // link. Server-only exposure (same protected exact-location read as lat/lng);
+  // nullable because older/seeded courts predate this field.
+  mapLinkUrl String?
+
   // Decorative [x%, y%] screen position for the stylized map canvas — NOT geo
   // (Risk #17). The serializer recombines these into the `mapCoords` tuple.
   mapX Int

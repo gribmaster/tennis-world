@@ -2,121 +2,73 @@
   "chateau-de-la-messardiere": {
     "lat": 43.2542059,
     "lng": 6.6576743,
-    "source": "google-maps-link",
-    "query": "https://maps.app.goo.gl/fcZsLCn2HEvbzLoTA?g_st=ic",
-    "displayName": "Airelles Saint-Tropez, Château de la Messardière",
-    "matchLevel": "google-place-pin",
-    "evidenceUrl": "https://www.google.com/maps/place/Airelles+Saint-Tropez,+Ch%C3%A2teau+de+la+Messardi%C3%A8re/@43.2542059,6.6576743,17z/data=!3m1!4b1!4m9!3m8!1s0x12cec72602a6ebc5:0x2ecc6386faf841fe!5m2!4m1!1i2!8m2!3d43.2542059!4d6.6576743!16s%2Fg%2F11dyl6chz!18m1!1e1",
-    "notes": "Coordinates taken directly from the Google Maps place pin the info.txt short link redirects to (@lat,lng and !3d!4d agree). No Nominatim/OSM/manual venue lookup involved."
+    "zoom": 17,
+    "source": "user-provided"
   },
   "domaine-des-etangs": {
     "lat": 45.7756621,
     "lng": 0.6434264,
-    "source": "google-maps-link",
-    "query": "https://maps.app.goo.gl/qqzJ67ib9tRjwn6n9?g_st=ic",
-    "displayName": "Domaine des Etangs, Auberge Collection",
-    "matchLevel": "google-place-pin",
-    "evidenceUrl": "https://www.google.com/maps/place/Domaine+des+Etangs,+Auberge+Collection/@45.7756621,0.6434264,17z/data=!3m1!4b1!4m9!3m8!1s0x47fef7bbc03eef79:0xca5136c9c4c84eac!5m2!4m1!1i2!8m2!3d45.7756621!4d0.6434264!16s%2Fg%2F1thp7c4s!18m1!1e1",
-    "notes": "Coordinates taken directly from the Google Maps place pin the info.txt short link redirects to (@lat,lng and !3d!4d agree). No Nominatim/OSM/manual venue lookup involved."
+    "zoom": 17,
+    "source": "user-provided"
   },
   "epi-baie-de-pampelonne": {
     "lat": 43.220411,
     "lng": 6.6603686,
-    "source": "google-maps-link",
-    "query": "https://maps.app.goo.gl/xRxB8hC6URwQGGEX6?g_st=ic",
-    "displayName": "EPI Baie de Pampelonne",
-    "matchLevel": "google-place-pin",
-    "evidenceUrl": "https://www.google.com/maps/place/EPI+Baie+de+Pampelonne/@43.220411,6.6603686,17z/data=!3m1!4b1!4m9!3m8!1s0x12cec6afe1584b7f:0x18e4548c23c54352!5m2!4m1!1i2!8m2!3d43.220411!4d6.6603686!16s%2Fg%2F1tf_khr8!18m1!1e1",
-    "notes": "Coordinates taken directly from the Google Maps place pin the info.txt short link redirects to (@lat,lng and !3d!4d agree). No Nominatim/OSM/manual venue lookup involved."
+    "zoom": 17,
+    "source": "user-provided"
   },
   "grand-hotel-du-cap-ferrat-a-four-seasons": {
     "lat": 43.6769942,
     "lng": 7.3314966,
-    "source": "google-maps-link",
-    "query": "https://maps.app.goo.gl/q2MX5CjPPn3iGaqn6?g_st=ic",
-    "displayName": "Grand-Hôtel du Cap-Ferrat",
-    "matchLevel": "google-place-pin",
-    "evidenceUrl": "https://www.google.com/maps/place/Grand-H%C3%B4tel+du+Cap-Ferrat/@43.6769942,7.3314966,17z/data=!3m1!4b1!4m9!3m8!1s0x12cddb7323c396af:0x50dfb140f960c843!5m2!4m1!1i2!8m2!3d43.6769942!4d7.3314966!16s%2Fm%2F04f63hl!18m1!1e1",
-    "notes": "Coordinates taken directly from the Google Maps place pin the info.txt short link redirects to (@lat,lng and !3d!4d agree). No Nominatim/OSM/manual venue lookup involved."
+    "zoom": 17,
+    "source": "user-provided"
   },
   "hotel-cap-estel": {
     "lat": 43.7183437,
     "lng": 7.3740844,
-    "source": "google-maps-link",
-    "query": "https://maps.app.goo.gl/6LD5K5Kuosxsddrf6?g_st=ic",
-    "displayName": "Hôtel Cap-Estel",
-    "matchLevel": "google-place-pin",
-    "evidenceUrl": "https://www.google.com/maps/place/H%C3%B4tel+Cap-Estel/@43.7183437,7.3740844,17z/data=!3m1!4b1!4m9!3m8!1s0x12cdc347652240d7:0x40880801fb1e7fe4!5m2!4m1!1i2!8m2!3d43.7183437!4d7.3740844!16s%2Fg%2F1vj6nvb3!18m1!1e1",
-    "notes": "Coordinates taken directly from the Google Maps place pin the info.txt short link redirects to (@lat,lng and !3d!4d agree). No Nominatim/OSM/manual venue lookup involved."
+    "zoom": 17,
+    "source": "user-provided"
   },
   "hotel-du-cap-eden-roc": {
     "lat": 43.5483462,
     "lng": 7.1216027,
-    "source": "google-maps-link",
-    "query": "https://maps.app.goo.gl/wVpHM7DhzQ6km3xn9?g_st=ic",
-    "displayName": "Hôtel du Cap-Eden-Roc",
-    "matchLevel": "google-place-pin",
-    "evidenceUrl": "https://www.google.com/maps/place/%D0%9E%D1%82%D0%B5%D0%BB%D1%8C+%D0%B4%D1%8E+%D0%9A%D0%B0%D0%BF-%D0%AD%D0%B4%D0%B5%D0%BD-%D0%A0%D0%BE%D0%BA/@43.5483462,7.1216027,17z/data=!3m1!4b1!4m9!3m8!1s0x12ce7fbd6d124481:0x3f502f7f5f237469!5m2!4m1!1i2!8m2!3d43.5483462!4d7.1216027!16zL20vMDNxMmRu!18m1!1e1",
-    "notes": "Coordinates taken directly from the Google Maps place pin the info.txt short link redirects to (@lat,lng and !3d!4d agree; the resolved page rendered the place name in Russian, 'Отель дю Кап-Эден-Рок', but the pin/coordinates are unaffected by UI locale). No Nominatim/OSM/manual venue lookup involved."
+    "zoom": 17,
+    "source": "user-provided"
   },
   "lagardere-paris-racing": {
     "lat": 48.8642463,
     "lng": 2.2558379,
-    "source": "google-maps-link",
-    "query": "https://maps.app.goo.gl/CNcFowWjj5Dm1kEN9?g_st=ic",
-    "displayName": "Lagardère Paris Racing",
-    "matchLevel": "google-place-pin",
-    "evidenceUrl": "https://www.google.com/maps/place/Lagard%C3%A8re+Paris+Racing/@48.8642463,2.2558379,17z/data=!3m1!4b1!4m6!3m5!1s0x47e66549a2575f81:0x9ddaa0105379a253!8m2!3d48.8642463!4d2.2558379!16s%2Fg%2F1tcz7ms6!18m1!1e1",
-    "notes": "Coordinates taken directly from the Google Maps place pin the info.txt short link redirects to (@lat,lng and !3d!4d agree). No Nominatim/OSM/manual venue lookup involved."
+    "zoom": 17,
+    "source": "user-provided"
   },
   "monte-carlo-country-club": {
     "lat": 43.7516314,
     "lng": 7.4407329,
-    "source": "google-maps-link",
-    "query": "https://maps.app.goo.gl/FRTr7PPxs9KPt7JN9?g_st=ic",
-    "displayName": "Monte-Carlo Country Club",
-    "matchLevel": "google-place-pin",
-    "evidenceUrl": "https://www.google.com/maps/place/Monte-Carlo+Country+Club/@43.7516314,7.4407329,17z/data=!3m1!4b1!4m6!3m5!1s0x12cde9d858c078cb:0xc4e059f16444dad7!8m2!3d43.7516314!4d7.4407329!16s%2Fm%2F026c3kr!18m1!1e1",
-    "notes": "Coordinates taken directly from the Google Maps place pin the info.txt short link redirects to (@lat,lng and !3d!4d agree). No Nominatim/OSM/manual venue lookup involved."
+    "zoom": 17,
+    "source": "user-provided"
   },
   "mouratoglou-tennis-academy": {
     "lat": 43.6206181,
     "lng": 7.0592973,
-    "source": "google-maps-link",
-    "query": "https://maps.app.goo.gl/gQoGGkrhNZKMs6Ns9?g_st=ic",
-    "displayName": "Mouratoglou Tennis Academy",
-    "matchLevel": "google-place-pin",
-    "evidenceUrl": "https://www.google.com/maps/place/Mouratoglou+Tennis+Academy/@43.6206181,7.0592973,17z/data=!3m1!4b1!4m6!3m5!1s0x12cc2b1003f75337:0x7d260b5b909d9ea2!8m2!3d43.6206181!4d7.0592973!16s%2Fg%2F1hm4kr1f6!18m1!1e1",
-    "notes": "Coordinates taken directly from the Google Maps place pin the info.txt short link redirects to (@lat,lng and !3d!4d agree). No Nominatim/OSM/manual venue lookup involved."
+    "zoom": 17,
+    "source": "user-provided"
   },
   "tennis-de-la-cavaleire": {
     "lat": 48.8496848,
     "lng": 2.3003642,
-    "source": "google-maps-link",
-    "query": "https://maps.app.goo.gl/XVBfxP4sBFTvekyS8?g_st=ic",
-    "displayName": "Tennis De La Cavalerie",
-    "matchLevel": "google-place-pin",
-    "evidenceUrl": "https://www.google.com/maps/place/Tennis+De+La+Cavalerie/@48.8496848,2.3003642,17z/data=!3m1!4b1!4m6!3m5!1s0x47e67022f5fbc20d:0xd08086e61c5f6296!8m2!3d48.8496848!4d2.3003642!16s%2Fg%2F1thkwl80!18m1!1e1",
-    "notes": "Coordinates taken directly from the Google Maps place pin the info.txt short link redirects to (@lat,lng and !3d!4d agree). No Nominatim/OSM/manual venue lookup involved."
+    "zoom": 17,
+    "source": "user-provided"
   },
   "tennis-de-la-rosiere": {
     "lat": 45.6263512,
     "lng": 6.848253,
-    "source": "google-maps-link",
-    "query": "https://maps.app.goo.gl/mDzxXn1eRYPz3Uft6?g_st=ic",
-    "displayName": "Tennis de la Rosière",
-    "matchLevel": "google-place-pin",
-    "evidenceUrl": "https://www.google.com/maps/place/Tennis+de+la+Rosi%C3%A8re/@45.6263512,6.848253,17z/data=!3m1!4b1!4m6!3m5!1s0x47896901b0bd0367:0xa47357eaf570d86f!8m2!3d45.6263512!4d6.848253!16s%2Fg%2F11fswrgvm8!18m1!1e1",
-    "notes": "Coordinates taken directly from the Google Maps place pin the info.txt short link redirects to (@lat,lng and !3d!4d agree). No Nominatim/OSM/manual venue lookup involved."
+    "zoom": 17,
+    "source": "user-provided"
   },
   "tennis-du-jardin-du-luxembourg": {
     "lat": 48.8464745,
     "lng": 2.3344922,
-    "source": "google-maps-link",
-    "query": "https://maps.app.goo.gl/n3UMFU8qPPPL9qdw9?g_st=ic",
-    "displayName": "Tennis Courts",
-    "matchLevel": "google-place-pin",
-    "evidenceUrl": "https://www.google.com/maps/place/Tennis+Courts/@48.8464745,2.3344922,17z/data=!3m1!4b1!4m6!3m5!1s0x47e671dadc993447:0x5cc6a0d34797123e!8m2!3d48.8464745!4d2.3344922!16s%2Fg%2F11c1q945s2!18m1!1e1",
-    "notes": "Coordinates taken directly from the Google Maps place pin the info.txt short link redirects to (@lat,lng and !3d!4d agree). No Nominatim/OSM/manual venue lookup involved."
+    "zoom": 17,
+    "source": "user-provided"
   }
 }

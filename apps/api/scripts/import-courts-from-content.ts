@@ -166,6 +166,8 @@ interface CourtPlan {
   lng?: number;
   approxLat?: number;
   approxLng?: number;
+  /** Leaflet initial zoom level for this court's detail map (from content/coordinates.json). */
+  zoom?: number;
   coordSource?: string;
   coordMatchLevel?: MatchLevel;
   coordDisplayName?: string;
@@ -565,16 +567,18 @@ async function resolveMapLinkCoords(mapLink: string): Promise<CoordResult> {
 // exclusively by `--resolve-coordinates` (Part 3) and merely READ by every
 // other mode. Keys are final court slugs; see `CoordinateOverride` for shape.
 
-type MatchLevel = 'exact-court' | 'venue-level';
+type MatchLevel = 'exact-court' | 'venue-level' | 'google-place-pin';
 
 interface CoordinateOverride {
   lat: number;
   lng: number;
-  /** e.g. "nominatim", "manual-google-maps", "official-site", "official-embedded-map", "openstreetmap", "wikidata", "wikipedia". */
+  /** Leaflet initial zoom level for this court's detail map. */
+  zoom?: number;
+  /** e.g. "user-provided", "google-maps-link", "nominatim", "manual-google-maps", "official-site", "official-embedded-map", "openstreetmap", "wikidata", "wikipedia". */
   source: string;
-  query: string; // the query/search string that produced this result
-  displayName: string; // the selected venue/court name, for human review
-  matchLevel: MatchLevel;
+  query?: string; // the query/search string that produced this result (Nominatim path only)
+  displayName?: string; // the selected venue/court name, for human review (Nominatim path only)
+  matchLevel?: MatchLevel;
   /** Public URL a human can open to verify this selection (required for manually-researched entries). */
   evidenceUrl?: string;
   /** Free-text justification, esp. required when matchLevel is venue-level (why no exact-court point exists). */
@@ -1044,6 +1048,7 @@ async function planCourt(
   let lng: number | undefined;
   let approxLat: number | undefined;
   let approxLng: number | undefined;
+  let zoom: number | undefined;
   let coordSource: string | undefined;
   let coordMatchLevel: MatchLevel | undefined;
   let coordDisplayName: string | undefined;
@@ -1054,6 +1059,7 @@ async function planCourt(
   if (override && isValidLatLng(override.lat, override.lng)) {
     lat = override.lat;
     lng = override.lng;
+    zoom = typeof override.zoom === 'number' && Number.isFinite(override.zoom) ? override.zoom : undefined;
     coordSource = override.source;
     coordMatchLevel = override.matchLevel;
     coordDisplayName = override.displayName;
@@ -1110,6 +1116,7 @@ async function planCourt(
     lng,
     approxLat,
     approxLng,
+    zoom,
     coordSource,
     coordMatchLevel,
     coordDisplayName,
@@ -1133,6 +1140,11 @@ function printReport(plans: CourtPlan[]): boolean {
 
   console.log(`Court folders found: ${totalFolders}`);
   console.log(`Total images found: ${totalImages}\n`);
+
+  const userProvidedCount = plans.filter((p) => p.coordSource === 'user-provided' && p.lat !== undefined).length;
+  const zoom17Count = plans.filter((p) => p.zoom === 17).length;
+  console.log(`Coordinates loaded from user-provided data: ${userProvidedCount}/${totalFolders}`);
+  console.log(`Courts with zoom: 17: ${zoom17Count}/${totalFolders}\n`);
 
   // Slug collision detection (within this import batch).
   const slugCounts = new Map<string, string[]>();
@@ -1193,6 +1205,7 @@ function printReport(plans: CourtPlan[]): boolean {
     console.log(
       `  lat/lng:     ${p.lat !== undefined ? `${p.lat}, ${p.lng}` : '(unresolved)'}`,
     );
+    console.log(`  zoom:        ${p.zoom ?? '(none)'}`);
     console.log(`  coord source: ${p.coordSource ?? '(none)'}`);
     console.log(`  match level: ${p.coordMatchLevel ?? '(n/a)'}`);
     console.log(`  selected display name: ${p.coordDisplayName ?? '(n/a)'}`);
@@ -1504,6 +1517,7 @@ async function runReplace(plans: CourtPlan[]): Promise<void> {
           lng: p.lng!,
           approxLat: p.approxLat!,
           approxLng: p.approxLng!,
+          mapLinkUrl: p.info.mapLink ?? null,
           mapX,
           mapY,
           surface: p.surface as never,
