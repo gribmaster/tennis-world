@@ -26,10 +26,11 @@ import { getRepositoriesForRequest } from '@/lib/repositories.server';
 // still renders and the menu prompts sign-in instead of crashing. In MOCK mode the saved
 // reads never 401, so `signedIn` is always true there.
 //
-// ENTITLEMENT (Feature 64): the locked/unlocked state now derives from the REAL protected
-// exact-location unlock (`GET /v1/me/courts/:slug/exact-location`, Feature 63) — attempted
-// only for a locked court, with the same session cookie, and degraded to "locked" for a
-// logged-out / non-entitled / unknown viewer (the repo maps 401/403/404 → null). An
+// ENTITLEMENT (Feature 64): the locked/unlocked state derives ENTIRELY from the REAL
+// protected exact-location unlock (`GET /v1/me/courts/:slug/exact-location`, Feature 63) —
+// attempted for EVERY court regardless of `court.isLocked` (that flag describes imported
+// content, not viewer entitlement), with the same session cookie, and degraded to "locked"
+// for a logged-out / non-entitled / unknown viewer (the repo maps 401/403/404 → null). An
 // entitled viewer gets back a `directionsUrl` (server-built from the exact coords) that
 // wires the real "Get Directions" link. NO Stripe, NO checkout — the paywall CTA is
 // unchanged for locked users. The location placeholder still never receives or plots
@@ -91,26 +92,25 @@ export default async function CourtDetailPage({
     }
   }
 
-  // ENTITLEMENT (Feature 64): the locked/unlocked state now derives from the REAL
+  // ENTITLEMENT (Feature 64): the locked/unlocked state derives ENTIRELY from the REAL
   // exact-location unlock (`GET /v1/me/courts/:slug/exact-location`, Feature 63) — the
-  // single source of truth — NOT a hardcoded stand-in and NOT `UserProfileDTO.membership`
+  // single source of truth — NOT `court.isLocked` and NOT `UserProfileDTO.membership`
   // (which would add an extra /v1/me call to this public page). The endpoint IS the
   // membership gate: 200 ⇒ entitled, 401/403/404 ⇒ not (the repo collapses all three to
   // `null`). Derived ONCE here and passed down as props — components never recompute it.
   //
-  // We attempt it ONLY for a court that is `isLocked` (a court that isn't locked has
-  // nothing to unlock — its public flow is unchanged, no protected call made). This runs
-  // through the request-scoped `protectedRepos.courts`, which forwards the session cookie
-  // in `api` mode; a logged-out visitor's protected read degrades to `null` INSIDE the
-  // repo (never an exception, never a redirect — this page is PUBLIC). In MOCK mode the
-  // repo returns `null` (no auth/entitlement seam), so locked courts stay locked exactly
-  // as before. A real (non-401/403/404) fault still propagates out of the repo.
-  let exactLocation: ExactLocationDTO | null = null;
-  if (court.isLocked) {
-    exactLocation = await protectedRepos.courts.getExactLocation(court.slug);
-  }
-  const unlocked = exactLocation !== null;
-  const locked = court.isLocked && !unlocked;
+  // Attempted for EVERY court, regardless of `court.isLocked` — that flag describes the
+  // imported/seeded content, not the viewer's entitlement, so gating the call on it would
+  // make the exact-location/zoom-17 map branch unreachable for any court whose `isLocked`
+  // happens to be false even for a genuinely entitled viewer. This runs through the
+  // request-scoped `protectedRepos.courts`, which forwards the session cookie in `api`
+  // mode; a logged-out or non-entitled visitor's protected read degrades to `null` INSIDE
+  // the repo (never an exception, never a redirect — this page is PUBLIC). In MOCK mode
+  // the repo always returns `null` (no auth/entitlement seam), so behavior there is
+  // unchanged. A real (non-401/403/404) fault still propagates out of the repo.
+  const exactLocation: ExactLocationDTO | null =
+    await protectedRepos.courts.getExactLocation(court.slug);
+  const locked = exactLocation === null;
 
   const { pullQuote, body } = splitBlurb(court.blurb);
   const locationLine = [court.country, court.region].filter(Boolean).join(' · ');
