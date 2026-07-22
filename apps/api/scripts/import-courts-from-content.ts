@@ -1526,7 +1526,11 @@ async function runReplace(plans: CourtPlan[]): Promise<void> {
           indoorOutdoor: (p.indoorOutdoor ?? 'Outdoor') as never,
           isScenic: p.isScenic,
           isFeatured: false,
-          isLocked: false,
+          // Locked by default so the page-level entitlement gate (courts/[slug]/page.tsx)
+          // actually calls the protected exact-location endpoint for these courts —
+          // an unlocked court never fetches it, so the exact-coordinate/zoom-17 map
+          // branch would otherwise be unreachable regardless of viewer entitlement.
+          isLocked: true,
           status: 'published' as never,
           blurb: p.info.description!,
           seedOrder: i,
