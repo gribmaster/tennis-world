@@ -26,8 +26,15 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Used by the Prisma CLI for migrations only (migrate dev/deploy/diff, db push).
+  // Points at a NON-pooled (session-mode) connection — pgbouncer's transaction
+  // pooler (DATABASE_URL, below) does not support the advisory locks / prepared
+  // statements Prisma's migration engine needs, which is what caused the prior
+  // $transaction timeout (P2028) against Supabase. The generated Prisma Client
+  // (runtime queries) never reads this — it always uses `url` above.
+  directUrl = env("DIRECT_URL")
 }
 
 enum Surface {
