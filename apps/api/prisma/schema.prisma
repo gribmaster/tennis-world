@@ -249,6 +249,17 @@ model User {
   // (everyone today) have null.
   stripeCustomerId String? @unique
 
+  // Google OAuth (additive, minimal — Google sign-in feature). Nullable + unique,
+  // same pattern as stripeCustomerId above. Populated on first Google sign-in for
+  // an account with no prior googleId; NEVER overwritten once set (see
+  // GoogleAuthService.findOrCreateUser — reassigning it would silently move an
+  // account to a different Google identity). Linking is EMAIL-primary: lookup is
+  // always by User.email first, and googleId is only backfilled onto that row.
+  googleId  String? @unique
+  // Profile picture URL from Google. Nullable; only backfilled when the row's
+  // avatarUrl is currently null/empty — never overwrites existing profile data.
+  avatarUrl String?
+
   entitlements         Entitlement[]
   savedCourts          SavedCourt[]
   userCollections      UserCollection[]

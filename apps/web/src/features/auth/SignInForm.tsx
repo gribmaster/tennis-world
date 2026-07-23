@@ -5,7 +5,12 @@ import type { FormEvent } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { AppleIcon, ArrowIcon, GoogleIcon, MailIcon } from './AuthIcons';
-import { AuthClientError, isApiMode, requestMagicLink } from './auth-client';
+import {
+  AuthClientError,
+  buildGoogleSignInUrl,
+  isApiMode,
+  requestMagicLink,
+} from './auth-client';
 
 // SignInForm — the magic-link sign-in island, ported from `SignIn` in files/signin.html.
 //
@@ -15,8 +20,14 @@ import { AuthClientError, isApiMode, requestMagicLink } from './auth-client';
 // whether the email has an account (no enumeration), so we ALWAYS flip to the generic
 // "Check your inbox" success on a 2xx — success copy reveals nothing. A network/validation
 // failure shows an inline error instead. In MOCK mode there is no API, so we keep the
-// original cosmetic delay → success (no fetch). The Apple/Google buttons stay INERT
-// placeholders (no OAuth — out of scope; recorded in PHASE_1_PLACEHOLDER_CTA_AUDIT §5).
+// original cosmetic delay → success (no fetch).
+//
+// GOOGLE OAUTH: the Google button is a plain full-page navigation (`<a href>`, NOT a
+// fetch/onClick) to `GET ${API_BASE_URL}/auth/google?redirectTo=...` — the API responds
+// with a 302 to Google's consent screen, so this can only be a real browser navigation.
+// In MOCK mode there's no API, so the link is omitted (same "no API" boundary the
+// magic-link path already respects). The Apple button stays an INERT placeholder (Apple
+// sign-in is out of scope; recorded in PHASE_1_PLACEHOLDER_CTA_AUDIT §5).
 //
 // State is local React state (email, `sent`, `loading`, `error`) discarded on unmount.
 
@@ -96,14 +107,24 @@ export function SignInForm() {
         Access your saved courts, collections, and membership.
       </p>
 
-      {/* Inert OAuth placeholders — no real Apple/Google sign-in in Phase 1 (no OAuth). */}
+      {/* Apple stays an inert placeholder (out of scope). Google is a real full-page
+          navigation to the API's OAuth start route — omitted in MOCK mode (no API). */}
       <div className="mt-10 flex flex-col gap-2.5">
         <button type="button" className="btn btn-secondary w-full justify-center gap-2.5">
           <AppleIcon width={16} height={16} /> Continue with Apple
         </button>
-        <button type="button" className="btn btn-secondary w-full justify-center gap-2.5">
-          <GoogleIcon width={16} height={16} /> Continue with Google
-        </button>
+        {isApiMode() ? (
+          <a
+            href={buildGoogleSignInUrl(redirectTo)}
+            className="btn btn-secondary w-full justify-center gap-2.5"
+          >
+            <GoogleIcon width={16} height={16} /> Continue with Google
+          </a>
+        ) : (
+          <button type="button" className="btn btn-secondary w-full justify-center gap-2.5">
+            <GoogleIcon width={16} height={16} /> Continue with Google
+          </button>
+        )}
       </div>
 
       <div className="my-7 flex items-center gap-3">

@@ -5,12 +5,12 @@ import {
   UnauthorizedException,
   createParamDecorator,
 } from '@nestjs/common';
-import { timingSafeEqual } from 'node:crypto';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { AUTH_CONFIG, type AuthConfig } from './auth.config';
 import type { AuthContext, RequestWithAuth } from './auth.types';
 import { Inject } from '@nestjs/common';
+import { safeEqual } from './crypto.util';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AuthGuard (prompt task 10) — the REUSABLE guard the future /v1/me/* surface will
@@ -36,19 +36,6 @@ import { Inject } from '@nestjs/common';
 
 /** Header carrying the staging demo-auth secret (Feature 76). Lower-case: Node lowercases header keys. */
 const DEMO_AUTH_HEADER = 'x-tennis-demo-auth';
-
-/**
- * Constant-time string equality (Feature 76 demo-auth compare). `timingSafeEqual`
- * requires equal-length buffers and throws otherwise, so we length-check first — that
- * check leaks only the length, never the content, which is acceptable for a fixed-length
- * shared secret. Avoids a short-circuiting `===` that could leak the secret via timing.
- */
-function safeEqual(a: string, b: string): boolean {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length) return false;
-  return timingSafeEqual(bufA, bufB);
-}
 
 @Injectable()
 export class AuthGuard implements CanActivate {

@@ -7,7 +7,9 @@
 // link) and the /verify island POSTs `/v1/auth/verify` (sets the httpOnly cookie). In MOCK
 // mode the forms keep their cosmetic success UX (no API). The transport lives in
 // `auth-client.ts`; none of this imports a domain repository (auth is not a domain
-// resource). Apple/Google buttons stay inert placeholders (no OAuth — out of scope).
+// resource). Google sign-in is a real full-page navigation to the API's OAuth start route
+// (`GET /v1/auth/google`, in `api` mode only). The Apple button stays an inert placeholder
+// (Apple sign-in is out of scope).
 
 export { AuthLayout } from './AuthLayout';
 export type { AuthLayoutProps } from './AuthLayout';

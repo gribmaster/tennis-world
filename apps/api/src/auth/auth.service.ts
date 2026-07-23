@@ -13,6 +13,7 @@ import { MailerService } from './mailer.service';
 import type { AccessTokenPayload } from './auth.types';
 import { toUserProfileDTO } from './user-profile.mapper';
 import { EntitlementsService } from '../entitlements/entitlements.service';
+import { sanitizeRedirect } from './redirect.util';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AuthService — the magic-link engine (prompt tasks 6/7/9/11).
@@ -67,39 +68,6 @@ export class AuthService {
     return createHash('sha256').update(value).digest('hex');
   }
 
-  /**
-   * Validate an optional `redirectTo` (open-redirect guard, Feature 50 §3.1 / §9).
-   * ACCEPTED: a relative path beginning with a single '/', OR an absolute URL whose
-   * origin exactly equals WEB_APP_URL. Anything else (external host,
-   * protocol-relative `//evil`, malformed) is dropped → undefined (we ignore, not
-   * 400, so a stray client value can't break sign-in). Returns the SAFE value or
-   * undefined.
-   */
-  private sanitizeRedirect(redirectTo: string | undefined): string | undefined {
-    if (!redirectTo) return undefined;
-    const value = redirectTo.trim();
-    if (value.length === 0) return undefined;
-
-    // Relative path: must start with exactly one '/' (reject '//host' which a browser
-    // treats as protocol-relative → external).
-    if (value.startsWith('/') && !value.startsWith('//')) {
-      return value;
-    }
-
-    // Absolute URL: only honor it if its origin matches the trusted web origin.
-    try {
-      const candidate = new URL(value);
-      const allowed = new URL(this.config.webAppUrl);
-      if (candidate.origin === allowed.origin) {
-        // Return just the path+query+hash (we re-base onto WEB_APP_URL ourselves).
-        return `${candidate.pathname}${candidate.search}${candidate.hash}`;
-      }
-    } catch {
-      // not a parseable URL → ignore
-    }
-    return undefined;
-  }
-
   /** Build the emailed verify URL from a raw token + an already-sanitized redirect. */
   private buildMagicLinkUrl(rawToken: string, safeRedirect?: string): string {
     const url = new URL('/verify', this.config.webAppUrl);
@@ -119,7 +87,7 @@ export class AuthService {
     context: { userAgent?: string; ip?: string },
   ): Promise<void> {
     const normalizedEmail = this.normalizeEmail(email);
-    const safeRedirect = this.sanitizeRedirect(redirectTo);
+    const safeRedirect = sanitizeRedirect(redirectTo, this.config.webAppUrl);
 
     // 256-bit random raw token; only its hash is persisted.
     const rawToken = randomBytes(32).toString('hex');
@@ -221,6 +189,22 @@ export class AuthService {
       accessToken,
       expiresAt,
     };
+  }
+
+  /**
+   * Public wrapper around the private session-issuance core, for any OTHER identity
+   * path that has already established a verified `User` row and just needs a session
+   * minted in the SAME shape `verify()` returns. Currently used only by the Google
+   * OAuth callback (`GoogleAuthService.completeSignIn`) after it finds/creates the
+   * User from verified Google claims — keeps `issueSession` itself private and
+   * `verify()`'s own call path untouched.
+   */
+  async issueSessionForUser(
+    userId: string,
+    email: string,
+    name: string | null,
+  ): Promise<AuthSessionDTO> {
+    return this.issueSession(userId, email, name);
   }
 
   /** Verify a raw access token (used by the guard). Throws on invalid/expired. */

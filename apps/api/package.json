@@ -23,7 +23,8 @@
     "verify:billing-rate-limit": "tsx scripts/verify-billing-rate-limit.ts",
     "verify:stripe-webhook": "tsx scripts/verify-stripe-webhook.ts",
     "verify:stripe-e2e": "tsx scripts/verify-stripe-e2e.ts",
-    "verify:staging-demo-auth": "tsx scripts/verify-staging-demo-auth.ts"
+    "verify:staging-demo-auth": "tsx scripts/verify-staging-demo-auth.ts",
+    "verify:google-oauth": "tsx scripts/verify-google-oauth.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -40,6 +41,7 @@
     "class-validator": "^0.14.4",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",
+    "google-auth-library": "^10.9.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "stripe": "^17.5.0"

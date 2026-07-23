@@ -6,6 +6,9 @@ import { AuthGuard } from './auth.guard';
 import { MailerService } from './mailer.service';
 import { AUTH_CONFIG, loadAuthConfig } from './auth.config';
 import { EntitlementsModule } from '../entitlements/entitlements.module';
+import { GoogleAuthController } from './google-auth.controller';
+import { GoogleAuthService } from './google-auth.service';
+import { GOOGLE_AUTH_CONFIG, loadGoogleAuthConfig } from './google-auth.config';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AuthModule (prompt task 5) — the magic-link auth foundation.
@@ -30,16 +33,25 @@ import { EntitlementsModule } from '../entitlements/entitlements.module';
 // membership in `AuthSessionDTO.user` (Feature 62) — the EntitlementsService is the one
 // place that rule lives. One-directional dependency (Auth → Entitlements → Prisma), no
 // cycle.
+//
+// GOOGLE OAUTH (additive): GoogleAuthController/GoogleAuthService are a separate
+// pair layered on top of this SAME module — GoogleAuthService depends on
+// AuthService (to mint the identical session shape via `issueSessionForUser`) and
+// GOOGLE_AUTH_CONFIG (its own optional-provider config, mirroring
+// BILLING_CONFIG's pattern: never blocks boot, gates at request time). Kept
+// internal — not exported — since nothing outside this module needs them.
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Module({
   imports: [JwtModule.register({}), EntitlementsModule],
-  controllers: [AuthController],
+  controllers: [AuthController, GoogleAuthController],
   providers: [
     { provide: AUTH_CONFIG, useFactory: () => loadAuthConfig() },
+    { provide: GOOGLE_AUTH_CONFIG, useFactory: () => loadGoogleAuthConfig() },
     AuthService,
     MailerService,
     AuthGuard,
+    GoogleAuthService,
   ],
   exports: [AuthService, AuthGuard, AUTH_CONFIG],
 })

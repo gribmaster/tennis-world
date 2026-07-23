@@ -5,7 +5,12 @@ import type { FormEvent } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { AppleIcon, ArrowIcon, GoogleIcon, MailIcon } from './AuthIcons';
-import { AuthClientError, isApiMode, requestMagicLink } from './auth-client';
+import {
+  AuthClientError,
+  buildGoogleSignInUrl,
+  isApiMode,
+  requestMagicLink,
+} from './auth-client';
 
 // SignUpForm — the name+email sign-up island, ported from `SignUp` in files/signup.html.
 //
@@ -20,7 +25,9 @@ import { AuthClientError, isApiMode, requestMagicLink } from './auth-client';
 // onboarding step is a follow-on. Until then the entered name is intentionally discarded
 // here. (No enumeration: success is generic on any 2xx.)
 //
-// MOCK mode keeps the original cosmetic delay → success (no fetch). Apple/Google stay INERT.
+// MOCK mode keeps the original cosmetic delay → success (no fetch). Apple stays INERT;
+// Google is a real full-page navigation to the API's OAuth start route (see SignInForm's
+// header comment for the same reasoning — omitted in MOCK mode, no API to redirect to).
 
 export function SignUpForm() {
   const searchParams = useSearchParams();
@@ -96,14 +103,24 @@ export function SignUpForm() {
         Save courts, build collections, and unlock the full atlas.
       </p>
 
-      {/* Inert OAuth placeholders — no real Apple/Google sign-up in Phase 1 (no OAuth). */}
+      {/* Apple stays an inert placeholder (out of scope). Google is a real full-page
+          navigation to the API's OAuth start route — omitted in MOCK mode (no API). */}
       <div className="mt-10 flex flex-col gap-2.5">
         <button type="button" className="btn btn-secondary w-full justify-center gap-2.5">
           <AppleIcon width={16} height={16} /> Continue with Apple
         </button>
-        <button type="button" className="btn btn-secondary w-full justify-center gap-2.5">
-          <GoogleIcon width={16} height={16} /> Continue with Google
-        </button>
+        {isApiMode() ? (
+          <a
+            href={buildGoogleSignInUrl(redirectTo)}
+            className="btn btn-secondary w-full justify-center gap-2.5"
+          >
+            <GoogleIcon width={16} height={16} /> Continue with Google
+          </a>
+        ) : (
+          <button type="button" className="btn btn-secondary w-full justify-center gap-2.5">
+            <GoogleIcon width={16} height={16} /> Continue with Google
+          </button>
+        )}
       </div>
 
       <div className="my-7 flex items-center gap-3">

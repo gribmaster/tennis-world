@@ -21,10 +21,25 @@ import type { AuthSessionDTO } from '@tennis/contracts';
 
 const DEFAULT_API_BASE_URL = 'http://localhost:3001/v1';
 
-function resolveBaseUrl(): string {
+export function resolveBaseUrl(): string {
   const raw = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
   const base = raw && raw.length > 0 ? raw : DEFAULT_API_BASE_URL;
   return base.replace(/\/+$/, '');
+}
+
+/**
+ * Build the URL the browser navigates to for Google sign-in — GET
+ * `${API_BASE_URL}/auth/google[?redirectTo=...]`. This is a FULL-PAGE navigation
+ * target (an `<a href>`), never fetched via AJAX: the API responds with a 302 to
+ * Google, which only makes sense as a real browser navigation. `redirectTo` is
+ * forwarded as-is (the same value the magic-link flow already reads from
+ * `useSearchParams()`); the API re-validates it server-side (open-redirect guard)
+ * before ever honoring it, so an untrusted value here is harmless.
+ */
+export function buildGoogleSignInUrl(redirectTo?: string): string {
+  const url = new URL(`${resolveBaseUrl()}/auth/google`);
+  if (redirectTo) url.searchParams.set('redirectTo', redirectTo);
+  return url.toString();
 }
 
 /** True when the web app is wired to the live API (vs. the in-memory mock). */
