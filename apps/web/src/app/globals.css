@@ -351,11 +351,18 @@
      (56px + safe-area). `--map-chrome` collapses the bottom-nav term at md+ where
      the tab bar is hidden. */
   .map-layout {
-
+    --map-header: 72px;
+    --map-filterbar: 69px;
+    --map-bottom-nav: calc(56px + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - var(--map-header) - var(--map-filterbar) - var(--map-bottom-nav));
   }
   .map-canvas-wrap {
     position: relative;
-    height: 500px;
+    flex: 0 0 55%;
+    min-height: 0;
+    overflow: hidden;
   }
   .map-list-panel {
     flex: 1 1 auto;
@@ -377,6 +384,17 @@
       border-top: none;
       border-left: 1px solid theme('colors.hairline');
       overflow-y: auto;
+    }
+  }
+  @media (max-width: 767px) {
+
+    .map-layout {
+      display: block;
+      height: auto;
+    }
+    .map-canvas-wrap {
+      position: relative;
+      height: 500px;
     }
   }
 }
