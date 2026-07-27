@@ -41,6 +41,14 @@ export const UserProfileSchema = z.object({
    * (nothing to show) and `lifetime` (no expiration to report, never a misleading date).
    */
   activeUntil: z.string().nullable().optional(),
+  /**
+   * The user's profile photo (currently sourced only from Google's `picture` claim —
+   * see `User.avatarUrl`). `null` when no photo is available (magic-link users, or a
+   * Google account whose claim omitted one); OPTIONAL so existing callers (mock data,
+   * older cached responses) stay valid without it. The server validates this is a
+   * usable http(s) URL before ever setting it — never a data: URI or provider token.
+   */
+  avatarUrl: z.string().nullable().optional(),
 });
 export type UserProfileDTO = z.infer<typeof UserProfileSchema>;
 

@@ -263,8 +263,10 @@ model User {
   // account to a different Google identity). Linking is EMAIL-primary: lookup is
   // always by User.email first, and googleId is only backfilled onto that row.
   googleId  String? @unique
-  // Profile picture URL from Google. Nullable; only backfilled when the row's
-  // avatarUrl is currently null/empty — never overwrites existing profile data.
+  // Profile picture URL from Google (the only source of this field today — there is
+  // no custom-upload UI). Nullable. Refreshed on every successful Google sign-in when
+  // Google supplies a picture, so a changed Google photo eventually propagates; never
+  // cleared when Google omits one, and never touched by magic-link sign-in.
   avatarUrl String?
 
   entitlements         Entitlement[]

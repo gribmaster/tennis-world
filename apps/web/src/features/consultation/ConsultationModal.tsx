@@ -296,7 +296,7 @@ export function ConsultationModal({
   return createPortal(
     // Backdrop — click closes (simple backdrop dismissal, matching PaywallModal).
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-ink/70 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-[9999] flex items-end justify-center bg-ink/70 p-0 backdrop-blur-sm sm:items-center sm:p-6"
       onClick={onClose}
     >
       {/* Dialog. stopPropagation so clicks inside don't bubble to the backdrop. */}

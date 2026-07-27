@@ -1,16 +1,17 @@
 import type { UserProfileDTO } from '@tennis/contracts';
-import { Badge } from '@/components/ui';
+import { Badge, UserAvatar } from '@/components/ui';
 import { isDemoMode } from '@/lib/demo-auth';
 
 // ProfileHeader — the top section of the Profile screen, ported from profile.html's
-// header (initials avatar + serif name + membership status line).
+// header (avatar + serif name + membership status line).
 //
 // PRESENTATIONAL ONLY: receives the already-fetched user via props (the page is the
 // only repository boundary). No repository, no @tennis/mock-data, no state.
 //
-// VISUAL: an 80px circular ink chip with the user's INITIALS in serif (not a photo —
-// UserProfileDTO carries no avatar URL, and none is added in Phase 1), the serif name,
-// and a membership status that branches on `membership`:
+// VISUAL: an 80px circular avatar — the user's Google profile photo when
+// `avatarUrl` is set and loads, else the ink-circle serif-INITIALS fallback
+// (`UserAvatar`, `@/components/ui`) — the serif name, and a membership status that
+// branches on `membership`:
 //   • lifetime     → gold "Lifetime Member" Badge (the Badge component's documented Profile use)
 //   • subscription → gold "Active Subscriber" Badge (active recurring Stripe subscription)
 //   • free         → "Explorer · Free" eyebrow in stone
@@ -69,13 +70,12 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
 
   return (
     <div className="flex items-center gap-6 border-b border-hairline pb-10">
-      {/* Initials avatar — ink circle, serif initials. */}
-      <div
-        className="flex h-20 w-20 shrink-0 items-center justify-center rounded-pill bg-ink text-bone"
-        aria-hidden
-      >
-        <span className="serif text-[30px] font-normal">{user.initials}</span>
-      </div>
+      <UserAvatar
+        name={user.name}
+        initials={user.initials}
+        avatarUrl={user.avatarUrl}
+        size="lg"
+      />
 
       <div>
         <h1 className="display-m text-ink">{user.name}</h1>

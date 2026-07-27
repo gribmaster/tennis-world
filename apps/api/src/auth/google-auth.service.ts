@@ -136,9 +136,13 @@ export class GoogleAuthService {
    *     null (a differing existing `googleId` is left untouched — reassigning it
    *     would silently move the account to a different Google identity; this is
    *     treated as a benign edge case, not an error, since email is
-   *     Google-verified and remains the trusted key). `name`/`avatarUrl` are
-   *     filled ONLY if currently null/empty — never overwrite existing profile
-   *     data the user may have set themselves.
+   *     Google-verified and remains the trusted key). `name` is filled ONLY if
+   *     currently null/empty — never overwrite a name the user may have set
+   *     themselves. `avatarUrl` is REFRESHED on every successful sign-in when
+   *     Google supplies a picture (Google is its only source — there's no
+   *     custom-upload UI to protect), so a changed Google photo eventually shows
+   *     up here; if Google returns no picture this sign-in, the existing value
+   *     (if any) is left untouched rather than cleared.
    *   - No match: create a new User with `authProvider: 'google'`.
    * Repeated Google sign-ins for the same email always resolve to the same row.
    */
@@ -153,7 +157,7 @@ export class GoogleAuthService {
       const data: Prisma.UserUpdateInput = {};
       if (!existing.googleId) data.googleId = claims.sub;
       if (!existing.name && claims.name) data.name = claims.name;
-      if (!existing.avatarUrl && claims.picture) data.avatarUrl = claims.picture;
+      if (claims.picture) data.avatarUrl = claims.picture;
 
       if (Object.keys(data).length > 0) {
         const updated = await this.prisma.user.update({

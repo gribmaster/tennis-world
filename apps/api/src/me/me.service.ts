@@ -42,7 +42,7 @@ export class MeService {
   async getProfile(userId: string): Promise<UserProfileDTO> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true, email: true, avatarUrl: true },
     });
     if (!user) {
       // Valid token, but the identity it names is gone → the auth context is stale.
@@ -76,7 +76,7 @@ export class MeService {
       const user = await this.prisma.user.update({
         where: { id: userId },
         data: { name: body.name },
-        select: { id: true, name: true, email: true },
+        select: { id: true, name: true, email: true, avatarUrl: true },
       });
       // Membership is entitlement-derived, not affected by a name edit — but we still
       // resolve and return the REAL value so PATCH and GET agree (Feature 62).

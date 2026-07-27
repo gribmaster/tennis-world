@@ -27,6 +27,13 @@ export interface AppShellProps {
    * Profile/Saved pages pass true (they only render when authenticated).
    */
   signedIn?: boolean;
+  /**
+   * The signed-in user's avatar fields, forwarded to AppHeader's account icon. Only
+   * pages that already fetch `getCurrentUser()` for their own content (e.g. Profile)
+   * pass this — it is never fetched solely to populate the header icon. Omitted
+   * (undefined) elsewhere, where the header falls back to the generic user glyph.
+   */
+  headerUser?: { name: string; initials: string; avatarUrl?: string | null };
 }
 
 export function AppShell({
@@ -34,6 +41,7 @@ export function AppShell({
   overHero = false,
   unlocked = false,
   signedIn = false,
+  headerUser,
 }: AppShellProps) {
   return (
     // NavigationPendingProvider mounts ONCE here so every PendingLink/PendingCardLink/
@@ -43,7 +51,12 @@ export function AppShell({
     // one piece of shared state this feature introduces.
     <NavigationPendingProvider>
       <div className="flex min-h-dvh flex-col">
-        <AppHeader overHero={overHero} unlocked={unlocked} signedIn={signedIn} />
+        <AppHeader
+          overHero={overHero}
+          unlocked={unlocked}
+          signedIn={signedIn}
+          headerUser={headerUser}
+        />
         <main
           className={[
             'flex-1',

@@ -11,3 +11,6 @@ export type { BadgeProps, BadgeTone } from './Badge';
 
 export { InlineSpinner } from './InlineSpinner';
 export type { InlineSpinnerProps } from './InlineSpinner';
+
+export { UserAvatar } from './UserAvatar';
+export type { UserAvatarProps } from './UserAvatar';

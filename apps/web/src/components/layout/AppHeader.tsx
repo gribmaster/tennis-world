@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { PRIMARY_NAV, TAB_NAV, isActiveRoute } from './nav-items';
 import { PendingLink } from '@/components/navigation';
-import { InlineSpinner } from '@/components/ui';
+import { InlineSpinner, UserAvatar } from '@/components/ui';
 
 // AppHeader — fixed top bar, ported from the prototypes' `Nav` component
 // (home.html / map.html). Behavior:
@@ -41,12 +41,20 @@ export interface AppHeaderProps {
    * wiring is a documented follow-on.
    */
   signedIn?: boolean;
+  /**
+   * The signed-in user's avatar fields (only passed by pages that already loaded
+   * `getCurrentUser()` for their own content — see `AppShellProps.headerUser`).
+   * When present and `signedIn`, the account icon shows the user's photo/initials
+   * instead of the generic glyph.
+   */
+  headerUser?: { name: string; initials: string; avatarUrl?: string | null };
 }
 
 export function AppHeader({
   overHero = false,
   unlocked = false,
   signedIn = false,
+  headerUser,
 }: AppHeaderProps) {
   const profileHref = signedIn ? '/profile' : '/signin';
   const pathname = usePathname();
@@ -127,7 +135,17 @@ export function AppHeader({
             label={signedIn ? 'Profile' : 'Sign in'}
             iconColor={iconColor}
           >
-            <UserIcon />
+            {signedIn && headerUser ? (
+              <UserAvatar
+                name={headerUser.name}
+                initials={headerUser.initials}
+                avatarUrl={headerUser.avatarUrl}
+                size="sm"
+                decorative
+              />
+            ) : (
+              <UserIcon />
+            )}
           </HeaderIconLink>
           {!unlocked ? (
             <PendingLink

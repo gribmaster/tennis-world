@@ -77,7 +77,11 @@ export default async function ProfilePage({
   const unlocked = user.membership !== 'free';
 
   return (
-    <AppShell unlocked={unlocked} signedIn>
+    <AppShell
+      unlocked={unlocked}
+      signedIn
+      headerUser={{ name: user.name, initials: user.initials, avatarUrl: user.avatarUrl }}
+    >
       <PageContainer className="py-section-lg md:py-section-xl">
         {/* Single calm reading column — ~680px on all breakpoints (no desktop dashboard). */}
         <div className="mx-auto max-w-[680px]">

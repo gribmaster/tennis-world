@@ -23,6 +23,11 @@ import type { MembershipStatus, UserProfileDTO } from '@tennis/contracts';
 //                   entitlement context (none in production today) stays back-compatible;
 //                   the live auth/me paths ALWAYS pass the derived value. Shape is
 //                   unchanged — only the derivation moved out of this function.
+//   - avatarUrl   : `User.avatarUrl` (Google's `picture` claim; magic-link users have
+//                   none), validated as a parseable http(s) URL before it's ever handed
+//                   to the client — never `googleId`, never a Google token. `null` when
+//                   absent or invalid; the source field is optional on `UserProfileSource`
+//                   so existing call sites that don't select it keep compiling.
 //
 // `createdAt`/`updatedAt` exist on the row but are NOT part of `UserProfileDTO`, so
 // they are intentionally not surfaced (don't widen the shared profile shape).
@@ -33,6 +38,7 @@ export interface UserProfileSource {
   id: string;
   name: string | null;
   email: string;
+  avatarUrl?: string | null;
 }
 
 /** Derive a display name: prefer `name`, else the email local-part (before `@`). */
@@ -41,6 +47,25 @@ function resolveDisplayName(name: string | null, email: string): string {
   if (trimmed) return trimmed;
   const local = email.split('@')[0] ?? email;
   return local || email;
+}
+
+/**
+ * Validate that a stored avatar URL is safe to hand back to the browser: parseable
+ * and `http:`/`https:` only (mirrors the `new URL(...)` + protocol-check convention
+ * in `redirect.util.ts`). Guards against a malformed/`javascript:`/`data:` value ever
+ * reaching the client, however it got into the column. Anything else → `null`.
+ */
+function toSafeAvatarUrl(avatarUrl: string | null | undefined): string | null {
+  if (!avatarUrl) return null;
+  try {
+    const url = new URL(avatarUrl);
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      return avatarUrl;
+    }
+  } catch {
+    // not a parseable URL → ignore
+  }
+  return null;
 }
 
 /** Up to two initials from a display name, upper-cased ("Eleanor Morgan" → "EM"). */
@@ -91,6 +116,7 @@ export function toUserProfileDTO(
     name,
     initials: deriveInitials(name),
     membership,
+    avatarUrl: toSafeAvatarUrl(user.avatarUrl),
   };
   if (membership === 'subscription' && entitlement) {
     dto.activeUntil = entitlement.activeUntil;
