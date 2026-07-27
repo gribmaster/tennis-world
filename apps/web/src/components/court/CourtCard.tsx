@@ -131,7 +131,7 @@ export function CourtCard({
         {court.isScenic ? (
           <Badge
             tone="neutral"
-            className="absolute right-3 top-3 border-paper/70 bg-black/25 text-paper backdrop-blur-sm"
+            className="absolute right-3 top-3 border-paper/70 bg-black/40 text-white backdrop-blur-sm"
           >
             Scenic
           </Badge>
