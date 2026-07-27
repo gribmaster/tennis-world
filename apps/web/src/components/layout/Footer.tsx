@@ -142,7 +142,7 @@ export function Footer() {
   const desktopLinkClass =
     'block text-left text-[14px] leading-[1.8] text-bone/65 transition-colors hover:text-bone';
   const mobileQuickLinkClass =
-    'inline-flex items-center py-2.5 text-[13px] text-bone/70 transition-colors hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bone/50 rounded-sm';
+    'inline-flex items-center py-0.7 text-[13px] text-bone/70 transition-colors hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bone/50 rounded-sm';
   const mobileExpandedLinkClass =
     'block py-1.5 text-[13px] leading-[1.6] text-bone/65 transition-colors hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bone/50 rounded-sm';
 
@@ -151,34 +151,36 @@ export function Footer() {
       {/* ── Mobile/tablet (< md): compact collapsed-by-default footer ── */}
       <div className="container-page py-5 md:hidden">
         {/* Row 1: brand + copyright */}
-        <div className="serif flex items-baseline gap-2 text-[15px] tracking-[0.08em] text-bone">
-          <span>TENNIS · WORLD</span>
-          <span className="text-bone/40">&middot;</span>
-          <span className="text-[11px] tracking-[0.04em] text-bone/50">&copy; {year}</span>
-        </div>
-
-        {/* Row 2: most important legal/support links */}
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-          {MOBILE_QUICK_LINKS.map((link) => (
-            <FooterLinkItem key={link.label} link={link} className={mobileQuickLinkClass} />
-          ))}
+        <div className="flex justify-between">
+          <div className="serif flex items-baseline gap-2 text-[15px] tracking-[0.08em] text-bone">
+            <span>TENNIS · WORLD</span>
+            <span className="text-bone/40">&middot;</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4">
+            {MOBILE_QUICK_LINKS.map((link) => (
+              <FooterLinkItem key={link.label} link={link} className={mobileQuickLinkClass} />
+            ))}
+          </div>
         </div>
 
         {/* Row 3: expand control */}
-        <button
-          type="button"
-          aria-expanded={expanded}
-          aria-controls={mobileLinksId}
-          onClick={() => setExpanded((value) => !value)}
-          className="mt-3 flex h-11 items-center gap-1.5 text-[12px] font-medium uppercase tracking-[0.08em] text-bone/70 transition-colors hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bone/50 rounded-sm"
-        >
-          {expanded ? 'Less' : 'More links'}
-          <ChevronIcon
-            className={`transition-transform duration-200 motion-reduce:transition-none ${
-              expanded ? 'rotate-180' : ''
-            }`}
-          />
-        </button>
+        <div className="flex justify-between items-end">
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-controls={mobileLinksId}
+            onClick={() => setExpanded((value) => !value)}
+            className="mt-3 flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-[0.08em] text-bone/70 transition-colors hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bone/50 rounded-sm"
+          >
+            {expanded ? 'Less' : 'More links'}
+            <ChevronIcon
+              className={`transition-transform duration-200 motion-reduce:transition-none ${
+                expanded ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+          <span className="text-[11px] tracking-[0.04em] text-bone/50">&copy; {year}</span>
+        </div>
 
         {/* Expanded content: every remaining column, densely grouped in a 2-col grid.
             The outer div drives the collapse/expand animation via a CSS grid-rows trick
