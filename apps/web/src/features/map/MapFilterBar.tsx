@@ -43,9 +43,9 @@ export function MapFilterBar({
 }: MapFilterBarProps) {
   return (
     <div className="sticky top-[72px] z-30 border-b border-hairline bg-bone px-[clamp(16px,4vw,40px)] py-4">
-      <div className="mx-auto flex max-w-container items-center gap-3">
+      <div className="mx-auto block max-w-container items-center gap-3 md:flex">
         {/* Search pill */}
-        <div className="pill flex h-11 max-w-[480px] flex-1 items-center gap-2.5 border border-hairline bg-ivory px-4">
+        <div className="pill flex h-11 max-w-[480px] flex-1 items-center gap-2.5 border border-hairline bg-ivory px-4 mb-3 md:mb-0">
           <span className="shrink-0 text-stone">
             <SearchGlyph />
           </span>
