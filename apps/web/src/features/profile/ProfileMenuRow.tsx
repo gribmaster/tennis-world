@@ -1,3 +1,8 @@
+// Client Component: reads useNavigationPendingRegistry() directly (to swap the trailing
+// chevron for a spinner itself, via spinnerPosition="none") rather than only rendering
+// PendingLink's own spinner, so this hook call can't run during server rendering.
+'use client';
+
 import { useId } from 'react';
 import { ConsultationTrigger } from '@/features/consultation';
 import { ManageBillingButton } from '@/features/billing';
