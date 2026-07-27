@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // One-time/manual data operation: populate the 6 existing editorial collections
-// (Coastal Courts, Desert Courts, Hidden Resorts, Historic Clubs, Mountain Courts,
-// Rooftop & Urban) with real court memberships for the client demo.
+// (Coastal Courts, Riviera Icons, Hidden Resorts, Historic Clubs, Mountain
+// Courts, Rooftop & Urban) with real court memberships for the client demo.
 //
 // Why this exists as its own script (not the seed): the live courts dataset was
 // replaced by `db:import-courts-content` and no longer matches
@@ -11,20 +11,31 @@
 // courts directly from the DATABASE by stable slug and only touches
 // CollectionCourt membership rows for these 6 collections.
 //
+// `desert-courts` → `riviera-icons` rename: the original "Desert Courts" theme
+// has zero matching courts in the current France-only dataset. Rather than
+// create a 7th collection, this script RENAMES that existing row in place (same
+// `id`, new `slug`/`name`) so the DB never carries an orphaned collection.
+// Handles the rename idempotently from either starting slug — safe to run
+// whether the DB still has the old `desert-courts` slug or already has
+// `riviera-icons` (e.g. re-run after a prior successful run).
+//
 // What it touches:
+//   • The renamed collection's `slug`/`name` (`desert-courts`/"Desert Courts" →
+//     `riviera-icons`/"Riviera Icons"), matched by whichever slug is present.
 //   • CollectionCourt rows for the 6 named collections ONLY (upsert by
 //     [collectionId, courtId] — matches the existing PK, so re-running is a no-op).
-//   • Stale memberships on these 6 collections pointing at court slugs that no
-//     longer exist (leftover from the old mock dataset) are removed.
+//   • Stale memberships on these 6 collections pointing at court slugs that are
+//     no longer in that collection's desired set are removed.
 //
 // What it does NOT touch:
 //   • Any other collection (including user-created UserCollection rows — a
-//     completely separate model).
+//     completely separate model — and any editorial collection outside this
+//     script's 6 target slugs).
 //   • Court content, coordinates, images, or visibility.
-//   • Collection rows themselves (name/slug/description/cover) — only membership.
+//   • Collection fields other than the one rename above (description, cover
+//     image, sortOrder, isPublished are left as-is).
 //
-// Idempotent: running twice makes zero further changes (verified by dry-run diff
-// before each write).
+// Idempotent: running twice makes zero further changes (verified below).
 //
 // Run with (from repo root):
 //   pnpm --filter @tennis/api db:populate-demo-collections
@@ -38,29 +49,60 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+/** Same slug-derivation rule as `slugifyCollectionName` (apps/api/src/me/collections.mapper.ts). */
+function slugifyCollectionName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * The "Desert Courts" → "Riviera Icons" rename. `fromSlug` is checked first;
+ * if the collection is already on `toSlug` (a prior run already renamed it),
+ * the rename step is a no-op.
+ */
+const DESERT_TO_RIVIERA_RENAME = {
+  fromSlug: 'desert-courts',
+  toName: 'Riviera Icons',
+  toSlug: slugifyCollectionName('Riviera Icons'),
+} as const;
+
 /**
  * Desired membership, by stable slugs. Hand-curated against the current live
  * court dataset (12 France courts imported via db:import-courts-content) —
  * matched on setting/blurb (coastal/sea-view, secluded/private, heritage,
- * alpine, urban/rooftop). See PR description for the full rationale per court.
+ * alpine, urban/rooftop, Riviera heritage). See PR description for the full
+ * rationale per court.
  *
- * `desert-courts` is intentionally left with NO entries: the current dataset
- * has zero desert/arid or Middle-East/North-Africa courts, and per explicit
- * product direction we do not force an unrelated court into the collection
- * just to fill it. Revisit once desert-themed court content exists.
+ * `riviera-icons` (formerly `desert-courts`) replaces the desert theme, which
+ * has zero matching courts in the current France-only dataset — see the
+ * rename above. It carries the Riviera's signature heritage courts.
+ *
+ * `mountain-courts` intentionally keeps just ONE court: it is the only
+ * genuine alpine match in the dataset, and per explicit product direction we
+ * do not pad it with unrelated city/coastal courts just to hit a count target.
+ *
+ * `coastal-courts` is trimmed to courts that are themselves directly
+ * beachfront/sea-view (not merely "on the Riviera") to reduce unnecessary
+ * overlap with `riviera-icons`.
  */
 const DESIRED_MEMBERSHIP: Record<string, string[]> = {
   'coastal-courts': [
     'hotel-du-cap-eden-roc',
-    'grand-hotel-du-cap-ferrat-a-four-seasons',
     'hotel-cap-estel',
     'epi-baie-de-pampelonne',
-    'chateau-de-la-messardiere',
+    'grand-hotel-du-cap-ferrat-a-four-seasons',
   ],
-  'desert-courts': [],
+  'riviera-icons': [
+    'grand-hotel-du-cap-ferrat-a-four-seasons',
+    'chateau-de-la-messardiere',
+    'monte-carlo-country-club',
+    'hotel-du-cap-eden-roc',
+    'domaine-des-etangs',
+  ],
   'hidden-resorts': [
     'domaine-des-etangs',
-    'hotel-cap-estel',
     'tennis-de-la-cavaleire',
     'monte-carlo-country-club',
   ],
@@ -86,8 +128,49 @@ interface Summary {
   missingCourtSlugs: string[];
 }
 
+/**
+ * Rename the old "Desert Courts" collection row to "Riviera Icons" in place —
+ * same `id`, new `slug`/`name` — instead of creating a 7th collection.
+ * Idempotent from either starting state:
+ *   - DB still has `desert-courts`  → renamed to `riviera-icons`.
+ *   - DB already has `riviera-icons` (prior run) → no-op.
+ *   - Neither exists → left alone; the later "6 collections must pre-exist"
+ *     check reports it as missing (same as any other unexpected DB state).
+ */
+async function renameDesertToRiviera(): Promise<void> {
+  const { fromSlug, toSlug, toName } = DESERT_TO_RIVIERA_RENAME;
+
+  const alreadyRenamed = await prisma.collection.findUnique({
+    where: { slug: toSlug },
+    select: { id: true },
+  });
+  if (alreadyRenamed) {
+    console.log(`Rename: "${toSlug}" already present — nothing to do.`);
+    return;
+  }
+
+  const desert = await prisma.collection.findUnique({
+    where: { slug: fromSlug },
+    select: { id: true, name: true },
+  });
+  if (!desert) {
+    // Neither slug exists — let the pre-existence check below report it.
+    return;
+  }
+
+  await prisma.collection.update({
+    where: { id: desert.id },
+    data: { slug: toSlug, name: toName },
+  });
+  console.log(
+    `Rename: collection id=${desert.id} "${desert.name}" (${fromSlug}) → "${toName}" (${toSlug}).`,
+  );
+}
+
 async function main(): Promise<void> {
   console.log('Populating demo editorial collections …');
+
+  await renameDesertToRiviera();
 
   const collections = await prisma.collection.findMany({
     where: { slug: { in: Object.keys(DESIRED_MEMBERSHIP) } },
