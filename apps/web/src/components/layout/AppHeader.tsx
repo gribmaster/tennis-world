@@ -149,7 +149,7 @@ export function AppHeader({
           aria-label={menuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((open) => !open)}
-          className={`p-2 transition-colors md:hidden ${navOver ? 'text-bone' : 'text-ink'}`}
+          className={`hidden p-2 transition-colors md:hidden ${navOver ? 'text-bone' : 'text-ink'}`}
         >
           {menuOpen ? <CloseIcon /> : <MenuIcon />}
         </button>
