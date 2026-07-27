@@ -17,7 +17,12 @@ import { isSignedIn } from '@/lib/session.server';
 // Feature 74: markers are plotted on a REAL Leaflet map (env-configured tiles) from
 // each court's APPROXIMATE geo (`approxLat`/`approxLng`) — exact `lat`/`lng` are not
 // part of these DTOs and never reach the client (Architecture Plan §9 Risk #17). No
-// geolocation, no payments here; the `pins` read supplies only pin state.
+// payments here; the `pins` read supplies only pin state.
+//
+// NEAREST-COURT AUTO-FOCUS: MapExplorer asks the BROWSER for the visitor's position on
+// first load and flies to the nearest court. That is entirely client-side — this page
+// stays a plain server read of the same two court sources, there is no location-aware
+// endpoint, and the visitor's coordinates never reach the server or the database.
 //
 // NOT `overHero` — the map screen has no full-bleed hero, so the header uses its
 // standard solid bar + 72px content offset (same as Court Detail).

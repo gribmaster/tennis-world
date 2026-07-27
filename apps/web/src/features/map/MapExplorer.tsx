@@ -1,10 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CourtSummaryDTO, MapPinDTO } from '@tennis/contracts';
 import { MapFilterBar, MAP_FILTERS, type MapFilter } from './MapFilterBar';
 import { MapCourtList } from './MapCourtList';
 import { LeafletMap } from './LeafletMap';
+import { MapLocateControl } from './MapLocateControl';
+import { useGeolocation } from './useGeolocation';
+import { findNearestPoint } from './geo-distance';
+import type { MapFocusRequest } from './LeafletMapInner';
 import { courtToMarker, pinStateToMarkerState, type MapMarkerState } from './map-markers';
 
 // MapExplorer — the ONE `'use client'` boundary on the Map screen.
@@ -25,6 +29,16 @@ import { courtToMarker, pinStateToMarkerState, type MapMarkerState } from './map
 //
 // COORDINATE SAFETY: exact `lat`/`lng` are not part of these DTOs and never reach the
 // client. The map layer only ever sees the always-public approximate points.
+//
+// NEAREST-COURT AUTO-FOCUS: on the first visit to /map this component asks the browser for
+// the visitor's position ONCE and, if granted, flies the map to the nearest court at zoom
+// ~17. It is orchestrated HERE (not inside the Leaflet layer) because this is where the
+// court set already lives — the nearest court is computed in memory from the markers the
+// map is already showing, so no backend endpoint, no extra fetch, and no new court field.
+// The user's coordinates stay in memory for this session only (see useGeolocation).
+
+/** Target zoom for the nearest-court focus — clamped to the map's real range downstream. */
+const NEAREST_COURT_ZOOM = 17;
 
 /** Chip → predicate over a `CourtSummaryDTO`, mirroring `CourtFilter` semantics. */
 const FILTER_PREDICATE: Record<MapFilter, (court: CourtSummaryDTO) => boolean> = {
@@ -80,6 +94,70 @@ export function MapExplorer({ courts, pins }: MapExplorerProps) {
     [visibleCourts, stateBySlug],
   );
 
+  // ── Nearest-court auto-focus ───────────────────────────────────────────────────────
+  // ONE geolocation implementation, mounted once here and shared by the automatic initial
+  // focus and the manual locate control (which receives its pending/error/handler as props).
+  const { pending: locating, error: locateError, locate } = useGeolocation();
+
+  const [focus, setFocus] = useState<MapFocusRequest | null>(null);
+  const focusTokenRef = useRef(0);
+  // Ensures the automatic request happens AT MOST ONCE per mount — the guard that makes
+  // React Strict Mode's double-invoked effect harmless (and it never re-runs on a filter
+  // change or an ordinary re-render).
+  const autoFocusStartedRef = useRef(false);
+  // Set as soon as the visitor pans/zooms the map themselves.
+  const userTookControlRef = useRef(false);
+  // Latest visible markers, read at resolve time WITHOUT making them an effect dependency
+  // (depending on them would re-arm the automatic request whenever a filter changed).
+  const markersRef = useRef(visibleMarkers);
+  useEffect(() => {
+    markersRef.current = visibleMarkers;
+  }, [visibleMarkers]);
+
+  const handleUserInteraction = useCallback(() => {
+    userTookControlRef.current = true;
+  }, []);
+
+  const focusNearestCourt = useCallback(
+    async ({ automatic }: { automatic: boolean }): Promise<void> => {
+      const coords = await locate();
+      // Denied / unavailable / timed out / unsupported: the error is already surfaced on
+      // the control. Leave the map exactly as it is — default position and zoom intact.
+      if (!coords) return;
+
+      // The user panned or zoomed while we were waiting: they own the viewport now, so the
+      // AUTOMATIC recentre stands down. An explicit click on the control still works.
+      if (automatic && userTookControlRef.current) return;
+
+      // Nearest by great-circle distance over the courts already on the map — courts with
+      // invalid coordinates are skipped, and `null` (nothing valid to focus) leaves the
+      // default viewport untouched.
+      const nearest = findNearestPoint(markersRef.current, coords);
+      if (!nearest) return;
+
+      focusTokenRef.current += 1;
+      setFocus({
+        lat: nearest.lat,
+        lng: nearest.lng,
+        zoom: NEAREST_COURT_ZOOM,
+        token: focusTokenRef.current,
+      });
+    },
+    [locate],
+  );
+
+  useEffect(() => {
+    if (autoFocusStartedRef.current) return;
+    autoFocusStartedRef.current = true;
+    // Fire-and-forget: `locate()` never rejects, and `focusNearestCourt` handles every
+    // failure path internally, so there is no unhandled rejection to guard against.
+    void focusNearestCourt({ automatic: true });
+  }, [focusNearestCourt]);
+
+  const handleLocateClick = useCallback(() => {
+    void focusNearestCourt({ automatic: false });
+  }, [focusNearestCourt]);
+
   const handleReset = () => {
     setQuery('');
     setActiveFilter('All');
@@ -95,8 +173,21 @@ export function MapExplorer({ courts, pins }: MapExplorerProps) {
       />
 
       <div className="map-layout">
+        {/* `.map-canvas-wrap` is already `position: relative`, so the locate control can
+            overlay the map without changing the canvas dimensions in any way. */}
         <div className="map-canvas-wrap">
-          <LeafletMap markers={visibleMarkers} navigateOnClick className="h-full w-full" />
+          <LeafletMap
+            markers={visibleMarkers}
+            navigateOnClick
+            className="h-full w-full"
+            focus={focus}
+            onUserInteraction={handleUserInteraction}
+          />
+          <MapLocateControl
+            pending={locating}
+            error={locateError}
+            onLocate={handleLocateClick}
+          />
         </div>
 
         <MapCourtList

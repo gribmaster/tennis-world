@@ -16,6 +16,17 @@ export type { MapFilterBarProps, MapFilter } from './MapFilterBar';
 // approxLat/approxLng only (never exact lat/lng — see map-markers / LeafletMapInner).
 export { LeafletMap } from './LeafletMap';
 export type { LeafletMapProps } from './LeafletMap';
+export type { MapFocusRequest } from './LeafletMapInner';
+
+// Nearest-court auto-focus (map screen only): the pure distance helpers, the single
+// geolocation hook both entry points share, and the small overlaid locate control.
+// The user's coordinates are used in memory only — never stored or transmitted.
+export { haversineDistanceKm, findNearestPoint, isValidLatLng } from './geo-distance';
+export type { GeoPoint } from './geo-distance';
+export { useGeolocation } from './useGeolocation';
+export type { GeolocationError, GeolocationErrorKind, UseGeolocationResult } from './useGeolocation';
+export { MapLocateControl } from './MapLocateControl';
+export type { MapLocateControlProps } from './MapLocateControl';
 export { courtToMarker } from './map-markers';
 export type { MapMarker, MapMarkerState } from './map-markers';
 export { getMapTileConfig } from './map-config';
