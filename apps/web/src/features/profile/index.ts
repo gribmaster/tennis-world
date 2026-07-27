@@ -14,6 +14,9 @@ export type { ProfileHeaderProps } from './ProfileHeader';
 export { ProfileStats } from './ProfileStats';
 export type { ProfileStatsProps } from './ProfileStats';
 
+export { ProfileStatLink } from './ProfileStatLink';
+export type { ProfileStatLinkProps } from './ProfileStatLink';
+
 export { ProfileMembershipCard } from './ProfileMembershipCard';
 export type { ProfileMembershipCardProps } from './ProfileMembershipCard';
 
