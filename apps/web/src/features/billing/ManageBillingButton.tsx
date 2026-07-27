@@ -19,6 +19,7 @@
 
 import type { ReactNode } from 'react';
 import { useBillingAction } from './use-billing-action';
+import { InlineSpinner } from '@/components/ui';
 
 export interface ManageBillingButtonProps {
   /** Button content (row markup, or a plain label). */
@@ -62,10 +63,23 @@ export function ManageBillingButton({
         onClick={() => void openPortal()}
         disabled={pending}
         aria-busy={pending}
+        aria-disabled={pending || undefined}
         aria-label={ariaLabel}
-        className={className}
+        // `relative` so the pending overlay below can anchor to this exact button without
+        // touching the row/footer-link's own layout (`children` is arbitrary caller markup
+        // — a flex row with justify-between, or a plain label — so we don't insert an extra
+        // flex child that would shift it; the spinner instead sits on top, right-aligned).
+        className={['relative', className ?? ''].filter(Boolean).join(' ')}
       >
-        {children}
+        <span className={pending ? 'opacity-0' : undefined}>{children}</span>
+        {pending ? (
+          <span
+            aria-hidden
+            className="absolute inset-y-0 right-1 flex items-center"
+          >
+            <InlineSpinner label="Opening billing portal…" />
+          </span>
+        ) : null}
       </button>
       {errorNode}
     </>

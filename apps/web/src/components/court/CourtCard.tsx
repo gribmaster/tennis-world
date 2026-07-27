@@ -1,7 +1,9 @@
-import Link from 'next/link';
+'use client';
+
 import type { ReactNode } from 'react';
 import type { CourtSummaryDTO } from '@tennis/contracts';
 import { Badge } from '@/components/ui';
+import { PendingCardLink } from '@/components/navigation';
 import { CourtImage } from './CourtImage';
 
 // CourtCard — the reusable court tile used in every list/grid/carousel (Home's
@@ -162,13 +164,15 @@ export function CourtCard({
     </article>
   );
 
-  // `href` wraps the card for future /courts/[slug] linking. The block-level Link
-  // keeps the whole tile clickable while staying a no-op when no href is provided.
+  // `href` wraps the card for /courts/[slug] linking. PendingCardLink keeps the whole tile
+  // clickable while staying a no-op when no href is provided, and — per the element-level
+  // loading requirement — shows a pending overlay ONLY on the exact card that was clicked,
+  // without resizing it or affecting any other card in the same grid/carousel.
   if (href) {
     return (
-      <Link href={href} className="block" aria-label={court.name}>
+      <PendingCardLink href={href} className="block" ariaLabel={court.name}>
         {card}
-      </Link>
+      </PendingCardLink>
     );
   }
 

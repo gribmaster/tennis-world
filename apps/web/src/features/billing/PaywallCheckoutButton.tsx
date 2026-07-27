@@ -19,6 +19,7 @@
 import type { ReactNode } from 'react';
 import type { BillingPlanKey } from '@tennis/contracts';
 import { useBillingAction } from './use-billing-action';
+import { InlineSpinner } from '@/components/ui';
 
 function ArrowGlyph() {
   return (
@@ -61,8 +62,10 @@ export function PaywallCheckoutButton({
         onClick={() => void startCheckout(plan)}
         disabled={pending}
         aria-busy={pending}
+        aria-disabled={pending || undefined}
         className={className}
       >
+        {pending ? <InlineSpinner label="Starting checkout…" /> : null}
         {pending ? 'Starting checkout…' : label}
         {pending ? null : <ArrowGlyph />}
       </button>

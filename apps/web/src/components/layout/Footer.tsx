@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { PaywallTrigger } from '@/features/paywall';
 import { ManageBillingButton } from '@/features/billing';
+import { PendingLink } from '@/components/navigation';
 
 // Footer — the shared dark site footer, ported from `files/*.html`'s `Footer`
 // component (every prototype screen renders it). Rendered once by `AppShell`, so
@@ -111,9 +111,9 @@ function FooterLinkItem({ link }: { link: FooterLink }) {
     );
   }
   return (
-    <Link href={link.href} className={className}>
+    <PendingLink href={link.href} className={className}>
       {link.label}
-    </Link>
+    </PendingLink>
   );
 }
 

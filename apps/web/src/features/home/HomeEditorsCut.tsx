@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import type { CourtSummaryDTO } from '@tennis/contracts';
 import { PageContainer } from '@/components/layout';
 import { SectionHeader } from '@/components/ui';
 import { CourtImage, CourtMeta } from '@/components/court';
+import { PendingCardLink } from '@/components/navigation';
 
 // HomeEditorsCut — the "Editor's Cut" section, ported from `files/home.html`
 // (the "Where they're playing this season" block). Stacked editorial rows that
@@ -51,9 +51,9 @@ function ArrowGlyph() {
 
 function EditorsCutRow({ court, flip }: EditorsCutRowProps) {
   return (
-    <Link
+    <PendingCardLink
       href={`/courts/${court.slug}`}
-      aria-label={court.name}
+      ariaLabel={court.name}
       className="court-card group grid grid-cols-1 border-t border-hairline md:grid-cols-2"
     >
       {/* Image. On desktop it sits left by default, right on flipped rows
@@ -82,7 +82,7 @@ function EditorsCutRow({ court, flip }: EditorsCutRowProps) {
           <ArrowGlyph />
         </span>
       </div>
-    </Link>
+    </PendingCardLink>
   );
 }
 

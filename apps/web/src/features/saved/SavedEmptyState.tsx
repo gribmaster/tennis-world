@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { PendingLink } from '@/components/navigation';
 
 // SavedEmptyState — the shared "beautiful, not a dead-end" empty state for each
 // Saved tab (Phase 1 §3.9 / FEATURE_19 §3.4). PRESENTATIONAL only: all copy and the
@@ -22,9 +22,9 @@ export function SavedEmptyState({ title, description, cta }: SavedEmptyStateProp
       <h2 className="display-m text-ink">{title}</h2>
       <p className="body-l mt-3 max-w-[420px] text-stone">{description}</p>
       {cta ? (
-        <Link href={cta.href} className="btn btn-secondary mt-8">
+        <PendingLink href={cta.href} className="btn btn-secondary mt-8">
           {cta.label}
-        </Link>
+        </PendingLink>
       ) : null}
     </div>
   );

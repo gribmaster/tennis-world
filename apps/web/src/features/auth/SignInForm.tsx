@@ -11,6 +11,7 @@ import {
   isApiMode,
   requestMagicLink,
 } from './auth-client';
+import { InlineSpinner } from '@/components/ui';
 
 // SignInForm — the magic-link sign-in island, ported from `SignIn` in files/signin.html.
 //
@@ -152,8 +153,11 @@ export function SignInForm() {
         <button
           type="submit"
           disabled={loading}
+          aria-busy={loading}
+          aria-disabled={loading || undefined}
           className="btn btn-primary mt-3.5 w-full justify-center"
         >
+          {loading ? <InlineSpinner label="Sending magic link…" /> : null}
           {loading ? 'Sending…' : 'Send Magic Link'}
           {!loading ? <ArrowIcon width={14} height={14} /> : null}
         </button>

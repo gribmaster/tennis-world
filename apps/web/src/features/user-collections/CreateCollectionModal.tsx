@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { createPortal } from 'react-dom';
+import { InlineSpinner } from '@/components/ui';
 
 // CreateCollectionModal — the Phase-1 "New collection" dialog. Ported from the
 // CreateCollectionModal prototype in files/saved.html: a compact bone panel with a
@@ -35,9 +36,12 @@ export interface CreateCollectionModalProps {
   /**
    * Called with the trimmed, non-empty collection name when the user submits. The caller
    * performs the (mock-only) create and any UI mirroring; this component only collects
-   * and validates the name.
+   * and validates the name. May return a Promise — the submit button shows a spinner and
+   * disables itself for the duration, matching the async-action pending pattern used
+   * elsewhere (save/unsave, rename, etc). A rejection re-enables the button (the error
+   * itself is the caller's concern — this component doesn't swallow it).
    */
-  onCreate: (name: string) => void;
+  onCreate: (name: string) => void | Promise<void>;
 }
 
 function CloseGlyph() {
@@ -84,11 +88,17 @@ export function CreateCollectionModal({ open, onClose, onCreate }: CreateCollect
   const previouslyFocused = useRef<HTMLElement | null>(null);
 
   const [name, setName] = useState('');
+  // In-flight create write. Disables the submit button + shows an inline spinner; reset in
+  // a `finally` so a failed create never leaves the button stuck disabled.
+  const [pending, setPending] = useState(false);
 
   // Reset the field every time the modal (re)opens, so the entered name never outlives a
   // single session-with-the-modal. (No persistence — hard rule.)
   useEffect(() => {
-    if (open) setName('');
+    if (open) {
+      setName('');
+      setPending(false);
+    }
   }, [open]);
 
   // Close on Escape + lock body scroll while open + manage focus (same as the other modals).
@@ -123,15 +133,24 @@ export function CreateCollectionModal({ open, onClose, onCreate }: CreateCollect
   if (!open || typeof document === 'undefined') return null;
 
   const trimmed = name.trim();
-  const canSubmit = trimmed.length > 0;
+  const canSubmit = trimmed.length > 0 && !pending;
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     // Required-name guard: do nothing on an empty/whitespace-only name (the submit button
-    // is also disabled in this state, this just backs it up).
+    // is also disabled in this state, this just backs it up). Also guard a double-submit
+    // while a previous create is still in flight.
     const value = name.trim();
-    if (!value) return;
-    onCreate(value);
+    if (!value || pending) return;
+    setPending(true);
+    try {
+      await onCreate(value);
+      // On success the caller normally closes the modal (via `onClose`/`open` flipping to
+      // false), which resets `pending` through the effect above. If it doesn't, resetting
+      // here still leaves the button usable rather than stuck disabled.
+    } finally {
+      setPending(false);
+    }
   }
 
   return createPortal(
@@ -184,14 +203,17 @@ export function CreateCollectionModal({ open, onClose, onCreate }: CreateCollect
           />
 
           {/* PRIMARY CTA — disabled until the trimmed name is non-empty (prototype:
-              `disabled={!name.trim()}`). */}
+              `disabled={!name.trim()}`), and while the create write is in flight. */}
           <button
             type="submit"
             disabled={!canSubmit}
+            aria-busy={pending}
+            aria-disabled={!canSubmit || undefined}
             className="btn btn-primary mt-5 w-full justify-center gap-2"
           >
-            Create Collection
-            <ArrowGlyph />
+            {pending ? <InlineSpinner label="Creating…" /> : null}
+            {pending ? 'Creating…' : 'Create Collection'}
+            {pending ? null : <ArrowGlyph />}
           </button>
         </form>
       </div>

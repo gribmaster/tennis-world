@@ -6,6 +6,7 @@ import type { CourtSummaryDTO } from '@tennis/contracts';
 import { CourtCard } from '@/components/court';
 import { getMutationSavedRepository } from '@/lib/repositories.client';
 import { AuthRequiredError } from '@/lib/repositories';
+import { InlineSpinner } from '@/components/ui';
 import { SavedEmptyState } from './SavedEmptyState';
 
 // SavedCourtsGrid — the Courts tab of the Saved page (FEATURE_19 §3.1). A responsive grid
@@ -121,11 +122,17 @@ export function SavedCourtsGrid({ courts }: SavedCourtsGridProps) {
             type="button"
             onClick={() => handleUnsave(court)}
             disabled={pending.has(court.id)}
+            aria-busy={pending.has(court.id)}
+            aria-disabled={pending.has(court.id) || undefined}
             aria-label={`Unsave ${court.name}`}
             title="Unsave"
             className="absolute bottom-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-pill bg-black/35 text-clay backdrop-blur-sm transition-colors hover:text-paper disabled:opacity-50"
           >
-            <CloseGlyph />
+            {pending.has(court.id) ? (
+              <InlineSpinner label={`Unsaving ${court.name}…`} className="text-paper" />
+            ) : (
+              <CloseGlyph />
+            )}
           </button>
         </li>
       ))}

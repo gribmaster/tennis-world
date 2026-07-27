@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import type { CourtSummaryDTO } from '@tennis/contracts';
 import { PageContainer } from '@/components/layout';
 import { SectionHeader } from '@/components/ui';
 import { CourtCard } from '@/components/court';
+import { PendingLink } from '@/components/navigation';
 
 // HomeFeaturedCourts — the "Destinations" peek carousel, ported from the featured
 // destinations section in `files/home.html` (the "This week, we're dreaming of…"
@@ -95,13 +95,13 @@ export function HomeFeaturedCourts({
 
 
       <PageContainer className="mt-5">
-        <Link
+        <PendingLink
           href={cta.href}
           className="btn btn-ghost inline-flex items-center gap-1.5 !px-0 text-stone"
         >
           {cta.label}
           <ArrowGlyph />
-        </Link>
+        </PendingLink>
       </PageContainer>
     </section>
   );

@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import Image from 'next/image';
 import type { ArticleDTO } from '@tennis/contracts';
 import { PageContainer } from '@/components/layout';
 import { SectionHeader } from '@/components/ui';
+import { PendingLink, PendingCardLink } from '@/components/navigation';
 
 // HomeJournalTeaser — the "Journal / Reading list" teaser, ported from the journal
 // section in `files/home.html` (and matching the article card treatment in
@@ -69,22 +69,22 @@ export function HomeJournalTeaser({
           eyebrow={eyebrow}
           title={title}
           action={
-            <Link
+            <PendingLink
               href={cta.href}
               className="btn btn-ghost inline-flex items-center gap-1.5 !px-0 text-stone"
             >
               {cta.label}
               <ArrowGlyph />
-            </Link>
+            </PendingLink>
           }
         />
 
         <ul className="mt-section grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
           {articles.map((article) => (
             <li key={article.id}>
-              <Link
+              <PendingCardLink
                 href={`/journal/${article.slug}`}
-                aria-label={article.title}
+                ariaLabel={article.title}
                 className="court-card group block"
               >
                 <div className="relative aspect-[16/9] overflow-hidden">
@@ -109,7 +109,7 @@ export function HomeJournalTeaser({
                     <p className="body-m mt-2.5 text-stone">{article.subtitle}</p>
                   ) : null}
                 </div>
-              </Link>
+              </PendingCardLink>
             </li>
           ))}
         </ul>

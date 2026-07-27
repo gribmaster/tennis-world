@@ -1,6 +1,6 @@
 import Image from 'next/image';
-import Link from 'next/link';
 import type { CollectionDTO } from '@tennis/contracts';
+import { BackButton } from '@/components/navigation';
 
 // CollectionDetailHero — the editorial hero for a single collection
 // (/collections/[slug]). It follows the dark hero treatment established by
@@ -14,24 +14,10 @@ import type { CollectionDTO } from '@tennis/contracts';
 //     component) fetches and passes the DTO in.
 //   • Renders only from fields on the DTO. `description` is optional, so it renders
 //     only when present (graceful fallback).
-
-function ChevronLeftGlyph() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="m15 6-6 6 6 6" />
-    </svg>
-  );
-}
+//
+// BACK NAVIGATION: uses the shared <BackButton> (history-aware, falls back to
+// `/collections` on a direct load) instead of a hardcoded "← All collections" link, so
+// behavior is consistent with every other detail page's back control.
 
 export interface CollectionDetailHeroProps {
   collection: CollectionDTO;
@@ -50,14 +36,11 @@ export function CollectionDetailHero({ collection }: CollectionDetailHeroProps) 
         className="object-cover opacity-35"
       />
       <div className="container-page relative py-[clamp(48px,8vw,96px)]">
-        {/* Back to the collections index. */}
-        <Link
-          href="/collections"
+        <BackButton
+          fallbackHref="/collections"
+          label="All collections"
           className="eyebrow inline-flex items-center gap-1.5 text-bone/70 transition-colors hover:text-bone"
-        >
-          <ChevronLeftGlyph />
-          All collections
-        </Link>
+        />
 
         <p className="eyebrow mt-6 text-bone/60">
           Collection

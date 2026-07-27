@@ -1,6 +1,8 @@
-import Link from 'next/link';
+import { useId } from 'react';
 import { ConsultationTrigger } from '@/features/consultation';
 import { ManageBillingButton } from '@/features/billing';
+import { PendingLink, useNavigationPendingRegistry } from '@/components/navigation';
+import { InlineSpinner } from '@/components/ui';
 
 // ProfileMenuRow — one settings/menu row, ported from profile.html's menu list rows.
 //
@@ -66,18 +68,24 @@ export function ProfileMenuRow({
   source,
 }: ProfileMenuRowProps) {
   const isDanger = tone === 'danger';
+  const pendingId = useId();
+  const { pendingId: activePendingId } = useNavigationPendingRegistry();
+  const isPending = activePendingId === pendingId;
 
   const rowClass = `flex h-14 w-full items-center justify-between border-b border-hairline px-1 text-left ${
     isDanger ? 'text-clay' : 'text-ink'
   }`;
 
+  // The trailing chevron slot doubles as the pending spinner slot for link rows — a
+  // navigation click swaps THAT glyph for a spinner in place, so the row's `justify-between`
+  // layout (label ↔ trailing cluster) never shifts to accommodate a third element.
   const rowContent = (
     <>
       <span className="body-l">{label}</span>
       {!isDanger ? (
         <span className="flex items-center gap-2 text-stone">
           {value ? <span className="body-m">{value}</span> : null}
-          <ChevronGlyph />
+          {isPending ? <InlineSpinner label={`Loading ${label}…`} /> : <ChevronGlyph />}
         </span>
       ) : null}
     </>
@@ -104,12 +112,16 @@ export function ProfileMenuRow({
     );
   }
 
-  // Link rows with a real destination (Privacy/Terms/Sign In) use a Next <Link>.
+  // Link rows with a real destination (Privacy/Terms/Sign In) use PendingLink so a click
+  // shows pending feedback (chevron → spinner, via `rowContent`'s own `isPending` read
+  // above) on THIS row only, cleared once the route changes (or on a safety-net timeout if
+  // navigation never actually starts). `spinnerPosition="none"` suppresses PendingLink's
+  // own automatic spinner since `rowContent` already renders one in the chevron slot.
   if (href) {
     return (
-      <Link href={href} className={rowClass}>
+      <PendingLink href={href} pendingId={pendingId} className={rowClass} spinnerPosition="none">
         {rowContent}
-      </Link>
+      </PendingLink>
     );
   }
 

@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { PRIMARY_NAV, TAB_NAV, isActiveRoute } from './nav-items';
+import { PendingLink } from '@/components/navigation';
+import { InlineSpinner } from '@/components/ui';
 
 // AppHeader — fixed top bar, ported from the prototypes' `Nav` component
 // (home.html / map.html). Behavior:
@@ -101,7 +103,7 @@ export function AppHeader({
           {PRIMARY_NAV.map((item) => {
             const active = isActiveRoute(item.href, pathname);
             return (
-              <Link
+              <PendingLink
                 key={item.href}
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
@@ -110,29 +112,25 @@ export function AppHeader({
                 }`}
               >
                 {item.label}
-              </Link>
+              </PendingLink>
             );
           })}
         </nav>
 
         {/* Desktop right cluster: saved / profile icons + Unlock CTA */}
         <div className="hidden items-center gap-3 md:flex">
-          <Link
-            href="/saved"
-            aria-label="Saved"
-            className={`p-2 transition-colors ${iconColor}`}
-          >
+          <HeaderIconLink href="/saved" label="Saved" iconColor={iconColor}>
             <BookmarkIcon />
-          </Link>
-          <Link
+          </HeaderIconLink>
+          <HeaderIconLink
             href={profileHref}
-            aria-label={signedIn ? 'Profile' : 'Sign in'}
-            className={`p-2 transition-colors ${iconColor}`}
+            label={signedIn ? 'Profile' : 'Sign in'}
+            iconColor={iconColor}
           >
             <UserIcon />
-          </Link>
+          </HeaderIconLink>
           {!unlocked ? (
-            <Link
+            <PendingLink
               href="/map"
               className={[
                 'btn',
@@ -141,7 +139,7 @@ export function AppHeader({
               ].join(' ')}
             >
               Unlock Map
-            </Link>
+            </PendingLink>
           ) : null}
         </div>
 
@@ -164,7 +162,7 @@ export function AppHeader({
           {TAB_NAV.map((item) => {
             const active = isActiveRoute(item.href, pathname);
             return (
-              <Link
+              <PendingLink
                 key={item.href}
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
@@ -173,17 +171,45 @@ export function AppHeader({
                 }`}
               >
                 {item.label}
-              </Link>
+              </PendingLink>
             );
           })}
           {!unlocked ? (
-            <Link href="/map" className="btn btn-primary mt-5 w-full">
+            <PendingLink href="/map" className="btn btn-primary mt-5 w-full">
               Unlock Full Access
-            </Link>
+            </PendingLink>
           ) : null}
         </div>
       ) : null}
     </header>
+  );
+}
+
+/**
+ * One icon-only header link (Saved / Profile). Swaps its icon for a small spinner while
+ * pending, keeping the same `p-2` box (no layout shift) and accessible name.
+ */
+function HeaderIconLink({
+  href,
+  label,
+  iconColor,
+  children,
+}: {
+  href: string;
+  label: string;
+  iconColor: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <PendingLink
+      href={href}
+      aria-label={label}
+      pendingLabel={`Loading ${label}…`}
+      replaceContent
+      className={`p-2 transition-colors ${iconColor}`}
+    >
+      {children}
+    </PendingLink>
   );
 }
 

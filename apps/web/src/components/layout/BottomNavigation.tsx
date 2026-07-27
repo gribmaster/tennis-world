@@ -1,9 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { TAB_NAV, isActiveRoute } from './nav-items';
+import { PendingLink, useNavigationPendingRegistry } from '@/components/navigation';
+import { InlineSpinner } from '@/components/ui';
 
 // BottomNavigation — the mobile bottom tab bar (design prompt §Information
 // Architecture): Home · Map · Saved · Profile. Outlined icons at rest, ink color
@@ -22,6 +23,10 @@ const ICONS: Record<string, (active: boolean) => ReactNode> = {
 
 export function BottomNavigation() {
   const pathname = usePathname();
+  // Tab hrefs are fixed and unique, so the href itself doubles as a stable pending id —
+  // simpler than a per-tab useId() and lets us look up "is THIS tab the pending one"
+  // directly from the shared registry to swap its icon for a spinner.
+  const { pendingId } = useNavigationPendingRegistry();
 
   return (
     <nav
@@ -31,23 +36,30 @@ export function BottomNavigation() {
       <ul className="container-page flex items-stretch justify-around pb-[env(safe-area-inset-bottom)]">
         {TAB_NAV.map((item) => {
           const active = isActiveRoute(item.href, pathname);
+          const isPending = pendingId === item.href;
           return (
             <li key={item.href} className="flex-1">
-              <Link
+              <PendingLink
                 href={item.href}
+                pendingId={item.href}
+                spinnerPosition="none"
                 aria-current={active ? 'page' : undefined}
                 className={`flex h-14 flex-col items-center justify-center gap-1 transition-colors ${
                   active ? 'text-ink' : 'text-stone'
                 }`}
               >
-                {ICONS[item.href]?.(active)}
+                {isPending ? (
+                  <InlineSpinner label={`Loading ${item.label}…`} className="h-[22px]" />
+                ) : (
+                  ICONS[item.href]?.(active)
+                )}
                 <span
                   className={`eyebrow ${active ? 'opacity-100' : 'opacity-70'}`}
                   style={{ fontSize: 10 }}
                 >
                   {item.label}
                 </span>
-              </Link>
+              </PendingLink>
             </li>
           );
         })}

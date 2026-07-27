@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getMutationSavedRepository } from '@/lib/repositories.client';
 import { AuthRequiredError } from '@/lib/repositories';
+import { InlineSpinner } from '@/components/ui';
 
 // CourtSaveButton — the standalone Save / Unsave (heart) control for Court Detail.
 //
@@ -121,13 +122,15 @@ export function CourtSaveButton({
       type="button"
       onClick={handleClick}
       disabled={pending}
+      aria-busy={pending}
+      aria-disabled={pending || undefined}
       aria-pressed={signedIn ? saved : undefined}
       className={
         className ??
         'inline-flex h-9 items-center gap-1.5 border border-hairline bg-transparent px-3.5 text-[12px] text-stone transition-colors hover:text-ink'
       }
     >
-      <HeartGlyph filled={signedIn && saved} />
+      {pending ? <InlineSpinner label="Saving…" /> : <HeartGlyph filled={signedIn && saved} />}
       {saved && signedIn ? 'Saved' : 'Save Court'}
     </button>
   );

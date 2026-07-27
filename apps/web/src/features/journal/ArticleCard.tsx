@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import Image from 'next/image';
 import type { ArticleDTO } from '@tennis/contracts';
+import { PendingCardLink } from '@/components/navigation';
 
 // ArticleCard — one entry in the Journal, ported from the article cards in
 // files/journal.html: a cover image, a category (clay accent) · read-time meta line,
@@ -67,9 +67,9 @@ export function ArticleCard({
 
   if (variant === 'featured') {
     return (
-      <Link
+      <PendingCardLink
         href={href}
-        aria-label={article.title}
+        ariaLabel={article.title}
         className={['court-card group block border border-hairline', className ?? '']
           .filter(Boolean)
           .join(' ')}
@@ -97,14 +97,14 @@ export function ArticleCard({
             </span>
           </div>
         </div>
-      </Link>
+      </PendingCardLink>
     );
   }
 
   return (
-    <Link
+    <PendingCardLink
       href={href}
-      aria-label={article.title}
+      ariaLabel={article.title}
       className={['court-card group block', className ?? ''].filter(Boolean).join(' ')}
     >
       <div className="relative aspect-[16/9] overflow-hidden">
@@ -124,7 +124,7 @@ export function ArticleCard({
         </h3>
         {article.subtitle ? <p className="body-m mt-2 text-stone">{article.subtitle}</p> : null}
       </div>
-    </Link>
+    </PendingCardLink>
   );
 }
 

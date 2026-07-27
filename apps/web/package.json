@@ -13,7 +13,8 @@
     "verify:persisted-saved-flow": "tsx scripts/verify-persisted-saved-flow.ts",
     "verify:saved-court-toggle": "tsx scripts/verify-saved-court-toggle.ts",
     "verify:web-exact-location": "tsx scripts/verify-web-exact-location.ts",
-    "verify:web-billing": "tsx scripts/verify-web-billing.ts"
+    "verify:web-billing": "tsx scripts/verify-web-billing.ts",
+    "verify:ux-pending-states": "tsx scripts/verify-ux-pending-states.ts"
   },
   "dependencies": {
     "@tennis/contracts": "workspace:*",

@@ -171,6 +171,33 @@
     font-weight: 600;
   }
 
+  /* ── Inline spinner (element-level pending state) ─────────────────────── */
+  /* Small CSS-only spinner used inside buttons/cards/menu items while a click's
+     navigation or mutation is pending. Inherits `color` (currentColor) so it always
+     matches its host's text color — no hardcoded palette. Pure CSS animation (no JS
+     timers). `.tw-spinner--static` (used under prefers-reduced-motion, see below)
+     freezes the rotation but keeps the ring visible as a pending affordance. */
+  .tw-spinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    opacity: 0.85;
+    animation: tw-spin 700ms linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tw-spinner {
+      animation-duration: 1500ms;
+    }
+  }
+  @keyframes tw-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
   /* ── Pills & chips ─────────────────────────────────────────────────────── */
   .pill {
     border-radius: theme('borderRadius.pill');
@@ -324,18 +351,11 @@
      (56px + safe-area). `--map-chrome` collapses the bottom-nav term at md+ where
      the tab bar is hidden. */
   .map-layout {
-    --map-header: 72px;
-    --map-filterbar: 69px;
-    --map-bottom-nav: calc(56px + env(safe-area-inset-bottom));
-    display: flex;
-    flex-direction: column;
-    height: calc(100dvh - var(--map-header) - var(--map-filterbar) - var(--map-bottom-nav));
+
   }
   .map-canvas-wrap {
     position: relative;
-    flex: 0 0 55%;
-    min-height: 0;
-    overflow: hidden;
+    height: 500px;
   }
   .map-list-panel {
     flex: 1 1 auto;

@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import Image from 'next/image';
 import type { CollectionDTO } from '@tennis/contracts';
 import { PageContainer } from '@/components/layout';
 import { SectionHeader } from '@/components/ui';
+import { PendingLink, PendingCardLink } from '@/components/navigation';
 
 // HomeCollectionsTeaser — the "Collections / Curated journeys" teaser, ported from
 // the collections section in `files/home.html` (and matching the card treatment in
@@ -70,23 +70,23 @@ export function HomeCollectionsTeaser({
           eyebrow={eyebrow}
           title={title}
           action={
-            <Link
+            <PendingLink
               href={cta.href}
               className="btn btn-ghost inline-flex items-center gap-1.5 !px-0 text-stone"
             >
               {cta.label}
               <ChevronGlyph />
-            </Link>
+            </PendingLink>
           }
         />
 
         <ul className="mt-section grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {collections.map((collection) => (
             <li key={collection.id}>
-              <Link
+              <PendingCardLink
                 href={`/collections/${collection.slug}`}
-                aria-label={collection.name}
-                className="court-card group relative block aspect-[3/2] overflow-hidden"
+                ariaLabel={collection.name}
+                className="court-card group block aspect-[3/2] overflow-hidden"
               >
                 <Image
                   src={collection.coverImageUrl}
@@ -106,7 +106,7 @@ export function HomeCollectionsTeaser({
                   </h3>
                   <p className="eyebrow mt-1.5 text-paper/70">{collection.count} courts</p>
                 </div>
-              </Link>
+              </PendingCardLink>
             </li>
           ))}
         </ul>

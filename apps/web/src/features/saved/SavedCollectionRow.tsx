@@ -1,6 +1,6 @@
 import Image from 'next/image';
-import Link from 'next/link';
 import type { UserCollectionDTO } from '@tennis/contracts';
+import { PendingCardLink } from '@/components/navigation';
 
 // SavedCollectionRow — one wishlist-folder row in the Saved → Collections tab
 // (FEATURE_19 §3.2). Ported from saved.html's collection rows: a small stack of court
@@ -43,10 +43,10 @@ export function SavedCollectionRow({ collection }: SavedCollectionRowProps) {
   const covers = collection.coverImageUrls ?? [];
 
   return (
-    <Link
+    <PendingCardLink
       href={`/saved/collections/${collection.slug}`}
       className="flex items-center gap-5 border-b border-hairline py-5 transition-colors hover:bg-ivory"
-      aria-label={collection.name}
+      ariaLabel={collection.name}
     >
       {/* Thumbnail stack (only when cover images are present). */}
       {covers.length > 0 ? (
@@ -69,6 +69,6 @@ export function SavedCollectionRow({ collection }: SavedCollectionRowProps) {
       <span className="shrink-0 text-stone" aria-hidden>
         <ChevronRightGlyph />
       </span>
-    </Link>
+    </PendingCardLink>
   );
 }

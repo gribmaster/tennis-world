@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import Image from 'next/image';
 import type { CollectionDTO } from '@tennis/contracts';
+import { PendingCardLink } from '@/components/navigation';
 
 // CollectionCard — one cover tile in the Collections grid, ported from the
 // collection card in files/collections.html (the 3:2 cover with a bottom-up
@@ -12,8 +12,8 @@ import type { CollectionDTO } from '@tennis/contracts';
 //     component) fetches and passes the DTO in.
 //   • Renders only from fields on the DTO. `description` is optional on
 //     CollectionDTO, so it is rendered only when present (graceful fallback).
-//   • The whole card links to `/collections/{slug}` — that detail route is NOT
-//     built in this feature, but the link is wired now per the prompt.
+//   • The whole card links to `/collections/{slug}` via <PendingCardLink> so only THIS
+//     card shows a pending overlay while its own navigation is in flight.
 
 export interface CollectionCardProps {
   collection: CollectionDTO;
@@ -24,10 +24,10 @@ export interface CollectionCardProps {
 
 export function CollectionCard({ collection, priority = false, className }: CollectionCardProps) {
   return (
-    <Link
+    <PendingCardLink
       href={`/collections/${collection.slug}`}
-      aria-label={collection.name}
-      className={['court-card group relative block aspect-[3/2] overflow-hidden', className ?? '']
+      ariaLabel={collection.name}
+      className={['court-card group block aspect-[3/2] overflow-hidden', className ?? '']
         .filter(Boolean)
         .join(' ')}
     >
@@ -55,6 +55,6 @@ export function CollectionCard({ collection, priority = false, className }: Coll
           <p className="body-s mt-2 line-clamp-2 text-paper/80">{collection.description}</p>
         ) : null}
       </div>
-    </Link>
+    </PendingCardLink>
   );
 }

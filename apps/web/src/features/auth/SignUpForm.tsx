@@ -11,6 +11,7 @@ import {
   isApiMode,
   requestMagicLink,
 } from './auth-client';
+import { InlineSpinner } from '@/components/ui';
 
 // SignUpForm — the name+email sign-up island, ported from `SignUp` in files/signup.html.
 //
@@ -164,8 +165,11 @@ export function SignUpForm() {
         <button
           type="submit"
           disabled={loading}
+          aria-busy={loading}
+          aria-disabled={loading || undefined}
           className="btn btn-primary mt-[22px] w-full justify-center"
         >
+          {loading ? <InlineSpinner label="Creating account…" /> : null}
           {loading ? 'Creating…' : 'Create Account'}
           {!loading ? <ArrowIcon width={14} height={14} /> : null}
         </button>

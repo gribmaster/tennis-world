@@ -8,3 +8,6 @@ export type { SectionHeaderProps } from './SectionHeader';
 
 export { Badge } from './Badge';
 export type { BadgeProps, BadgeTone } from './Badge';
+
+export { InlineSpinner } from './InlineSpinner';
+export type { InlineSpinnerProps } from './InlineSpinner';

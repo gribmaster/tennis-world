@@ -6,6 +6,7 @@ import type { UserCollectionDTO } from '@tennis/contracts';
 import { getMutationSavedRepository } from '@/lib/repositories.client';
 import { AuthRequiredError } from '@/lib/repositories';
 import { CreateCollectionModal } from '@/features/user-collections';
+import { InlineSpinner } from '@/components/ui';
 
 // SaveToCollectionMenu — the Court Detail "Add to Collection" dropdown, ported from the
 // `SaveToCollectionMenu` prototype in files/home.html / files/map.html. It lets the user
@@ -140,6 +141,10 @@ export function SaveToCollectionMenu({
   const [memberIds, setMemberIds] = useState<Set<string>>(
     () => new Set(initialMemberCollectionIds),
   );
+  // Folder ids with an in-flight toggle write — shows a small spinner in place of the
+  // checkbox/checkmark on THAT row only, and guards against a rapid double-click re-firing
+  // the same toggle before its first write settles.
+  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
 
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -176,6 +181,10 @@ export function SaveToCollectionMenu({
   // sign-in prompt — we don't leave a checkmark the server rejected.
   const handleToggle = useCallback(
     (collectionId: string) => {
+      // Guard against a rapid double-click re-firing the same toggle before its first
+      // write settles (this row is already showing its spinner).
+      if (pendingIds.has(collectionId)) return;
+
       const wasMember = memberIds.has(collectionId);
       setMemberIds((prev) => {
         const next = new Set(prev);
@@ -183,6 +192,8 @@ export function SaveToCollectionMenu({
         else next.add(collectionId);
         return next;
       });
+      setPendingIds((prev) => new Set(prev).add(collectionId));
+
       void savedRepo
         .toggleCourtInCollection(collectionId, courtId)
         .catch((err: unknown) => {
@@ -199,9 +210,16 @@ export function SaveToCollectionMenu({
           // Other errors: the optimistic update already happened (mock mode never
           // throws); we don't surface non-auth network blips here (matches the
           // fire-and-forget prototype behavior).
+        })
+        .finally(() => {
+          setPendingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(collectionId);
+            return next;
+          });
         });
     },
-    [courtId, memberIds, savedRepo],
+    [courtId, memberIds, pendingIds, savedRepo],
   );
 
   // Create-from-menu (matches the prototype, which seeds the new folder WITH the current
@@ -272,17 +290,22 @@ export function SaveToCollectionMenu({
           ) : (
             items.map((col) => {
               const inCollection = memberIds.has(col.id);
+              const rowPending = pendingIds.has(col.id);
               return (
                 <button
                   key={col.id}
                   type="button"
                   role="menuitemcheckbox"
                   aria-checked={inCollection}
+                  aria-busy={rowPending}
+                  aria-disabled={rowPending || undefined}
                   onClick={() => handleToggle(col.id)}
-                  className="flex w-full items-center justify-between gap-3 px-2.5 py-2.5 text-left transition-colors hover:bg-bone"
+                  className="flex w-full items-center justify-between gap-3 px-2.5 py-2.5 text-left transition-colors hover:bg-bone disabled:cursor-default"
                 >
                   <span className="body-m text-ink">{col.name}</span>
-                  {inCollection ? (
+                  {rowPending ? (
+                    <InlineSpinner label="Updating…" className="shrink-0 text-stone" />
+                  ) : inCollection ? (
                     <span
                       aria-hidden
                       className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] bg-ink text-bone"

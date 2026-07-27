@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import Image from 'next/image';
 import type { CourtSummaryDTO } from '@tennis/contracts';
+import { PendingCardLink } from '@/components/navigation';
 
 // MapCourtRow — the desktop list-panel row, ported from the `.map-rows` markup in
 // files/map.html: a small left thumbnail + stacked eyebrow (country · region) /
@@ -36,8 +36,9 @@ export interface MapCourtRowProps {
 
 export function MapCourtRow({ court }: MapCourtRowProps) {
   return (
-    <Link
+    <PendingCardLink
       href={`/courts/${court.slug}`}
+      ariaLabel={court.name}
       className="flex items-start gap-3.5 border-b border-hairline px-5 py-4 transition-colors hover:bg-ivory"
     >
       <div className="relative h-[60px] w-20 shrink-0 overflow-hidden">
@@ -63,6 +64,6 @@ export function MapCourtRow({ court }: MapCourtRowProps) {
           <LockGlyph />
         </span>
       ) : null}
-    </Link>
+    </PendingCardLink>
   );
 }

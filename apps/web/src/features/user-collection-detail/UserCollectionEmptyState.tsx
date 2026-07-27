@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { PendingLink } from '@/components/navigation';
 
 // UserCollectionEmptyState — shown when a wishlist folder has no member courts.
 // Ported from files/collection.html's empty branch ("This collection is empty." +
@@ -35,10 +35,10 @@ export function UserCollectionEmptyState() {
       <p className="body-l mt-3 max-w-[460px] text-stone">
         Add courts from any court page using “Add to Collection.”
       </p>
-      <Link href="/map" className="btn btn-primary mt-8 inline-flex">
+      <PendingLink href="/map" className="btn btn-primary mt-8 inline-flex">
         Explore the Map
         <ArrowRightGlyph />
-      </Link>
+      </PendingLink>
     </div>
   );
 }

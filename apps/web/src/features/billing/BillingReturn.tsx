@@ -37,6 +37,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { getClientRepositories } from '@/lib/repositories.client';
 import { AuthRequiredError } from '@/lib/repositories';
+import { BackButton } from '@/components/navigation';
 
 // Bounded polling: total worst-case wait ≈ MAX_ATTEMPTS × POLL_INTERVAL_MS. The first
 // read happens immediately; subsequent reads are spaced by the interval. Kept short so a
@@ -239,11 +240,21 @@ function ReturnShell({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="fade-in mx-auto max-w-[560px] text-center">
-      <div className="eyebrow text-gold">{eyebrow}</div>
-      <h1 className="display-l mt-3 text-ink">{title}</h1>
-      <p className="body-l mt-4 text-graphite">{body}</p>
-      {children ? <div className="mt-8">{children}</div> : null}
+    <div className="mx-auto max-w-[560px]">
+      {/* Back navigation — this is a landing page reached via an external redirect
+          (Stripe), so there is rarely a meaningful in-app "previous page" to pop into;
+          the fallback (/profile) is what the brief specifies for this route. */}
+      <BackButton
+        fallbackHref="/profile"
+        label="Profile"
+        className="eyebrow mb-8 inline-flex items-center gap-1.5 text-stone transition-colors hover:text-ink"
+      />
+      <div className="fade-in text-center">
+        <div className="eyebrow text-gold">{eyebrow}</div>
+        <h1 className="display-l mt-3 text-ink">{title}</h1>
+        <p className="body-l mt-4 text-graphite">{body}</p>
+        {children ? <div className="mt-8">{children}</div> : null}
+      </div>
     </div>
   );
 }

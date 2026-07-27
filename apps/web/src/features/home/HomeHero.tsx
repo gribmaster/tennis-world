@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import Image from 'next/image';
+import { PendingLink } from '@/components/navigation';
 
 // HomeHero — the full-bleed opening section of the Home page, ported from the
 // hero block in `files/home.html`:
@@ -132,14 +132,17 @@ export function HomeHero({ content = HOME_HERO_CONTENT }: HomeHeroProps) {
           <p className="body-l mt-5 max-w-[420px] text-bone/80">{subtitle}</p>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href={primaryCta.href} className="btn btn-over-image gap-2.5">
+            <PendingLink href={primaryCta.href} className="btn btn-over-image gap-2.5">
               {primaryCta.label}
               <ArrowGlyph />
-            </Link>
+            </PendingLink>
             {secondaryCta ? (
-              <Link href={secondaryCta.href} className="btn btn-over-image gap-2.5 !border-bone/40">
+              <PendingLink
+                href={secondaryCta.href}
+                className="btn btn-over-image gap-2.5 !border-bone/40"
+              >
                 {secondaryCta.label}
-              </Link>
+              </PendingLink>
             ) : null}
           </div>
 

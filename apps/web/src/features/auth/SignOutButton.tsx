@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { isApiMode, logout } from './auth-client';
 import { isDemoMode } from '@/lib/demo-auth';
+import { InlineSpinner } from '@/components/ui';
 
 // SignOutButton — the logout control (Feature 57). A tiny client island so the otherwise
 // server-rendered ProfileMenuList can end the session without becoming a client component.
@@ -60,9 +61,14 @@ export function SignOutButton() {
       type="button"
       onClick={handleSignOut}
       disabled={busy}
+      aria-busy={busy}
+      aria-disabled={busy || undefined}
       className="flex h-14 w-full items-center justify-between border-b border-hairline px-1 text-left text-clay transition-opacity hover:opacity-70 disabled:opacity-50"
     >
-      <span className="body-l">{busy ? 'Signing out…' : 'Sign Out'}</span>
+      <span className="body-l inline-flex items-center gap-2">
+        {busy ? <InlineSpinner label="Signing out…" /> : null}
+        {busy ? 'Signing out…' : 'Sign Out'}
+      </span>
     </button>
   );
 }

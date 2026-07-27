@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { AppShell, PageContainer } from '@/components/layout';
 import { SectionHeader } from '@/components/ui';
+import { BackButton } from '@/components/navigation';
 import { CourtCard, CourtMeta } from '@/components/court';
 import {
   CourtDetailGallery,
@@ -121,6 +122,13 @@ export default async function CourtDetailPage({
     // the protected saved reads) also points the header user icon at /profile vs /signin.
     <AppShell unlocked={false} signedIn={signedIn}>
       <PageContainer as="article" className="py-section-lg md:py-section-xl">
+        {/* Back to the courts listing. Court Detail previously had NO way back besides
+            browser/app chrome navigation — this closes that gap, matching every other
+            detail page's back control. NOTE: this app has no standalone `/courts` index
+            route — courts are browsed via the `/map` explorer (list + map), which is the
+            real "all courts" surface, so that's the fallback destination. */}
+        <BackButton fallbackHref="/map" label="Courts" className="mb-6 eyebrow inline-flex items-center gap-1.5 text-stone transition-colors hover:text-ink" />
+
         <div className="grid grid-cols-1 gap-10 md:grid-cols-[minmax(0,1fr)_360px] md:gap-16 md:items-start">
           {/* ── Left column: media + editorial content ───────────────────────── */}
           <div>

@@ -1,6 +1,6 @@
 import Image from 'next/image';
-import Link from 'next/link';
 import type { ArticleDTO } from '@tennis/contracts';
+import { BackButton } from '@/components/navigation';
 import { ArticleMeta } from './ArticleMeta';
 
 // ArticleHero — the editorial hero for a single journal article
@@ -19,24 +19,9 @@ import { ArticleMeta } from './ArticleMeta';
 //
 // Mobile-first: a single readable column inside the page gutter; the hero image
 // (if any) spans the gutter as a wide editorial banner.
-
-function ChevronLeftGlyph() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="m15 6-6 6 6 6" />
-    </svg>
-  );
-}
+//
+// BACK NAVIGATION: uses the shared <BackButton> (history-aware, falls back to /journal on
+// a direct load) instead of a hardcoded "← Journal" link.
 
 export interface ArticleHeroProps {
   article: ArticleDTO;
@@ -46,14 +31,11 @@ export function ArticleHero({ article }: ArticleHeroProps) {
   return (
     <header className="border-b border-hairline bg-ivory">
       <div className="container-page py-[clamp(40px,6vw,80px)]">
-        {/* Back to the journal index. */}
-        <Link
-          href="/journal"
+        <BackButton
+          fallbackHref="/journal"
+          label="Journal"
           className="eyebrow inline-flex items-center gap-1.5 text-stone transition-colors hover:text-ink"
-        >
-          <ChevronLeftGlyph />
-          Journal
-        </Link>
+        />
 
         {/* Centered, readable editorial column. */}
         <div className="mx-auto mt-8 max-w-[760px] text-center">
