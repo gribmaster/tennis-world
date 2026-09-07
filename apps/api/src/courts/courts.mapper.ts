@@ -6,6 +6,7 @@ import type {
   ExactLocationDTO,
   MapPinDTO,
 } from '@tennis/contracts';
+import { orderCourtTags } from './court-tags';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Court mappers + PUBLIC Prisma selects (intake §4 masking; prompt tasks 7, 8).
@@ -43,6 +44,8 @@ export const courtSummarySelect = {
   isScenic: true,
   isFeatured: true,
   isLocked: true,
+  // Public "Experience" tags (Feature 72) — descriptive metadata, never geo.
+  tags: true,
   approxLat: true,
   approxLng: true,
   mapX: true,
@@ -125,6 +128,7 @@ export function toCourtSummaryDTO(row: CourtSummaryRow): CourtSummaryDTO {
     isScenic: row.isScenic,
     isFeatured: row.isFeatured,
     isLocked: row.isLocked,
+    tags: orderCourtTags(row.tags),
     heroImageUrl: heroUrl(row.images),
     mapCoords: [row.mapX, row.mapY],
     // Always-public approximate geo only — exact lat/lng are never selected.
@@ -164,6 +168,7 @@ export function toCourtDTO(row: CourtDetailRow): CourtDTO {
     isScenic: row.isScenic,
     isFeatured: row.isFeatured,
     isLocked: row.isLocked,
+    tags: orderCourtTags(row.tags),
     heroImageUrl: hero?.url ?? '',
     mapCoords: [row.mapX, row.mapY],
     approxLat: row.approxLat,

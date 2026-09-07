@@ -39,6 +39,8 @@ function toSummary(court: MockCourt): CourtSummaryDTO {
     isScenic: court.isScenic,
     isFeatured: court.isFeatured,
     isLocked: court.isLocked,
+    // Canonical order is already applied by the `COURTS` export (mock-data).
+    tags: court.tags,
     heroImageUrl: court.heroImageUrl,
     mapCoords: court.mapCoords,
     // Always-public approximate geo only — exact lat/lng never enter the summary.

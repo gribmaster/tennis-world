@@ -1,4 +1,4 @@
-import type { CourtDTO } from '@tennis/contracts';
+import { orderCourtTags, type CourtDTO } from '@tennis/contracts';
 import { IMG, U, placeholder } from './images';
 
 // 12 courts ported verbatim from the HTML prototypes (`map.html` COURTS array).
@@ -11,6 +11,16 @@ import { IMG, U, placeholder } from './images';
 //   featured-> isFeatured
 //
 // `slug` is authored here (kebab/id form) as the routing + seed key (Risk #18).
+//
+// `tags` (Feature 72) is the closed "Experience" vocabulary from
+// `@tennis/contracts` (`CourtTag`). Each court's tags are authored from that
+// court's OWN record here — its `setting`, `region` and `blurb` wording — never
+// from outside knowledge about the real-world hotel, and never duplicating a fact
+// that already has its own field (`surface`, `access`, `indoorOutdoor`,
+// `isScenic`). Authored order below is for readability only: the `COURTS` export
+// normalizes every list through `orderCourtTags` so mock output and API output
+// are array-identical (mock↔API parity compares them exactly).
+//
 // `lat`/`lng`/`approxLat`/`approxLng` are PLACEHOLDER real-geo values — they only
 // need to exist and be geo-shaped in Phase 0; real coordinates are an editorial/
 // seed concern for later. They are deliberately distinct from `mapCoords`.
@@ -34,6 +44,7 @@ const COURT_SEEDS: CourtSeed[] = [
     isScenic: true,
     isLocked: false,
     isFeatured: true,
+    tags: ['Lakeside', 'Garden', 'Mountains'],
     status: 'published',
     mapCoords: [49, 32],
     lat: 45.9876,
@@ -64,6 +75,7 @@ const COURT_SEEDS: CourtSeed[] = [
     isScenic: true,
     isLocked: true,
     isFeatured: false,
+    tags: ['Sea View'],
     status: 'published',
     mapCoords: [54, 44],
     lat: 40.5489,
@@ -92,6 +104,7 @@ const COURT_SEEDS: CourtSeed[] = [
     isScenic: false,
     isLocked: true,
     isFeatured: true,
+    tags: ['Garden'],
     status: 'published',
     mapCoords: [40, 56],
     lat: 31.6295,
@@ -120,6 +133,7 @@ const COURT_SEEDS: CourtSeed[] = [
     isScenic: true,
     isLocked: false,
     isFeatured: false,
+    tags: ['Mountains'],
     status: 'published',
     mapCoords: [44, 38],
     lat: 39.7491,
@@ -148,6 +162,7 @@ const COURT_SEEDS: CourtSeed[] = [
     isScenic: true,
     isLocked: true,
     isFeatured: false,
+    tags: ['Jungle'],
     status: 'published',
     mapCoords: [78, 58],
     lat: -8.4767,
@@ -175,6 +190,7 @@ const COURT_SEEDS: CourtSeed[] = [
     isScenic: true,
     isLocked: false,
     isFeatured: false,
+    tags: ['Mountains'],
     status: 'published',
     mapCoords: [18, 36],
     lat: 39.1872,
@@ -202,6 +218,7 @@ const COURT_SEEDS: CourtSeed[] = [
     isScenic: true,
     isLocked: true,
     isFeatured: true,
+    tags: ['Island', 'Sea View'],
     status: 'published',
     mapCoords: [70, 60],
     lat: 5.6634,
@@ -229,6 +246,7 @@ const COURT_SEEDS: CourtSeed[] = [
     isScenic: false,
     isLocked: true,
     isFeatured: false,
+    tags: ['Rooftop'],
     status: 'published',
     mapCoords: [82, 38],
     lat: 35.6877,
@@ -256,6 +274,7 @@ const COURT_SEEDS: CourtSeed[] = [
     isScenic: false,
     isLocked: false,
     isFeatured: false,
+    tags: ['Countryside'],
     status: 'published',
     mapCoords: [47, 28],
     lat: 51.9426,
@@ -283,6 +302,7 @@ const COURT_SEEDS: CourtSeed[] = [
     isScenic: true,
     isLocked: true,
     isFeatured: false,
+    tags: ['Sea View'],
     status: 'published',
     mapCoords: [50, 40],
     lat: 43.7508,
@@ -310,6 +330,7 @@ const COURT_SEEDS: CourtSeed[] = [
     isScenic: true,
     isLocked: true,
     isFeatured: false,
+    tags: ['Countryside'],
     status: 'published',
     mapCoords: [42, 38],
     lat: 41.1579,
@@ -337,6 +358,7 @@ const COURT_SEEDS: CourtSeed[] = [
     isScenic: true,
     isLocked: true,
     isFeatured: false,
+    tags: ['Sea View'],
     status: 'published',
     mapCoords: [51, 42],
     lat: 43.5519,
@@ -371,6 +393,9 @@ export const COURTS: CourtSeed[] = (() => {
   let galleryCursor = 0;
   return COURT_SEEDS.map((court) => ({
     ...court,
+    // Canonical vocabulary order — the single normalization point for tags on the
+    // mock side (the API mirrors it in `courts.mapper.ts`).
+    tags: orderCourtTags(court.tags),
     images: court.images.map((img) =>
       img.isHero ? img : { ...img, url: placeholder(galleryCursor++) },
     ),

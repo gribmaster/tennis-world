@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AccessType, CourtStatus, IndoorOutdoor, Surface } from './enums';
+import { AccessType, CourtStatus, CourtTag, IndoorOutdoor, Surface } from './enums';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Court DTOs (Architecture Plan §2, §3).
@@ -39,6 +39,13 @@ export const CourtSummarySchema = z.object({
   isScenic: z.boolean(),
   isFeatured: z.boolean(),
   isLocked: z.boolean(),
+  // Closed "Experience" vocabulary (see `CourtTag` in enums.ts). Lives on the
+  // SUMMARY because cards and filter chips need it, not only the detail page;
+  // `CourtSchema` inherits it. Always public, always present (possibly empty) —
+  // this is descriptive metadata and is deliberately NOT location data, so it has
+  // nothing to do with the entitlement-gated exact-location boundary.
+  // Always emitted in canonical vocabulary order (`orderCourtTags`).
+  tags: z.array(CourtTag),
   heroImageUrl: z.string(),
   mapCoords: MapCoordsSchema,
   // Always-public approximate geo. Exact lat/lng are not part of the summary.

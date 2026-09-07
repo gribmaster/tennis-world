@@ -55,6 +55,8 @@ function toSummary(court: MockCourt): CourtSummaryDTO {
     isScenic: court.isScenic,
     isFeatured: court.isFeatured,
     isLocked: court.isLocked,
+    // Canonical order is already applied by the `COURTS` export (mock-data).
+    tags: court.tags,
     heroImageUrl: court.heroImageUrl,
     // mapCoords is the decorative [x%, y%] screen position used by the Wishlist map.
     mapCoords: court.mapCoords,

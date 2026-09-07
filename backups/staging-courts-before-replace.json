@@ -1,0 +1,795 @@
+{
+  "takenAt": "2026-07-22T16:55:20.518Z",
+  "counts": {
+    "Country": 11,
+    "Region": 12,
+    "Court": 12,
+    "CourtImage": 30,
+    "CollectionCourt": 15,
+    "SavedCourt": 0,
+    "UserCollectionCourt": 1
+  },
+  "Country": [
+    {
+      "id": "italy",
+      "name": "Italy",
+      "isoCode": "IT",
+      "continent": "Europe"
+    },
+    {
+      "id": "morocco",
+      "name": "Morocco",
+      "isoCode": "MA",
+      "continent": "Africa"
+    },
+    {
+      "id": "spain",
+      "name": "Spain",
+      "isoCode": "ES",
+      "continent": "Europe"
+    },
+    {
+      "id": "indonesia",
+      "name": "Indonesia",
+      "isoCode": "ID",
+      "continent": "Asia"
+    },
+    {
+      "id": "usa",
+      "name": "USA",
+      "isoCode": "US",
+      "continent": "Americas"
+    },
+    {
+      "id": "maldives",
+      "name": "Maldives",
+      "isoCode": "MV",
+      "continent": "Asia"
+    },
+    {
+      "id": "japan",
+      "name": "Japan",
+      "isoCode": "JP",
+      "continent": "Asia"
+    },
+    {
+      "id": "uk",
+      "name": "UK",
+      "isoCode": "GB",
+      "continent": "Europe"
+    },
+    {
+      "id": "monaco",
+      "name": "Monaco",
+      "isoCode": "MC",
+      "continent": "Europe"
+    },
+    {
+      "id": "portugal",
+      "name": "Portugal",
+      "isoCode": "PT",
+      "continent": "Europe"
+    },
+    {
+      "id": "france",
+      "name": "France",
+      "isoCode": "FR",
+      "continent": "Europe"
+    }
+  ],
+  "Region": [
+    {
+      "id": "italy-lake-como",
+      "countryId": "italy",
+      "name": "Lake Como",
+      "lat": 45.99,
+      "lng": 9.22
+    },
+    {
+      "id": "italy-capri",
+      "countryId": "italy",
+      "name": "Capri",
+      "lat": 40.55,
+      "lng": 14.24
+    },
+    {
+      "id": "morocco-marrakech",
+      "countryId": "morocco",
+      "name": "Marrakech",
+      "lat": 31.63,
+      "lng": -7.98
+    },
+    {
+      "id": "spain-mallorca",
+      "countryId": "spain",
+      "name": "Mallorca",
+      "lat": 39.75,
+      "lng": 2.65
+    },
+    {
+      "id": "indonesia-bali",
+      "countryId": "indonesia",
+      "name": "Bali",
+      "lat": -8.48,
+      "lng": 115.26
+    },
+    {
+      "id": "usa-aspen",
+      "countryId": "usa",
+      "name": "Aspen",
+      "lat": 39.19,
+      "lng": -106.82
+    },
+    {
+      "id": "maldives-noonu-atoll",
+      "countryId": "maldives",
+      "name": "Noonu Atoll",
+      "lat": 5.66,
+      "lng": 73.35
+    },
+    {
+      "id": "japan-otemachi",
+      "countryId": "japan",
+      "name": "Otemachi",
+      "lat": 35.69,
+      "lng": 139.77
+    },
+    {
+      "id": "uk-cotswolds",
+      "countryId": "uk",
+      "name": "Cotswolds",
+      "lat": 51.94,
+      "lng": -1.53
+    },
+    {
+      "id": "monaco-roquebrune",
+      "countryId": "monaco",
+      "name": "Roquebrune",
+      "lat": 43.75,
+      "lng": 7.44
+    },
+    {
+      "id": "portugal-douro-valley",
+      "countryId": "portugal",
+      "name": "Douro Valley",
+      "lat": 41.16,
+      "lng": -7.79
+    },
+    {
+      "id": "france-antibes",
+      "countryId": "france",
+      "name": "Antibes",
+      "lat": 43.55,
+      "lng": 7.12
+    }
+  ],
+  "Court": [
+    {
+      "id": "tremezzo",
+      "slug": "grand-hotel-tremezzo",
+      "name": "Grand Hotel Tremezzo",
+      "regionId": "italy-lake-como",
+      "countryId": "italy",
+      "lat": 45.9876,
+      "lng": 9.2233,
+      "approxLat": 45.99,
+      "approxLng": 9.22,
+      "mapX": 49,
+      "mapY": 32,
+      "surface": "Clay",
+      "setting": "Lakefront",
+      "access": "Resort",
+      "indoorOutdoor": "Outdoor",
+      "isScenic": true,
+      "isFeatured": true,
+      "isLocked": false,
+      "status": "published",
+      "blurb": "Suspended above Lake Como's mirror-still water, the court at Grand Hotel Tremezzo is set within a century-old garden of cypress and bougainvillea. Players rally against a backdrop of the Grigne mountains and a horizon of pale stucco villas. After play, retreat to the lakeside terrace for a campari and the slow hours that follow.",
+      "seedOrder": 0,
+      "createdAt": "2026-07-07T15:05:19.838Z",
+      "updatedAt": "2026-07-07T15:05:19.838Z"
+    },
+    {
+      "id": "tragara",
+      "slug": "hotel-punta-tragara",
+      "name": "Hotel Punta Tragara",
+      "regionId": "italy-capri",
+      "countryId": "italy",
+      "lat": 40.5489,
+      "lng": 14.2412,
+      "approxLat": 40.55,
+      "approxLng": 14.24,
+      "mapX": 54,
+      "mapY": 44,
+      "surface": "Hard",
+      "setting": "Cliffside",
+      "access": "Resort",
+      "indoorOutdoor": "Outdoor",
+      "isScenic": true,
+      "isFeatured": false,
+      "isLocked": true,
+      "status": "published",
+      "blurb": "A Le Corbusier-designed sanctuary on Capri's southern cliffs. The single court is cut into the rock above the Faraglioni — play opens to the Mediterranean and closes with limoncello in the garden bar.",
+      "seedOrder": 1,
+      "createdAt": "2026-07-07T15:05:20.152Z",
+      "updatedAt": "2026-07-07T15:05:20.152Z"
+    },
+    {
+      "id": "mansour",
+      "slug": "royal-mansour",
+      "name": "Royal Mansour",
+      "regionId": "morocco-marrakech",
+      "countryId": "morocco",
+      "lat": 31.6295,
+      "lng": -7.9811,
+      "approxLat": 31.63,
+      "approxLng": -7.98,
+      "mapX": 40,
+      "mapY": 56,
+      "surface": "Clay",
+      "setting": "Walled garden",
+      "access": "Resort",
+      "indoorOutdoor": "Outdoor",
+      "isScenic": false,
+      "isFeatured": true,
+      "isLocked": true,
+      "status": "published",
+      "blurb": "Inside the medina's terracotta walls, a court of rust-red clay shaded by ancient olive trees. Morning hours only — the heat takes the afternoon.",
+      "seedOrder": 2,
+      "createdAt": "2026-07-07T15:05:20.310Z",
+      "updatedAt": "2026-07-07T15:05:20.310Z"
+    },
+    {
+      "id": "residencia",
+      "slug": "belmond-la-residencia",
+      "name": "Belmond La Residencia",
+      "regionId": "spain-mallorca",
+      "countryId": "spain",
+      "lat": 39.7491,
+      "lng": 2.6469,
+      "approxLat": 39.75,
+      "approxLng": 2.65,
+      "mapX": 44,
+      "mapY": 38,
+      "surface": "Clay",
+      "setting": "Mountain village",
+      "access": "Resort",
+      "indoorOutdoor": "Outdoor",
+      "isScenic": true,
+      "isFeatured": false,
+      "isLocked": false,
+      "status": "published",
+      "blurb": "Tucked into the Tramuntana mountains above Deià, two clay courts within an olive grove, the village church bells the only sound between points.",
+      "seedOrder": 3,
+      "createdAt": "2026-07-07T15:05:20.467Z",
+      "updatedAt": "2026-07-07T15:05:20.467Z"
+    },
+    {
+      "id": "como",
+      "slug": "como-shambhala-estate",
+      "name": "Como Shambhala Estate",
+      "regionId": "indonesia-bali",
+      "countryId": "indonesia",
+      "lat": -8.4767,
+      "lng": 115.2625,
+      "approxLat": -8.48,
+      "approxLng": 115.26,
+      "mapX": 78,
+      "mapY": 58,
+      "surface": "Hard",
+      "setting": "Jungle",
+      "access": "Resort",
+      "indoorOutdoor": "Outdoor",
+      "isScenic": true,
+      "isFeatured": false,
+      "isLocked": true,
+      "status": "published",
+      "blurb": "Cut into the Ayung river gorge near Ubud. The court is reached by a stone path through frangipani; macaques watch from the canopy.",
+      "seedOrder": 4,
+      "createdAt": "2026-07-07T15:05:20.626Z",
+      "updatedAt": "2026-07-07T15:05:20.626Z"
+    },
+    {
+      "id": "nell",
+      "slug": "the-little-nell",
+      "name": "The Little Nell",
+      "regionId": "usa-aspen",
+      "countryId": "usa",
+      "lat": 39.1872,
+      "lng": -106.8175,
+      "approxLat": 39.19,
+      "approxLng": -106.82,
+      "mapX": 18,
+      "mapY": 36,
+      "surface": "Hard",
+      "setting": "Alpine",
+      "access": "Resort",
+      "indoorOutdoor": "Outdoor",
+      "isScenic": true,
+      "isFeatured": false,
+      "isLocked": false,
+      "status": "published",
+      "blurb": "Aspen Mountain rises directly behind the baseline. Summer mornings smell of pine; the altitude lifts the ball an extra foot.",
+      "seedOrder": 5,
+      "createdAt": "2026-07-07T15:05:20.787Z",
+      "updatedAt": "2026-07-07T15:05:20.787Z"
+    },
+    {
+      "id": "cheval",
+      "slug": "cheval-blanc-randheli",
+      "name": "Cheval Blanc Randheli",
+      "regionId": "maldives-noonu-atoll",
+      "countryId": "maldives",
+      "lat": 5.6634,
+      "lng": 73.3502,
+      "approxLat": 5.66,
+      "approxLng": 73.35,
+      "mapX": 70,
+      "mapY": 60,
+      "surface": "Hard",
+      "setting": "Island",
+      "access": "Private",
+      "indoorOutdoor": "Outdoor",
+      "isScenic": true,
+      "isFeatured": true,
+      "isLocked": true,
+      "status": "published",
+      "blurb": "An island unto itself. The court sits between two reef-edges, lit at dusk by lanterns staked into the sand.",
+      "seedOrder": 6,
+      "createdAt": "2026-07-07T15:05:20.950Z",
+      "updatedAt": "2026-07-07T15:05:20.950Z"
+    },
+    {
+      "id": "aman",
+      "slug": "aman-tokyo",
+      "name": "Aman Tokyo",
+      "regionId": "japan-otemachi",
+      "countryId": "japan",
+      "lat": 35.6877,
+      "lng": 139.7664,
+      "approxLat": 35.69,
+      "approxLng": 139.77,
+      "mapX": 82,
+      "mapY": 38,
+      "surface": "Hard",
+      "setting": "Rooftop",
+      "access": "Resort",
+      "indoorOutdoor": "Indoor",
+      "isScenic": false,
+      "isFeatured": false,
+      "isLocked": true,
+      "status": "published",
+      "blurb": "On the 33rd floor of the Otemachi tower, a private court rises above the imperial gardens. Wash basins of warm cedar at the door.",
+      "seedOrder": 7,
+      "createdAt": "2026-07-07T15:05:21.108Z",
+      "updatedAt": "2026-07-07T15:05:21.108Z"
+    },
+    {
+      "id": "soho",
+      "slug": "soho-farmhouse",
+      "name": "Soho Farmhouse",
+      "regionId": "uk-cotswolds",
+      "countryId": "uk",
+      "lat": 51.9426,
+      "lng": -1.5258,
+      "approxLat": 51.94,
+      "approxLng": -1.53,
+      "mapX": 47,
+      "mapY": 28,
+      "surface": "Grass",
+      "setting": "Countryside",
+      "access": "Club",
+      "indoorOutdoor": "Outdoor",
+      "isScenic": false,
+      "isFeatured": false,
+      "isLocked": false,
+      "status": "published",
+      "blurb": "Mown stripes, white linens, an honesty bar of Pimm's. The grass court at Soho Farmhouse keeps an English summer to itself.",
+      "seedOrder": 8,
+      "createdAt": "2026-07-07T15:05:21.264Z",
+      "updatedAt": "2026-07-07T15:05:21.264Z"
+    },
+    {
+      "id": "monte",
+      "slug": "monte-carlo-country-club",
+      "name": "Monte-Carlo Country Club",
+      "regionId": "monaco-roquebrune",
+      "countryId": "monaco",
+      "lat": 43.7508,
+      "lng": 7.4386,
+      "approxLat": 43.75,
+      "approxLng": 7.44,
+      "mapX": 50,
+      "mapY": 40,
+      "surface": "Clay",
+      "setting": "Cliffside",
+      "access": "Club",
+      "indoorOutdoor": "Outdoor",
+      "isScenic": true,
+      "isFeatured": false,
+      "isLocked": true,
+      "status": "published",
+      "blurb": "The terraced clay courts of Roquebrune face the Mediterranean head-on. Cypress hedges, white umbrellas, the Masters in April.",
+      "seedOrder": 9,
+      "createdAt": "2026-07-07T15:05:21.423Z",
+      "updatedAt": "2026-07-07T15:05:21.423Z"
+    },
+    {
+      "id": "sixsenses",
+      "slug": "six-senses-douro",
+      "name": "Six Senses Douro",
+      "regionId": "portugal-douro-valley",
+      "countryId": "portugal",
+      "lat": 41.1579,
+      "lng": -7.7864,
+      "approxLat": 41.16,
+      "approxLng": -7.79,
+      "mapX": 42,
+      "mapY": 38,
+      "surface": "Clay",
+      "setting": "Vineyard",
+      "access": "Resort",
+      "indoorOutdoor": "Outdoor",
+      "isScenic": true,
+      "isFeatured": false,
+      "isLocked": true,
+      "status": "published",
+      "blurb": "A clay court terraced into a 19th-century vineyard above the Douro. Play before the heat, port at dusk.",
+      "seedOrder": 10,
+      "createdAt": "2026-07-07T15:05:21.580Z",
+      "updatedAt": "2026-07-07T15:05:21.580Z"
+    },
+    {
+      "id": "edenroc",
+      "slug": "hotel-du-cap-eden-roc",
+      "name": "Hotel du Cap-Eden-Roc",
+      "regionId": "france-antibes",
+      "countryId": "france",
+      "lat": 43.5519,
+      "lng": 7.115,
+      "approxLat": 43.55,
+      "approxLng": 7.12,
+      "mapX": 51,
+      "mapY": 42,
+      "surface": "Clay",
+      "setting": "Coastal",
+      "access": "Resort",
+      "indoorOutdoor": "Outdoor",
+      "isScenic": true,
+      "isFeatured": false,
+      "isLocked": true,
+      "status": "published",
+      "blurb": "Five clay courts on the Cap d'Antibes, pine-shaded and salt-aired. The kind of place where time collapses gracefully.",
+      "seedOrder": 11,
+      "createdAt": "2026-07-07T15:05:21.737Z",
+      "updatedAt": "2026-07-07T15:05:21.737Z"
+    }
+  ],
+  "CourtImage": [
+    {
+      "id": "tremezzo-img-0",
+      "courtId": "tremezzo",
+      "url": "/placeholders/guilherme-maggieri-OH5g9IgcMWs-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 0,
+      "isHero": true
+    },
+    {
+      "id": "tremezzo-img-1",
+      "courtId": "tremezzo",
+      "url": "/placeholders/aleksandar-kyng-dhkdfFxGHfU-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 1,
+      "isHero": false
+    },
+    {
+      "id": "tremezzo-img-2",
+      "courtId": "tremezzo",
+      "url": "/placeholders/anastasia-chistik--9Vy4fR_Xo0-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 2,
+      "isHero": false
+    },
+    {
+      "id": "tremezzo-img-3",
+      "courtId": "tremezzo",
+      "url": "/placeholders/andrew-heald-6DSoTlwOkZQ-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 3,
+      "isHero": false
+    },
+    {
+      "id": "tremezzo-img-4",
+      "courtId": "tremezzo",
+      "url": "/placeholders/andrew-heald-C1bGTi-rSus-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 4,
+      "isHero": false
+    },
+    {
+      "id": "tragara-img-0",
+      "courtId": "tragara",
+      "url": "/placeholders/maurits-bausenhart-XtcZbSPVJ3A-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 0,
+      "isHero": true
+    },
+    {
+      "id": "tragara-img-1",
+      "courtId": "tragara",
+      "url": "/placeholders/andrew-heald-n9RZ0dCunpY-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 1,
+      "isHero": false
+    },
+    {
+      "id": "tragara-img-2",
+      "courtId": "tragara",
+      "url": "/placeholders/andrew-heald-q-lz1KZw640-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 2,
+      "isHero": false
+    },
+    {
+      "id": "mansour-img-0",
+      "courtId": "mansour",
+      "url": "/placeholders/renith-r-A9VpotrPr1k-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 0,
+      "isHero": true
+    },
+    {
+      "id": "mansour-img-1",
+      "courtId": "mansour",
+      "url": "/placeholders/ben-hershey-K9HgyI3qmqA-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 1,
+      "isHero": false
+    },
+    {
+      "id": "mansour-img-2",
+      "courtId": "mansour",
+      "url": "/placeholders/braden-egli-k_H7OSg_fUs-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 2,
+      "isHero": false
+    },
+    {
+      "id": "residencia-img-0",
+      "courtId": "residencia",
+      "url": "/placeholders/moises-alex-WqI-PbYugn4-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 0,
+      "isHero": true
+    },
+    {
+      "id": "residencia-img-1",
+      "courtId": "residencia",
+      "url": "/placeholders/chris-chondrogiannis-oN_rL__KiiU-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 1,
+      "isHero": false
+    },
+    {
+      "id": "residencia-img-2",
+      "courtId": "residencia",
+      "url": "/placeholders/christian-tenguan-RNiK93wcz-U-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 2,
+      "isHero": false
+    },
+    {
+      "id": "como-img-0",
+      "courtId": "como",
+      "url": "/placeholders/hoi-pham-eLZwsPO8cCQ-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 0,
+      "isHero": true
+    },
+    {
+      "id": "como-img-1",
+      "courtId": "como",
+      "url": "/placeholders/darko-nesic-VZEnVM6c1lY-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 1,
+      "isHero": false
+    },
+    {
+      "id": "nell-img-0",
+      "courtId": "nell",
+      "url": "/placeholders/julia-kuzenkov-UTLqS1wa104-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 0,
+      "isHero": true
+    },
+    {
+      "id": "nell-img-1",
+      "courtId": "nell",
+      "url": "/placeholders/denis-zelenykh-fd9CLvRae9I-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 1,
+      "isHero": false
+    },
+    {
+      "id": "cheval-img-0",
+      "courtId": "cheval",
+      "url": "/placeholders/renith-r-MLU_X1d3ofQ-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 0,
+      "isHero": true
+    },
+    {
+      "id": "cheval-img-1",
+      "courtId": "cheval",
+      "url": "/placeholders/fei-chao-IaRe1EGaMRc-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 1,
+      "isHero": false
+    },
+    {
+      "id": "aman-img-0",
+      "courtId": "aman",
+      "url": "/placeholders/mario-gogh-8xaMOOkKNsw-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 0,
+      "isHero": true
+    },
+    {
+      "id": "aman-img-1",
+      "courtId": "aman",
+      "url": "/placeholders/flou-gaupr-TiWoNYXvFIM-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 1,
+      "isHero": false
+    },
+    {
+      "id": "soho-img-0",
+      "courtId": "soho",
+      "url": "/placeholders/john-fornander-4R9CcBdQTEg-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 0,
+      "isHero": true
+    },
+    {
+      "id": "soho-img-1",
+      "courtId": "soho",
+      "url": "/placeholders/gonzalo-facello-RjCo6j0BkU8-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 1,
+      "isHero": false
+    },
+    {
+      "id": "monte-img-0",
+      "courtId": "monte",
+      "url": "/placeholders/anastasia-chistik--9Vy4fR_Xo0-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 0,
+      "isHero": true
+    },
+    {
+      "id": "monte-img-1",
+      "courtId": "monte",
+      "url": "/placeholders/guilherme-maggieri-OH5g9IgcMWs-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 1,
+      "isHero": false
+    },
+    {
+      "id": "sixsenses-img-0",
+      "courtId": "sixsenses",
+      "url": "/placeholders/todd-trapani-sI-p_NLBNr0-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 0,
+      "isHero": true
+    },
+    {
+      "id": "sixsenses-img-1",
+      "courtId": "sixsenses",
+      "url": "/placeholders/guzman-barquin-GQmYqY2ySLg-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 1,
+      "isHero": false
+    },
+    {
+      "id": "edenroc-img-0",
+      "courtId": "edenroc",
+      "url": "/placeholders/darko-nesic-VZEnVM6c1lY-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 0,
+      "isHero": true
+    },
+    {
+      "id": "edenroc-img-1",
+      "courtId": "edenroc",
+      "url": "/placeholders/hoi-pham-eLZwsPO8cCQ-unsplash.jpg",
+      "alt": null,
+      "sortOrder": 1,
+      "isHero": false
+    }
+  ],
+  "CollectionCourt": [
+    {
+      "collectionId": "coastal",
+      "courtId": "tremezzo",
+      "sortOrder": 0
+    },
+    {
+      "collectionId": "coastal",
+      "courtId": "tragara",
+      "sortOrder": 1
+    },
+    {
+      "collectionId": "coastal",
+      "courtId": "cheval",
+      "sortOrder": 2
+    },
+    {
+      "collectionId": "coastal",
+      "courtId": "edenroc",
+      "sortOrder": 3
+    },
+    {
+      "collectionId": "coastal",
+      "courtId": "monte",
+      "sortOrder": 4
+    },
+    {
+      "collectionId": "desert",
+      "courtId": "mansour",
+      "sortOrder": 0
+    },
+    {
+      "collectionId": "hidden",
+      "courtId": "como",
+      "sortOrder": 0
+    },
+    {
+      "collectionId": "hidden",
+      "courtId": "cheval",
+      "sortOrder": 1
+    },
+    {
+      "collectionId": "hidden",
+      "courtId": "sixsenses",
+      "sortOrder": 2
+    },
+    {
+      "collectionId": "hidden",
+      "courtId": "residencia",
+      "sortOrder": 3
+    },
+    {
+      "collectionId": "historic",
+      "courtId": "monte",
+      "sortOrder": 0
+    },
+    {
+      "collectionId": "historic",
+      "courtId": "soho",
+      "sortOrder": 1
+    },
+    {
+      "collectionId": "mountain",
+      "courtId": "nell",
+      "sortOrder": 0
+    },
+    {
+      "collectionId": "mountain",
+      "courtId": "residencia",
+      "sortOrder": 1
+    },
+    {
+      "collectionId": "rooftop",
+      "courtId": "aman",
+      "sortOrder": 0
+    }
+  ],
+  "SavedCourt": [],
+  "UserCollectionCourt": [
+    {
+      "userCollectionId": "cmrb84hb2000amn0mgk1dbtzr",
+      "courtId": "tremezzo",
+      "sortOrder": 0
+    }
+  ]
+}

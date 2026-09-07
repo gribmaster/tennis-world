@@ -167,6 +167,17 @@ model Court {
   status        CourtStatus   @default(draft)
   blurb         String
 
+  // Closed "Experience" tag vocabulary (Feature 72) — see `CourtTag` in
+  // packages/contracts/src/enums.ts, which is the single source of truth for the
+  // ten allowed values and their canonical order. Stored as a Postgres text[]
+  // rather than a normalized tag table: the vocabulary is closed in code, tags
+  // carry no per-tag metadata, and the only query is a single array-overlap
+  // filter (`GET /v1/courts?tags=`). `@default([])` keeps the column additive and
+  // back-safe — existing rows get an empty array with no backfill required.
+  // Public, always-visible metadata: NOT location data, unrelated to the
+  // entitlement-gated exact-location boundary.
+  tags          String[]      @default([])
+
   // Stable ordinal reproducing the mock-data COURTS array order for deterministic
   // list/map output (so seeded API reads match the mock byte-for-byte).
   seedOrder Int @default(0)

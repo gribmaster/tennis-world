@@ -125,6 +125,94 @@ const SCENIC_TOKEN_PATTERN =
  */
 const NON_SURFACE_DESCRIPTOR_PATTERN = /\bfloating\s*courts?\b/i;
 
+// ── Court "Experience" tags (Feature 72) ─────────────────────────────────────
+//
+// The CLOSED ten-value vocabulary is owned by `CourtTag` in
+// packages/contracts/src/enums.ts; the values are mirrored here (this script, like
+// apps/api, treats @tennis/contracts as types only) exactly as SURFACE_VALUES /
+// ACCESS_VALUES already are.
+//
+// TAGS ARE NOT GUESSED. `TAG_PHRASE_MAP` below is ONE explicit, readable table
+// mapping the free-text `type:` phrases that actually appear in content/*/info.txt
+// onto vocabulary values — no fuzzy matching, no open-ended tokenization. A phrase
+// with no entry contributes no tag; that is a deliberate outcome, not a failure,
+// and it is surfaced in the dry-run report so an unmapped phrase stays visible to
+// the operator rather than being silently coerced into an invented value.
+//
+// Deliberately ABSENT from this table: surface (`clay court`, `hard court`,
+// `grass court`), access (`private club`, `luxury hotel`, `boutique hotel`,
+// `tennis academy`, `public court`) and indoor/outdoor (`indoor court`) phrases.
+// Those already have their own columns and must never be duplicated as a tag — a
+// chip row must not show the same fact twice.
+
+const COURT_TAG_VALUES = [
+  'Sea View',
+  'Beach Club',
+  'Mountains',
+  'Lakeside',
+  'Garden',
+  'Historic',
+  'Jungle',
+  'Island',
+  'Rooftop',
+  'Countryside',
+] as const;
+type CourtTagValue = (typeof COURT_TAG_VALUES)[number];
+
+/**
+ * Free-text `type:` phrase → tag(s). Matched case-insensitively against the whole
+ * token text. The `phrase` column records the token AS AUTHORED in info.txt, so
+ * this table can be audited against the content files line by line.
+ */
+const TAG_PHRASE_MAP: { phrase: string; pattern: RegExp; tags: CourtTagValue[] }[] = [
+  // Sea / coast
+  { phrase: 'sea view', pattern: /\bsea\s*view\b/i, tags: ['Sea View'] },
+  // ANCHORED: several courts prefix their FIRST type token with the LOCATION
+  // ("FRENCH RIVIERA, clay court"), which is a region label, not an experience
+  // descriptor — an unanchored /riviera/ would hand `Sea View` to every Riviera
+  // court, inland ones included (e.g. the Mouratoglou academy). Only a token that
+  // IS the word "riviera" on its own counts.
+  { phrase: 'riviera', pattern: /^riviera$/i, tags: ['Sea View'] },
+  { phrase: 'pampelonne beach', pattern: /\bbeach\b/i, tags: ['Beach Club'] },
+  // Relief
+  { phrase: 'saint-tropez hills', pattern: /\bhills?\b/i, tags: ['Mountains'] },
+  { phrase: 'alpine view', pattern: /\balpine\b/i, tags: ['Mountains'] },
+  { phrase: 'mountain resort', pattern: /\bmountains?\b/i, tags: ['Mountains'] },
+  // Water
+  { phrase: 'lake estate', pattern: /\blakes?\b/i, tags: ['Lakeside'] },
+  // Greenery
+  { phrase: 'garden court', pattern: /\bgardens?\b/i, tags: ['Garden'] },
+  // Heritage
+  { phrase: 'heritage club', pattern: /\bheritage\b/i, tags: ['Historic'] },
+  { phrase: 'art deco', pattern: /\bart\s*deco\b/i, tags: ['Historic'] },
+  { phrase: 'historic park', pattern: /\bhistoric\b/i, tags: ['Historic'] },
+];
+
+/**
+ * Map a court's `type:` tokens onto the closed tag vocabulary via TAG_PHRASE_MAP,
+ * returning the tags in CANONICAL VOCABULARY ORDER (`COURT_TAG_VALUES`) — the same
+ * normalization `orderCourtTags` applies on the mock/API side, so importer output
+ * and mock-data output can never drift on ordering — plus the tokens that produced
+ * no tag, for the dry-run report.
+ */
+function mapTypeTokensToTags(tokens: string[]): { tags: CourtTagValue[]; untagged: string[] } {
+  const found = new Set<CourtTagValue>();
+  const untagged: string[] = [];
+
+  for (const token of tokens) {
+    const hits = TAG_PHRASE_MAP.filter((entry) => entry.pattern.test(token));
+    if (hits.length === 0) {
+      untagged.push(token);
+      continue;
+    }
+    for (const hit of hits) {
+      for (const tag of hit.tags) found.add(tag);
+    }
+  }
+
+  return { tags: COURT_TAG_VALUES.filter((t) => found.has(t)), untagged };
+}
+
 interface ParsedInfo {
   raw: Record<string, string>;
   name?: string;
@@ -159,6 +247,10 @@ interface CourtPlan {
   access?: AccessType;
   indoorOutdoor?: IndoorOutdoor;
   isScenic: boolean;
+  /** Closed "Experience" vocabulary, canonical order (Feature 72). */
+  tags: CourtTagValue[];
+  /** `type:` tokens that mapped to no tag — reported, never coerced. */
+  untaggedTypeTokens: string[];
   unmappedTypeTokens: string[];
   remainingSettingTokens: string[];
   noSurfaceTokenPresent: boolean;
@@ -964,6 +1056,8 @@ async function planCourt(
       info: { raw: {}, typeTokens: [], warnings: [], errors: [] },
       images: [],
       isScenic: false,
+      tags: [],
+      untaggedTypeTokens: [],
       unmappedTypeTokens: [],
       remainingSettingTokens: [],
       noSurfaceTokenPresent: false,
@@ -1010,11 +1104,19 @@ async function planCourt(
   let access: AccessType | undefined;
   let indoorOutdoor: IndoorOutdoor | undefined;
   let isScenic = false;
+  let tags: CourtTagValue[] = [];
+  let untaggedTypeTokens: string[] = [];
   let unmappedTypeTokens: string[] = [];
   let remainingSettingTokens: string[] = [];
   let noSurfaceTokenPresent = false;
   if (info.typeTokens.length > 0) {
     const mapped = mapTypeTokens(info.typeTokens);
+    // Tags come from their OWN explicit phrase table, independently of the
+    // surface/access/indoor derivation above — the two vocabularies must not
+    // bleed into each other (see TAG_PHRASE_MAP).
+    const taggedResult = mapTypeTokensToTags(info.typeTokens);
+    tags = taggedResult.tags;
+    untaggedTypeTokens = taggedResult.untagged;
     surface = mapped.surface;
     access = mapped.access;
     indoorOutdoor = mapped.indoorOutdoor;
@@ -1109,6 +1211,8 @@ async function planCourt(
     access,
     indoorOutdoor,
     isScenic,
+    tags,
+    untaggedTypeTokens,
     unmappedTypeTokens,
     remainingSettingTokens,
     noSurfaceTokenPresent,
@@ -1195,6 +1299,10 @@ function printReport(plans: CourtPlan[]): boolean {
     console.log(
       `  → surface: ${p.surface ?? '(unmapped)'}  access: ${p.access ?? '(unmapped)'}  indoor/outdoor: ${p.indoorOutdoor ?? 'Outdoor (default)'}  scenic: ${p.isScenic}`,
     );
+    console.log(`  → tags: ${p.tags.length > 0 ? JSON.stringify(p.tags) : '(none)'}`);
+    if (p.untaggedTypeTokens.length > 0) {
+      console.log(`  type tokens contributing no tag: ${JSON.stringify(p.untaggedTypeTokens)}`);
+    }
     if (p.remainingSettingTokens.length > 0) {
       console.log(`  setting tokens (→ Court.setting): ${JSON.stringify(p.remainingSettingTokens)}`);
     }
@@ -1525,6 +1633,8 @@ async function runReplace(plans: CourtPlan[]): Promise<void> {
           access: (p.access ?? 'Resort') as never,
           indoorOutdoor: (p.indoorOutdoor ?? 'Outdoor') as never,
           isScenic: p.isScenic,
+          // Already in canonical vocabulary order (mapTypeTokensToTags).
+          tags: p.tags,
           isFeatured: false,
           // Locked by default so the page-level entitlement gate (courts/[slug]/page.tsx)
           // actually calls the protected exact-location endpoint for these courts —

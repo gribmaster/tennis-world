@@ -1,9 +1,11 @@
 import { BadRequestException } from '@nestjs/common';
 import type {
   AccessType,
+  CourtTag,
   IndoorOutdoor,
   Surface,
 } from '@tennis/contracts';
+import { COURT_TAGS } from './court-tags';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Query parsing for GET /v1/courts (intake §5; prompt task 9).
@@ -42,6 +44,12 @@ export interface CourtListQuery {
   indoorOutdoor?: IndoorOutdoor;
   scenic?: boolean;
   featured?: boolean;
+  /**
+   * Closed "Experience" tag vocabulary (Feature 72). Multiple tags are OR-ed:
+   * a court matches if it carries ANY of the listed tags — see `list()` in
+   * courts.service.ts for the reasoning.
+   */
+  tags?: CourtTag[];
   /** Free-text search over name/country/region/setting. */
   q?: string;
   /** Cap applied AFTER filtering (matches the mock's `slice(0, limit)`). */
@@ -96,6 +104,44 @@ function enumValue<T extends string>(
 }
 
 /**
+ * Parse the comma-separated `tags` param into a validated, de-duplicated list.
+ *
+ * Repeated keys (`?tags=a&tags=b`) arrive from Express as an array, so both the
+ * comma form and the repeated form are accepted and normalized to one flat list.
+ * Any value outside the closed vocabulary is a 400 — consistent with how
+ * `surface`/`access`/`indoorOutdoor` reject unknown enum values rather than
+ * silently ignoring them. An empty/whitespace-only param is treated as absent.
+ */
+function tagList(value: unknown): CourtTag[] | undefined {
+  const rawParts = Array.isArray(value) ? value : [value];
+  const parts: string[] = [];
+  for (const part of rawParts) {
+    const s = str(part);
+    if (s === undefined) continue;
+    for (const piece of s.split(',')) {
+      const trimmed = piece.trim();
+      if (trimmed.length > 0) parts.push(trimmed);
+    }
+  }
+  if (parts.length === 0) return undefined;
+
+  const allowed = COURT_TAGS as readonly string[];
+  const seen = new Set<string>();
+  const tags: CourtTag[] = [];
+  for (const part of parts) {
+    if (!allowed.includes(part)) {
+      throw new BadRequestException(
+        `Query param "tags" must contain only: ${COURT_TAGS.join(', ')} (got "${part}").`,
+      );
+    }
+    if (seen.has(part)) continue;
+    seen.add(part);
+    tags.push(part as CourtTag);
+  }
+  return tags;
+}
+
+/**
  * Build a validated `CourtListQuery` from the raw Express query object. Throws
  * `BadRequestException` (→ HTTP 400) on any malformed enum / boolean / limit.
  */
@@ -113,6 +159,7 @@ export function parseCourtListQuery(raw: Record<string, unknown>): CourtListQuer
     ),
     scenic: bool(raw.scenic, 'scenic'),
     featured: bool(raw.featured, 'featured'),
+    tags: tagList(raw.tags),
     q: str(raw.q),
     limit: limit(raw.limit),
   };

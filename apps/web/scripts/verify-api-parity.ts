@@ -325,7 +325,7 @@ async function compareCourts(): Promise<void> {
     const expectedDetailKeys = [
       'access', 'approxLat', 'approxLng', 'blurb', 'country', 'heroImageUrl', 'id',
       'images', 'indoorOutdoor', 'isFeatured', 'isLocked', 'isScenic', 'mapCoords',
-      'name', 'region', 'setting', 'slug', 'status', 'surface',
+      'name', 'region', 'setting', 'slug', 'status', 'surface', 'tags',
     ].sort();
     expectTrue(
       'courts.getBySlug: detail has exactly the CourtDTO keys (no Prisma internals, no lat/lng)',

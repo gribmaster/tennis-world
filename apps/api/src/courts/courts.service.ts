@@ -48,6 +48,18 @@ export class CourtsService {
     if (query.scenic !== undefined) where.isScenic = query.scenic;
     if (query.featured !== undefined) where.isFeatured = query.featured;
 
+    // Tags filter (Feature 72) — OR semantics: a court matches if it carries ANY
+    // of the requested tags (`hasSome` = Postgres array overlap). The prototype's
+    // filter sheet renders the Experience vocabulary as a multi-toggle chip row,
+    // and those ten values are largely mutually exclusive per court (Sea View vs
+    // Mountains vs Jungle), so AND (`hasEvery`) would return an empty set for most
+    // multi-select combinations — it would read as a broken filter. OR also matches
+    // how a chip row conventionally behaves: each extra chip WIDENS the result set.
+    // Single-tag selection is identical under either rule.
+    if (query.tags !== undefined && query.tags.length > 0) {
+      where.tags = { hasSome: query.tags };
+    }
+
     // Collection filter is by SLUG, resolved through the CollectionCourt join
     // (mirrors the mock's `courtSlugsInCollection`).
     if (query.collection) {

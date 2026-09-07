@@ -28,7 +28,7 @@ import { CourtsService } from './courts.service';
 export class CourtsController {
   constructor(private readonly courts: CourtsService) {}
 
-  /** GET /v1/courts?country=&region=&collection=&surface=&access=&indoorOutdoor=&scenic=&featured=&q=&limit= */
+  /** GET /v1/courts?country=&region=&collection=&surface=&access=&indoorOutdoor=&scenic=&featured=&tags=&q=&limit= */
   @Get()
   list(@Query() query: Record<string, unknown>): Promise<CourtSummaryDTO[]> {
     return this.courts.list(parseCourtListQuery(query));

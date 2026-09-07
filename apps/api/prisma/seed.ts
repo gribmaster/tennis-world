@@ -177,6 +177,8 @@ async function seedCourts(): Promise<number> {
       isScenic: c.isScenic,
       isFeatured: c.isFeatured,
       isLocked: c.isLocked,
+      // Already normalized to canonical vocabulary order by the COURTS export.
+      tags: c.tags,
       status: c.status as never,
       blurb: c.blurb,
       seedOrder: i, // reproduce mock-data COURTS array order
