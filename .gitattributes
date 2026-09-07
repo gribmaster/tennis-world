@@ -1,0 +1,16 @@
+# Line-ending policy for the Tennis World monorepo. Without this file nothing
+# normalizes EOLs, so a file edited on Windows is rewritten LF -> CRLF and its
+# diff shows every line as changed — which buries the real change during review.
+# Text is stored LF in the repository regardless of the checkout platform.
+* text=auto eol=lf
+
+# Binaries must never be touched by EOL conversion.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.ico  binary
+*.pdf  binary
+*.zip  binary
+*.woff  binary
+*.woff2 binary

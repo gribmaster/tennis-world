@@ -17,7 +17,6 @@ build/
 # env
 .env
 .env.local
-.env.example
 .env.*.local
 
 # prisma
