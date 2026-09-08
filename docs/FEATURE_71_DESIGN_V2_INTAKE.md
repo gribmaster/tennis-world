@@ -1133,3 +1133,25 @@ explicit mapping table shared by mock-data and the importer. See
 and served in `mock` mode) and `content/*/info.txt` (12 French Riviera courts, imported
 into production by `import-courts-from-content.ts`) are **different court sets**. Any
 data-layer feature must author for both, or production and CI will diverge.
+
+### Known gap opened by Feature 72, surfaced by Feature 73
+
+`GET /v1/courts?tags=` exists (Feature 72, Prisma `hasSome`), but the **web-side**
+`CourtFilter` type has no `tags` field, so `CourtRepository.list()` cannot carry it:
+`HttpCourtRepository.list` builds its query string from an explicit field list with no
+`tags` entry, and `MockCourtRepository.list` ignores it. Feature 73 therefore declares
+`CourtListQuery = CourtFilter & { tags?: CourtTag[] }` in
+`apps/web/src/components/filters/court-filter-state.ts` and filters client-side.
+
+Nothing is broken today — the Map page fetches the full set and narrows in memory. This
+becomes real work only when filtering moves server-side, which needs, in one change:
+
+1. `tags` added to `CourtFilter` and to both repository implementations;
+2. `surface` / `access` / `indoorOutdoor` widened from single value to list on
+   `GET /v1/courts` (the same `hasSome` shape Feature 72 gave `tags`), because the UI is
+   multi-select on all of them and `toCourtQuery` currently omits any dimension with two
+   or more values rather than sending an arbitrary one — omitting returns a recoverable
+   superset, sending one value returns an unrecoverable subset;
+3. `toCourtQuery`'s `unsupported` return shrinking to empty as each is closed.
+
+Until then `unsupported` names exactly what a caller must still narrow itself.
