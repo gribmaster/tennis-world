@@ -217,11 +217,39 @@
     cursor: pointer;
     transition: all 150ms ease;
   }
-  .filter-pill:hover,
+  /* Hover is a LIGHTER treatment than selection, deliberately. Before Feature 73
+     `:hover` and `.is-active` resolved to identical ink-on-bone styling, so hovering
+     an unselected chip made it look selected — with a multi-select sheet that is a
+     real misread, not a cosmetic one. Hover now only warms the surface and darkens
+     the border; only `.is-active` inverts. */
+  .filter-pill:hover:not(.is-active) {
+    background-color: theme('colors.ivory');
+    border-color: theme('colors.stone');
+  }
   .filter-pill.is-active {
     background-color: theme('colors.ink');
     color: theme('colors.bone');
     border-color: theme('colors.ink');
+  }
+  /* Count badge inside a chip (e.g. "Filters 3"). Inverts with its host so it stays
+     legible whether the chip is selected or not — no second palette. */
+  .filter-pill-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding-inline: 4px;
+    border-radius: theme('borderRadius.pill');
+    background-color: theme('colors.ink');
+    color: theme('colors.bone');
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .filter-pill.is-active .filter-pill-badge {
+    background-color: theme('colors.bone');
+    color: theme('colors.ink');
   }
   /* Metadata chip for surface/setting/access/indoor-outdoor (court cards/detail). */
   .meta-chip {

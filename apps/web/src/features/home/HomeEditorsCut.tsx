@@ -1,123 +1,95 @@
+import Image from 'next/image';
 import type { CourtSummaryDTO } from '@tennis/contracts';
-import { PageContainer } from '@/components/layout';
-import { SectionHeader } from '@/components/ui';
-import { CourtImage, CourtMeta } from '@/components/court';
 import { PendingCardLink } from '@/components/navigation';
+import { courtDisplay } from './court-display';
 
-// HomeEditorsCut — the "Editor's Cut" section, ported from `files/home.html`
-// (the "Where they're playing this season" block). Stacked editorial rows that
-// alternate image/text left-right on desktop and stack image-over-text on mobile.
+// HomeEditorsCut — the editorial "Editor's Cut" section, RESTYLED to the v2 language
+// (Feature 74).
 //
-// Purely PRESENTATIONAL & data-driven (Phase 1 §4), like the other Home sections:
-//   • Receives the courts to feature via the `courts` prop — it does NOT call a
-//     repository and does NOT import `@tennis/mock-data`. The page (a server
-//     component) passes in a subset of the featured courts it already fetched, so
-//     this section adds NO extra repository call.
-//   • Renders content from the DTOs only; the eyebrow/title are section chrome.
+// KEPT DELIBERATELY (intake §8 Q1, decided): the prototype's Home has no equivalent
+// section. It stays because it is the one place on Home that gives a court more than a
+// card-sized glance, and a shipped section is not deleted as a redesign side effect.
 //
-// NOTE ON THE PULL-QUOTE: the prototype shows an italic pull-quote derived from
-// `court.blurb`. `blurb` lives on the full CourtDTO, NOT on the CourtSummaryDTO that
-// list()/the Home page provides — so this section intentionally omits the quote
-// rather than fetch full detail per court (which Task 5 says to avoid) or invent a
-// field the summary shape doesn't carry. Everything else from the prototype row is
-// preserved.
-
-// EditorsCutRow — feature-local presentational row. Kept here (not a global
-// component) because it's only used by this section; promote it only if real reuse
-// appears (Decision #6 / Task 2).
-interface EditorsCutRowProps {
-  court: CourtSummaryDTO;
-  /** Even rows put the image on the left (desktop); odd rows flip to the right. */
-  flip: boolean;
-}
-
-function ArrowGlyph() {
-  return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M5 12h14M13 6l6 6-6 6" />
-    </svg>
-  );
-}
-
-function EditorsCutRow({ court, flip }: EditorsCutRowProps) {
-  return (
-    <PendingCardLink
-      href={`/courts/${court.slug}`}
-      ariaLabel={court.name}
-      className="court-card group grid grid-cols-1 border-t border-hairline md:grid-cols-2"
-    >
-      {/* Image. On desktop it sits left by default, right on flipped rows
-          (md:order-last). On mobile it always stacks on top. */}
-      <div className={`relative aspect-[4/3] overflow-hidden ${flip ? 'md:order-last' : ''}`}>
-        <CourtImage
-          src={court.heroImageUrl}
-          alt={court.name}
-          aspectClassName="aspect-[4/3]"
-          withOverlay={false}
-          sizes="(max-width: 768px) 100vw, 50vw"
-        />
-      </div>
-
-      {/* Text panel, vertically centered like the prototype. */}
-      <div className="flex flex-col justify-center bg-ivory p-[clamp(24px,4vw,56px)]">
-        <p className="eyebrow text-stone">
-          {[court.country, court.region].filter(Boolean).join(' · ')}
-        </p>
-        <h3 className="display-l mt-3 text-ink">{court.name}</h3>
-
-        <CourtMeta surface={court.surface} setting={court.setting} className="mt-7" />
-
-        <span className="btn btn-ghost mt-8 inline-flex items-center gap-2 self-start !px-0 text-ink">
-          View Court
-          <ArrowGlyph />
-        </span>
-      </div>
-    </PendingCardLink>
-  );
-}
+// V2 RESTYLE: the v1 version was a full-width alternating image/text slab pair sized for
+// a desktop editorial page — visually the heaviest thing on Home and completely unlike
+// anything else in the v2 stack. It is now a WIDE 16:10 editorial card in the same visual
+// family as the rest of the screen: the prototype's `.img-overlay` bottom gradient, the
+// 14px radius, the serif 20px name and the 13px stone/paper meta line, at the same 20px
+// gutter. It reads as a larger sibling of the featured card rather than a different
+// design system.
+//
+// Its ROLE is what keeps it distinct from the featured strip above: the strip is a
+// scannable row the visitor filters, this is a small stack of full-width picks. Both point
+// at courts; only this one gives each pick the width to be looked at.
+//
+// LOCKED COURTS: masking comes from the same shared `courtDisplay` helper the strip and
+// the search panel use, so a locked court reads "Premium Court" / "Unlock to reveal
+// location" identically wherever it appears.
+//
+// PRESENTATIONAL & data-driven: courts arrive as a prop from `app/page.tsx` — a subset of
+// the set already fetched there, so this section adds NO repository call. No fetching, no
+// @tennis/mock-data.
+//
+// PENDING STATES (CLAUDE.md §4 rule 1): each row is a whole-card navigation ⇒
+// `PendingCardLink`. Nothing here mutates, so no save control and no pending triad.
 
 export interface HomeEditorsCutProps {
-  /** The courts to feature as editorial rows. Expected to be a small set (2–3). */
+  /** The courts to feature. Expected to be a small set (2–3). */
   courts: CourtSummaryDTO[];
-  /** Eyebrow caption above the title. */
-  eyebrow?: string;
-  /** Section title. */
   title?: string;
 }
 
-// Section chrome copy, ported verbatim from home.html's Editor's Cut block. Kept as
-// named defaults (not inline JSX) so strings live in one place and can be overridden.
-const DEFAULT_EYEBROW = "Editor's Cut";
-const DEFAULT_TITLE = "Where they're playing this season";
+const DEFAULT_TITLE = "Editor's cut";
 
-export function HomeEditorsCut({
-  courts,
-  eyebrow = DEFAULT_EYEBROW,
-  title = DEFAULT_TITLE,
-}: HomeEditorsCutProps) {
+export function HomeEditorsCut({ courts, title = DEFAULT_TITLE }: HomeEditorsCutProps) {
   if (courts.length === 0) return null;
 
   return (
-    <section className="bg-ivory py-section-lg md:py-section-xl">
-      <PageContainer>
-        <SectionHeader eyebrow={eyebrow} title={title} />
+    <section className="pt-7">
+      <div className="container-page">
+        <h2 className="serif mb-4 text-[20px] font-normal leading-tight text-ink">{title}</h2>
 
-        <div className="mt-section flex flex-col">
-          {courts.map((court, i) => (
-            <EditorsCutRow key={court.id} court={court} flip={i % 2 !== 0} />
-          ))}
-        </div>
-      </PageContainer>
+        <ul className="flex flex-col gap-3">
+          {courts.map((court) => {
+            const display = courtDisplay(court);
+            return (
+              <li key={court.id}>
+                <PendingCardLink
+                  href={`/courts/${court.slug}`}
+                  ariaLabel={display.name}
+                  className="block aspect-[16/10] overflow-hidden rounded-[14px]"
+                >
+                  <Image
+                    src={court.heroImageUrl}
+                    alt=""
+                    fill
+                    sizes="(max-width: 768px) 100vw, 1280px"
+                    className="object-cover"
+                  />
+                  {/* `.img-overlay` — the same gradient the v2 cards use. */}
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0"
+                    style={{
+                      background:
+                        'linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.72) 100%)',
+                    }}
+                  />
+                  <span className="absolute inset-x-0 bottom-0 block px-4 pb-4 pt-6">
+                    <span className="mb-2 inline-flex rounded-pill border border-paper/35 bg-bone/20 px-2.5 py-1 text-[11px] font-medium tracking-[0.03em] text-paper backdrop-blur-sm">
+                      {display.chip}
+                    </span>
+                    <span className="serif mb-[5px] block text-[24px] font-normal leading-[30px] text-paper">
+                      {display.name}
+                    </span>
+                    <span className="block text-[13px] text-paper/70">{display.location}</span>
+                  </span>
+                </PendingCardLink>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </section>
   );
 }

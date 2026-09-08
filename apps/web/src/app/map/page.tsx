@@ -10,7 +10,9 @@ import { isSignedIn } from '@/lib/session.server';
 // This is a SERVER component and the ONLY repository boundary on the screen. It
 // fetches ONCE, unfiltered, and hands the full dataset to the single `'use client'`
 // MapExplorer, which owns the search/filter state and narrows the arrays in memory
-// (see MapExplorer for why filtering is client-side in Phase 1):
+// (see MapExplorer for why filtering is client-side in Phase 1). The fetch is UNCHANGED
+// by the `?q=` support added in Feature 76 — `q` only seeds the client's initial query;
+// it is not a server-side filter:
 //   • repositories.courts.list()       → CourtSummaryDTO[] (list panel + filter source)
 //   • repositories.courts.getMapPins() → MapPinDTO[]       (canvas pin positions/state)
 //
@@ -32,17 +34,33 @@ export const metadata: Metadata = {
   description: 'Explore the world’s most beautiful tennis courts on the map.',
 };
 
-export default async function MapPage() {
-  const [courts, pins, signedIn] = await Promise.all([
+export default async function MapPage({
+  searchParams,
+}: {
+  // Next 15: `searchParams` is async and must be awaited. The ONLY param this page reads
+  // is `q` — the initial free-text query (Feature 76). The Collections screen's "By
+  // Country" strip links here as `/map?q=<country name>`, and `GET /v1/courts`'s `q`
+  // (and the in-memory `narrowCourts` predicate the client uses) already searches the
+  // country name, so the country filter needs no new filter dimension. Nothing else about
+  // the map reads the URL: the query is an INITIAL value only, and MapExplorer remains the
+  // single owner of the live filter state.
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const [courts, pins, signedIn, params] = await Promise.all([
     repositories.courts.list(),
     repositories.courts.getMapPins(),
     // Header user icon: /profile vs /signin (true in a real session or staging demo mode).
     isSignedIn(),
+    searchParams,
   ]);
+
+  // A repeated `?q=` yields an array under Next's parsing; the type above narrows to the
+  // single-value case, and a non-string is simply ignored rather than coerced.
+  const initialQuery = typeof params.q === 'string' ? params.q : '';
 
   return (
     <AppShell unlocked={false} signedIn={signedIn}>
-      <MapExplorer courts={courts} pins={pins} />
+      <MapExplorer courts={courts} pins={pins} initialQuery={initialQuery} />
     </AppShell>
   );
 }

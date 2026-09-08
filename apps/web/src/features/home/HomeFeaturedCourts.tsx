@@ -1,108 +1,203 @@
+'use client';
+
+import Image from 'next/image';
 import type { CourtSummaryDTO } from '@tennis/contracts';
-import { PageContainer } from '@/components/layout';
-import { SectionHeader } from '@/components/ui';
-import { CourtCard } from '@/components/court';
-import { PendingLink } from '@/components/navigation';
+import { PendingCardLink, PendingLink } from '@/components/navigation';
+import { courtDisplay } from './court-display';
+import { HomeCourtSaveHeart } from './HomeCourtSaveHeart';
 
-// HomeFeaturedCourts — the "Destinations" peek carousel, ported from the featured
-// destinations section in `files/home.html` (the "This week, we're dreaming of…"
-// strip). It's the first data-driven Home section, sitting directly under the
-// full-bleed hero.
+// HomeFeaturedCourts — the v2 portrait courts strip (Feature 74), rebuilt from the
+// prototype's HomeScreen (design_v2_stripped.html:519–575).
 //
-// Purely PRESENTATIONAL & data-driven (Phase 1 §4), exactly like CourtCard:
-//   • Receives the courts to show via the `courts` prop — it does NOT call a
-//     repository and does NOT import `@tennis/mock-data`. The page (a server
-//     component) fetches via `@/lib/repositories` and passes the result in.
-//   • Renders content from the DTOs only; the eyebrow/title are section chrome.
+// Prototype geometry, from the file:
+//   • section `padding:'28px 0 0'` (line 520); `.sec-hdr` at the 20px gutter with a serif
+//     20px title and a 13px stone "View all" (lines 521–527, CSS line 96).
+//   • strip: `.h-scroll` at `gap:14`, `padding:'0 0 4px 20px'`, closed by a 20px spacer so
+//     the last card does not sit flush to the edge (lines 535, 570).
+//   • card: `width:calc(75vw)`, `maxWidth:292`, `minWidth:240`, `aspectRatio:'2/3'`,
+//     `borderRadius:14` (lines 537–538). Neither `CourtCard` variant is 2:3 (they are 4:5
+//     and 3:2), which is why this strip renders its own card rather than reusing one.
+//   • `.img-overlay` (line 87): `linear-gradient(180deg, rgba(0,0,0,0) 40%,
+//     rgba(0,0,0,0.72) 100%)`.
+//   • premium badge top-left at `12,12` (line 543, `.premium-badge` line 141: gold
+//     gradient, 10px/600, 0.08em, uppercase, pill).
+//   • save control top-right at `12,12`, 36×36 (line 545) — see HomeCourtSaveHeart.
+//   • text block `padding:'20px 14px 16px'`: a translucent experience chip, then the
+//     serif 20px name, then a 13px location at 72% white (lines 551–560).
+//   • empty state when a filter clears the strip: centred 14px stone line with a clay
+//     "Clear" control (lines 531–533).
 //
-// Layout mirrors the prototype's `no-scroll-bar` strip: a horizontal, scroll-snap
-// card row that lets the next card "peek" at the edge. This is CSS-only
-// (overflow-x + snap-x + no-scrollbar) — no JS carousel, per the hard rules. The
-// SectionHeader and CTA sit in the page gutter (PageContainer), while the strip is
-// full-bleed with matching gutter spacers so the first card aligns to the gutter
-// and the last doesn't snap flush to the edge — just like home.html.
+// PRESENTATIONAL & controlled: the courts arrive already narrowed from HomeExplorer; this
+// component never fetches, never filters and never imports @tennis/mock-data. It is a
+// client component only because the save heart it hosts is interactive.
+//
+// PENDING STATES (CLAUDE.md §4):
+//   • The whole card navigates ⇒ `PendingCardLink` (rule 1).
+//   • "View all" is a navigational link ⇒ `PendingLink` (rule 1).
+//   • The save heart is a database-backed action ⇒ the rule-2 triad, inside
+//     `HomeCourtSaveHeart`. It is rendered as a SIBLING of the card link, not a child, so
+//     saving can never trigger the card's navigation (the same structure SavedCourtsGrid
+//     already uses for its unsave control) — a nested <button> inside an <a> would also be
+//     invalid HTML.
+//   • The empty state's "Clear" control is a LOCAL filter reset (rule 10) — no navigation,
+//     no repository call, so no pending primitive.
 
-export interface HomeFeaturedCourtsProps {
-  /** The courts to feature. Expected to be a small set (the prototype shows 6). */
-  courts: CourtSummaryDTO[];
-  /** Eyebrow caption above the title. */
-  eyebrow?: string;
-  /** Section title. */
-  title?: string;
-  /** Label + href for the trailing "view all" link. */
-  cta?: { label: string; href: string };
-}
-
-function ArrowGlyph() {
+/** Small lock glyph for the premium badge (prototype: `Ico.lock(10)`). */
+function LockGlyph() {
   return (
     <svg
-      width="13"
-      height="13"
+      width="10"
+      height="10"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5"
+      strokeWidth="2.4"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden
     >
-      <path d="M5 12h14M13 6l6 6-6 6" />
+      <rect x="4" y="10" width="16" height="11" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
     </svg>
   );
 }
 
-// Section chrome copy (the prototype's "Destinations" / "This week, we're dreaming
-// of…" / "View all courts"). Kept as named defaults rather than inline JSX so the
-// caller can override and the strings live in one place.
-const DEFAULT_EYEBROW = 'Destinations';
-const DEFAULT_TITLE = 'This week, we’re dreaming of…';
-const DEFAULT_CTA = { label: 'View all courts', href: '/map' } as const;
+export interface HomeFeaturedCourtsProps {
+  /** The courts to show — already narrowed by the active shortcut/filters. */
+  courts: CourtSummaryDTO[];
+  /**
+   * Section heading. "Featured courts" by default; HomeExplorer swaps in the active
+   * shortcut's label while one is selected (prototype line 523).
+   */
+  title: string;
+  /** Ids of the courts the visitor has already saved (seeds each heart). */
+  savedCourtIds: ReadonlySet<string>;
+  /** False for a logged-out visitor in `api` mode → hearts route to /signin. */
+  signedIn: boolean;
+  /** Whether anything is currently narrowing the list (drives the empty state). */
+  isFiltered: boolean;
+  /** Clear every chip and the query — the empty state's escape hatch. */
+  onClearFilters: () => void;
+}
 
 export function HomeFeaturedCourts({
   courts,
-  eyebrow = DEFAULT_EYEBROW,
-  title = DEFAULT_TITLE,
-  cta = DEFAULT_CTA,
+  title,
+  savedCourtIds,
+  signedIn,
+  isFiltered,
+  onClearFilters,
 }: HomeFeaturedCourtsProps) {
-  if (courts.length === 0) return null;
-
   return (
-    <section className="py-section-lg md:py-section-xl">
-      <PageContainer>
-        <SectionHeader eyebrow={eyebrow} title={title} />
-      </PageContainer>
-
-      <PageContainer>
-        <div className="no-scrollbar mt-section flex snap-x snap-mandatory gap-3.5 overflow-x-auto pb-1">
-          {courts.map((court, i) => (
-            <div
-              key={court.id}
-              className="w-[clamp(240px,72vw,300px)] shrink-0 snap-start"
-            >
-              <CourtCard
-                court={court}
-                href={`/courts/${court.slug}`}
-                priority={i === 0}
-              />
-            </div>
-          ))}
+    <section className="pt-7">
+      <div className="container-page">
+        <div className="mb-4 flex items-baseline justify-between gap-4">
+          <h2 className="serif text-[20px] font-normal leading-tight text-ink">{title}</h2>
+          <PendingLink
+            href="/map"
+            className="body-s shrink-0 text-stone transition-colors hover:text-ink"
+          >
+            View all
+          </PendingLink>
         </div>
-      </PageContainer>
+      </div>
 
-      {/* Full-bleed scroll-snap strip. The leading/trailing spacers reproduce the
-          prototype's gutter so cards align to the page edge cleanly. */}
+      {courts.length === 0 ? (
+        <div className="container-page">
+          <p className="py-5 text-center text-[14px] text-stone">
+            {isFiltered ? 'No courts for this filter. ' : 'No courts to show yet.'}
+            {isFiltered ? (
+              // Local filter reset — not navigation, not a mutation (§4 rule 10).
+              <button
+                type="button"
+                onClick={onClearFilters}
+                className="text-clay underline-offset-2 transition-opacity hover:opacity-75"
+              >
+                Clear
+              </button>
+            ) : null}
+          </p>
+        </div>
+      ) : (
+        // Plain overflow-x row — no carousel/slider library (hard rule).
+        //
+        // GUTTER ALIGNMENT: the row lives INSIDE `.container-page` so its first card
+        // lines up with the section header above it at every width (the container is
+        // centered and capped at 1280px, so a viewport-relative padding would drift left
+        // of the header on wide screens). `-mr-[...]` then cancels only the container's
+        // RIGHT gutter, so the row still bleeds off the edge as it scrolls instead of
+        // stopping short — the prototype's `padding:'0 0 4px 20px'` effect, kept correct
+        // on desktop. A trailing spacer closes the row.
+        <div className="container-page">
+          <ul className="no-scrollbar -mr-[clamp(20px,4vw,64px)] flex gap-3.5 overflow-x-auto pb-1">
+            {courts.map((court, index) => {
+              const display = courtDisplay(court);
+              return (
+                // `relative` so the save heart can position against this box while
+                // remaining a SIBLING of the card link, never a descendant of the anchor.
+                <li
+                  key={court.id}
+                  className="relative w-[75vw] min-w-[240px] max-w-[292px] shrink-0"
+                >
+                  <PendingCardLink
+                    href={`/courts/${court.slug}`}
+                    ariaLabel={display.name}
+                    className="block aspect-[2/3] overflow-hidden rounded-[14px]"
+                  >
+                    <Image
+                      src={court.heroImageUrl}
+                      alt=""
+                      fill
+                      priority={index === 0}
+                      sizes="(max-width: 480px) 75vw, 292px"
+                      className="object-cover"
+                    />
+                    {/* `.img-overlay` — transparent to 40%, then to 72% black. */}
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0"
+                      style={{
+                        background:
+                          'linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.72) 100%)',
+                      }}
+                    />
 
+                    {display.locked ? (
+                      <span
+                        className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-pill px-2.5 py-[3px] text-[10px] font-semibold uppercase tracking-caption text-paper"
+                        style={{ background: 'linear-gradient(135deg,#C8A860,#B89968)' }}
+                      >
+                        <LockGlyph />
+                        Premium
+                      </span>
+                    ) : null}
 
+                    <span className="absolute inset-x-0 bottom-0 block px-3.5 pb-4 pt-5">
+                      <span className="mb-2 inline-flex rounded-pill border border-paper/35 bg-bone/20 px-2.5 py-1 text-[11px] font-medium tracking-[0.03em] text-paper backdrop-blur-sm">
+                        {display.chip}
+                      </span>
+                      <span className="serif mb-[5px] block text-[20px] font-normal leading-tight text-paper">
+                        {display.name}
+                      </span>
+                      <span className="block text-[13px] text-paper/70">{display.location}</span>
+                    </span>
+                  </PendingCardLink>
 
-      <PageContainer className="mt-5">
-        <PendingLink
-          href={cta.href}
-          className="btn btn-ghost inline-flex items-center gap-1.5 !px-0 text-stone"
-        >
-          {cta.label}
-          <ArrowGlyph />
-        </PendingLink>
-      </PageContainer>
+                  {/* Sibling overlay — the save mutation, never the card's navigation. */}
+                  <HomeCourtSaveHeart
+                    courtId={court.id}
+                    courtSlug={court.slug}
+                    courtLabel={display.name}
+                    initialSaved={savedCourtIds.has(court.id)}
+                    signedIn={signedIn}
+                  />
+                </li>
+              );
+            })}
+            <li aria-hidden className="w-5 shrink-0" />
+          </ul>
+        </div>
+      )}
     </section>
   );
 }

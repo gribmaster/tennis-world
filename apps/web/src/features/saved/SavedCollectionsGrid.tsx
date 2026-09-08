@@ -3,19 +3,30 @@ import { CreateCollectionTrigger } from '@/features/user-collections';
 import { SavedCollectionRow } from './SavedCollectionRow';
 import { SavedEmptyState } from './SavedEmptyState';
 
-// SavedCollectionsGrid — the Collections tab of the Saved page (FEATURE_19 §3.2).
-// Renders the user's wishlist folders as rows, plus a "New Collection" button.
+// SavedCollectionsGrid — the Collections tab of the Saved page, rebuilt to the v2
+// prototype's two-column card grid (tennis_world_v2_standalone.html:1263–1286).
+//
+// ── WHAT THIS GRID SHOWS: THE USER'S OWN FOLDERS ────────────────────────────────────────
+// READ THIS BEFORE "FIXING" IT TOWARD THE PROTOTYPE.
+// These are `UserCollectionDTO`s from `SavedRepository.getSavedCollections()` — the
+// wishlist folders the visitor CREATES and fills with courts. They are NOT bookmarked
+// editorial collections. The prototype draws saved editorial podborki in this slot, and
+// this feature deliberately carries over its CARD TREATMENT but not its MEANING:
+// bookmarking an editorial `CollectionDTO` has no model, no join table, no endpoint and no
+// repository method in this product, and is not being built (decided). The two are
+// different objects that happen to look alike on screen.
+//
+// RESTYLED, not replaced: the same folders, the same create flow, the same per-folder link
+// target (`/saved/collections/{slug}`) — a 2-col grid of image cards instead of a row list.
+//
+// Prototype geometry: `display:'grid', gridTemplateColumns:'1fr 1fr', gap:12` (line 1265);
+// the card itself is `SavedCollectionRow`.
 //
 // PRESENTATIONAL & data-driven: receives the folders via props; no repository, no
-// @tennis/mock-data.
-//
-// CREATE (Feature 35): the "New Collection" button is now a <CreateCollectionTrigger>
-// (a client island) that opens the Create-Collection modal and, on submit, creates a
-// folder through the MOCK-ONLY SavedRepository seam (Feature 34 — in-memory, no
-// backend/auth/persistence). The created folder is reported back up via
-// `onCollectionCreated` so the parent (SavedTabs) can mirror it into the visible list for
-// the session. Rename / remove / Add-to-Collection are still NOT wired here (rename stays
-// disabled on the detail hero; the Court-Detail menu is Feature 36).
+// @tennis/mock-data. The one interactive descendant is `CreateCollectionTrigger` (a client
+// island that owns the Create-Collection modal and its own pending state); the created
+// folder is reported back up via `onCollectionCreated` so the parent (SavedTabs) can mirror
+// it into the visible list for the session.
 
 /** Minimal inline plus glyph — avoids pulling in an icon library (hard rule). */
 function PlusGlyph() {
@@ -39,8 +50,8 @@ function PlusGlyph() {
 export interface SavedCollectionsGridProps {
   collections: UserCollectionDTO[];
   /**
-   * Called with the newly-created folder after a successful (mock-only) create, so the
-   * parent can mirror it into the visible list. Optional.
+   * Called with the newly-created folder after a successful create, so the parent can
+   * mirror it into the visible list. Optional.
    */
   onCollectionCreated?: (collection: UserCollectionDTO) => void;
 }
@@ -51,7 +62,7 @@ function NewCollectionButton({
 }: Pick<SavedCollectionsGridProps, 'onCollectionCreated'>) {
   return (
     <CreateCollectionTrigger
-      className="btn btn-primary"
+      className="btn btn-primary h-11 px-5 text-[11px]"
       source="saved"
       onCreated={onCollectionCreated}
     >
@@ -81,7 +92,7 @@ export function SavedCollectionsGrid({
 
   return (
     <div>
-      <ul className="border-t border-hairline">
+      <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
         {collections.map((collection) => (
           <li key={collection.id}>
             <SavedCollectionRow collection={collection} />
@@ -89,7 +100,7 @@ export function SavedCollectionsGrid({
         ))}
       </ul>
 
-      <div className="mt-7">
+      <div className="mt-6">
         <NewCollectionButton onCollectionCreated={onCollectionCreated} />
       </div>
     </div>

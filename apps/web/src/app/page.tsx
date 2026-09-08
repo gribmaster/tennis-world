@@ -1,60 +1,100 @@
 import { AppShell } from '@/components/layout';
-import {
-  HomeHero,
-  HomeFeaturedCourts,
-  HomeEditorsCut,
-  HomeCollectionsTeaser,
-  HomeJournalTeaser,
-  HomePaywallBand,
-} from '@/features/home';
-import { repositories } from '@/lib/repositories';
-import { isSignedIn } from '@/lib/session.server';
+import { HomeHero, HomeExplorer } from '@/features/home';
+import { repositories, AuthRequiredError } from '@/lib/repositories';
+import { getRepositoriesForRequest } from '@/lib/repositories.server';
 
-// Home page — the real Home screen, assembled section by section across Phase-1
-// features: hero, featured courts, Editor's Cut, collections teaser, journal
-// teaser, and the closing membership/paywall CTA band.
+// Home page (v2, Feature 74) — the single data boundary for the Home screen.
 //
-// This is the data boundary: the page (a server component) is the single place
-// that touches the repositories, fetches the data each section needs, and passes
-// it down as props. Section components stay presentational and never fetch — so
-// they never import a repository or @tennis/mock-data.
+// This is a SERVER component and the ONLY place on this screen that touches a repository.
+// It fetches, then hands the results to `HomeExplorer` (the screen's one `'use client'`
+// boundary), which owns the filter state and narrows in memory. Section components never
+// fetch and never import a repository or @tennis/mock-data.
 //
-// `overHero` puts the full-bleed hero behind the transparent app header (it fades
-// to a solid bar on scroll). `unlocked` is hardcoded false in Phase 1 — there is
-// no real entitlement system yet; a real value flows from the user repository in a
-// later feature.
+// ── THE FETCHING CHANGE, AND WHY ────────────────────────────────────────────────────────
+// v1 fetched `courts.list({ featured: true, limit: 6 })` — six rows, enough for a static
+// strip. v2 needs more than that: the search box returns inline results and the shortcut
+// row narrows the strip in place, and BOTH operate over the CATALOGUE, not over six
+// editorial picks. Searching six rows would silently hide most of the app.
+//
+// The choice was between (a) fetching the full published list and deriving the featured
+// strip from it in memory, and (b) keeping the featured call and adding a second, full
+// one. This page does (a):
+//   • (b) is two round-trips where the second is a SUPERSET of the first — the featured
+//     six are already inside the full list, distinguishable by the `isFeatured` flag the
+//     summary DTO carries. The extra call buys nothing but latency and a second failure
+//     mode.
+//   • (a) also guarantees the strip and the search panel are views of ONE array. With two
+//     fetches they are two arrays that can disagree — a court could be missing from the
+//     strip's copy and present in the search copy, or vice versa, if the two reads
+//     straddled a publish.
+//   • It matches `app/map/page.tsx`, which already fetches the full set once and narrows
+//     client-side. Home and Map now share both the fetch shape and the narrowing
+//     predicate.
+//
+// SCALING LIMIT (the same hedge Feature 73 made, restated because this page now ships the
+// whole catalogue to the browser): this is fine at ~12 published courts — a few kilobytes,
+// one read, and instant narrowing with no round-trip per keystroke. It becomes a
+// SERVER-SIDE QUERY when the catalogue grows large enough that shipping it all costs more
+// than querying would. The shape of that change is already prepared: `toCourtQuery(state)`
+// in `components/filters/court-filter-state.ts` maps the exact same filter state onto the
+// wire query, so the swap is a data-source change, not a UI rewrite.
+//
+// ── SAVED STATE ─────────────────────────────────────────────────────────────────────────
+// The featured cards carry a working save heart, so the page seeds each one with the
+// visitor's real saved set. That is a PROTECTED read (/v1/me/saved-courts), so it goes
+// through `getRepositoriesForRequest()` (request-scoped, carries the session cookie) —
+// unlike the four public reads above it, which need no identity. ONE call returns every
+// saved court, so seeding N hearts costs one read, not N.
+//
+// Home is a PUBLIC page: a logged-out visitor in `api` mode gets `AuthRequiredError` here,
+// which DEGRADES to an empty saved set + `signedIn:false` (never a redirect, never a
+// crash) — exactly what Court Detail does with the same read. The hearts then route to
+// /signin instead of mutating. This read also replaces the separate `isSignedIn()` call
+// v1 made purely for the header icon: it answers the same question as a side effect, so
+// the page makes one protected read rather than two.
+//
+// `overHero` puts the full-bleed hero behind the transparent app header (which supplies
+// the wordmark and avatar the prototype drew inside its own hero — see HomeHero).
+// `unlocked` stays false: this page renders no gated content, and entitlement is resolved
+// server-side wherever it actually matters.
 export default async function Home() {
-  // Each section's data is fetched here (the page is the only repository
-  // boundary) and passed down as props; the section components never fetch.
-  const [featuredCourts, collections, articles, signedIn] = await Promise.all([
-    // Featured destinations for the "This week, we're dreaming of…" strip. The
-    // repository already supports `featured` + `limit`, matching the prototype's 6.
-    repositories.courts.list({ featured: true, limit: 6 }),
-    // A few collections for the "Curated journeys" teaser.
+  const protectedRepos = await getRepositoriesForRequest();
+
+  // Public discovery reads — no identity needed, so they use the plain singleton.
+  const [courts, collections, articles] = await Promise.all([
+    // The FULL published set: the source the search box, the shortcut row and the
+    // featured strip all narrow over. See the fetching note above.
+    repositories.courts.list(),
     repositories.collections.list({ featured: true, limit: 4 }),
-    // The latest few articles for the "Reading list" journal teaser.
     repositories.journal.list({ featured: true, limit: 3 }),
-    // Session status for the header user icon (/profile vs /signin) — true for a real
-    // session AND in staging demo mode (the Demo User), false when logged out.
-    isSignedIn(),
   ]);
+
+  // Protected read — degrades cleanly for a logged-out visitor on this public page.
+  let savedCourtIds: string[] = [];
+  let signedIn = true;
+  try {
+    const saved = await protectedRepos.saved.getSavedCourts();
+    savedCourtIds = saved.map((court) => court.id);
+  } catch (err) {
+    if (err instanceof AuthRequiredError) {
+      signedIn = false;
+    } else {
+      // A real fault (5xx, network) must surface rather than masquerade as "logged out".
+      throw err;
+    }
+  }
 
   return (
     <AppShell overHero unlocked={false} signedIn={signedIn}>
       <HomeHero />
 
-      <HomeFeaturedCourts courts={featuredCourts} />
-
-      {/* Reuses the featured courts already fetched above (no extra repository
-          call); a small subset becomes the alternating editorial rows. */}
-      <HomeEditorsCut courts={featuredCourts.slice(0, 3)} />
-
-      <HomeCollectionsTeaser collections={collections} />
-
-      <HomeJournalTeaser articles={articles} />
-
-      {/* Closing membership CTA band — presentational only (no payments/auth). */}
-      <HomePaywallBand />
+      <HomeExplorer
+        courts={courts}
+        collections={collections}
+        articles={articles}
+        savedCourtIds={savedCourtIds}
+        signedIn={signedIn}
+      />
     </AppShell>
   );
 }

@@ -1,89 +1,75 @@
 import Image from 'next/image';
 import { PendingLink } from '@/components/navigation';
 
-// HomeHero — the full-bleed opening section of the Home page, ported from the
-// hero block in `files/home.html`:
-//   • a full-viewport cover photograph with a top+bottom darkening gradient,
-//   • an eyebrow caption,
-//   • a large serif editorial headline,
-//   • a short stat/intro subtitle,
-//   • a primary over-image CTA (and an optional secondary one),
-//   • a trio of headline stats along the bottom.
+// HomeHero — the v2 opening band (Feature 74), rebuilt from the prototype's HomeScreen
+// hero (design_v2_stripped.html:419–434).
 //
-// It is purely PRESENTATIONAL and data-agnostic, exactly like CourtCard: it owns
-// layout/typography only and renders from the `content` prop. It does NOT call a
-// repository and does NOT import `@tennis/mock-data` — the hero copy is supplied
-// by the caller (apps/web/src/app/page.tsx). A default content object lives below
-// so the section is content-config-driven rather than carrying literal copy inline
-// in JSX (Phase 1 §3.2 / §4 data-driven discipline).
+// Prototype geometry, taken from the file rather than from memory:
+//   • the band is `height:340` (line 420) — a fixed image band, not the old full-viewport
+//     hero. Kept fixed at mobile and allowed to grow on wide screens so the 44px headline
+//     does not float in an over-tall box on desktop.
+//   • `.img-overlay-top` (line 88): `linear-gradient(180deg, rgba(0,0,0,0.5) 0%,
+//     rgba(0,0,0,0) 44%, rgba(0,0,0,0.78) 100%)` — dark at the top for the transparent
+//     header, clear through the middle, heavy at the bottom for the headline. Reproduced
+//     verbatim as an inline gradient because Tailwind's `via-` stop lands at 50%, not the
+//     prototype's 44%, and the three stops are the whole character of the treatment.
+//   • copy block at `left:20 right:20 bottom:20` (line 428).
+//   • headline `display-xl` in three hard-wrapped lines, `marginBottom:4` (line 429).
+//   • sub-line `body-s` at 75% white, `marginBottom:16` (line 430).
+//   • CTA: `btn btn-gold btn-sm btn-pill`, `fontSize:11`, `letterSpacing:0.12em` (line 431)
+//     — a pill, 40px tall.
 //
-// FUTURE: in a later Phase-1 feature the hero copy moves behind the sanctioned
-// repository boundary (it originates from `SITE_STATS` in `@tennis/mock-data`),
-// at which point `page.tsx` will pass `content` sourced from a repository instead
-// of from the default below — with zero changes to this presentational component.
+// CTA VARIANT — one deliberate divergence from the prototype. The prototype paints this
+// button GOLD (`.btn-gold`). In this app gold is `.btn-premium`, which globals.css:167
+// reserves for the PAYWALL, and every current call site honours that (the paywall modal,
+// Court Detail's unlock CTA, Profile's membership card). This CTA just navigates to /map —
+// painting it gold would make the app's one "this costs money" signal mean nothing. So it
+// uses `.btn-over-image`, the existing variant for exactly this situation (a CTA sitting on
+// a photograph), with the prototype's pill radius, 40px height, 11px size and 0.12em
+// tracking applied as utilities. No `.btn-gold`, `.btn-sm` or `.btn-pill` class is added —
+// this repo has no such variants and the brief forbids a second button system.
+//
+// NO WORDMARK, NO AVATAR (brief §1): the prototype draws a `TENNIS · WORLD` wordmark and a
+// 32×32 avatar inside the hero (lines 425–427). In the real app that row IS `AppHeader`,
+// rendered transparently over this band by `AppShell`'s existing `overHero` prop. Building
+// them here would put a second header on top of the real one. The prototype's fake iOS
+// `StatusBar` (line 423) is discarded outright per intake §4.
+//
+// PRESENTATIONAL & data-agnostic, unchanged from v1: no repository, no @tennis/mock-data.
+// The copy stays a config object (not inline JSX) so it remains data-shaped.
 
 export interface HomeHeroCta {
   label: string;
   href: string;
 }
 
-export interface HomeHeroStat {
-  /** The large serif figure, e.g. "120+". */
-  value: string;
-  /** The eyebrow caption under it, e.g. "Courts". */
-  label: string;
-}
-
 export interface HomeHeroContent {
-  /** Uppercase caption above the headline. */
-  eyebrow: string;
-  /** The serif editorial headline. `\n` renders as a line break. */
+  /** The serif display headline. `\n` renders as a line break. */
   headline: string;
-  /** Short intro / stat line under the headline. */
+  /** Short line under the headline. */
   subtitle: string;
-  /** Primary call to action (rendered as the prominent over-image button). */
+  /** The single pill CTA. */
   primaryCta: HomeHeroCta;
-  /** Optional secondary call to action, shown beside the primary one. */
-  secondaryCta?: HomeHeroCta;
-  /** Headline stats shown along the bottom of the hero. */
-  stats: HomeHeroStat[];
-  /** Background photograph (absolute, remote URL whitelisted in next.config.mjs). */
+  /** Background photograph (root-relative so it resolves in every environment). */
   imageUrl: string;
-  /** Alt text for the background image (decorative hero → usually empty string). */
+  /** Alt text (decorative hero → empty string). */
   imageAlt?: string;
 }
 
-/**
- * Default hero content. The copy is ported verbatim from `files/home.html`'s hero.
- * Kept as a config object (not inline JSX) so content stays data-shaped; see the
- * FUTURE note above for the eventual move behind a repository.
- */
+/** Default hero content — copy ported verbatim from the prototype (lines 429–431). */
 export const HOME_HERO_CONTENT: HomeHeroContent = {
-  eyebrow: 'The World of Tennis',
-  headline: 'Where the game meets\nthe extraordinary.',
-  subtitle: '50 countries · 1,000 courts · endless inspiration',
-  primaryCta: { label: 'Explore the Map', href: '/map' },
-  stats: [
-    { value: '120+', label: 'Courts' },
-    { value: '50', label: 'Countries' },
-    { value: '6', label: 'Collections' },
-  ],
-  // Hero photograph, served from a local placeholder in apps/web/public/placeholders.
-  // Root-relative so it resolves on local, staging, and production alike.
+  headline: "The world's\nmost amazing\ntennis courts",
+  subtitle: 'Explore. Save. Travel.',
+  primaryCta: { label: 'Explore the map', href: '/map' },
   imageUrl: '/placeholders/maurits-bausenhart-XtcZbSPVJ3A-unsplash.jpg',
   imageAlt: '',
 };
 
-export interface HomeHeroProps {
-  /** Hero copy + imagery. Defaults to the ported prototype content. */
-  content?: HomeHeroContent;
-}
-
 function ArrowGlyph() {
   return (
     <svg
-      width="14"
-      height="14"
+      width="13"
+      height="13"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -97,14 +83,15 @@ function ArrowGlyph() {
   );
 }
 
+export interface HomeHeroProps {
+  content?: HomeHeroContent;
+}
+
 export function HomeHero({ content = HOME_HERO_CONTENT }: HomeHeroProps) {
-  const { eyebrow, headline, subtitle, primaryCta, secondaryCta, stats, imageUrl, imageAlt } =
-    content;
+  const { headline, subtitle, primaryCta, imageUrl, imageAlt } = content;
 
   return (
-    <section className="relative h-[min(100vh,860px)] min-h-[560px] w-full overflow-hidden">
-      {/* Background photograph. `priority` + above-the-fold sizing since this is
-          the first paint of the page. */}
+    <section className="relative h-[340px] w-full overflow-hidden md:h-[clamp(340px,46vw,520px)]">
       <Image
         src={imageUrl}
         alt={imageAlt ?? ''}
@@ -113,51 +100,30 @@ export function HomeHero({ content = HOME_HERO_CONTENT }: HomeHeroProps) {
         sizes="100vw"
         className="object-cover"
       />
-      {/* `.img-overlay-top` from the prototype: dark at the very top (for the
-          transparent header) and heavier at the bottom (for hero text). */}
+
+      {/* `.img-overlay-top`, stop for stop (prototype line 88). */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-ink/85"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 44%, rgba(0,0,0,0.78) 100%)',
+        }}
       />
 
-      {/* Content, anchored to the bottom-left and gutter-padded like the prototype. */}
-      <div className="container-page relative inset-0 flex flex-col justify-center h-[100%] px-[clamp(24px,6vw,80px)] pb-[clamp(48px,7vh,96px)] pt-[clamp(24px,5vw,80px)]">
-        <div className="max-w-[720px]">
-          <p className="eyebrow text-bone/75">{eyebrow}</p>
-
-          <h1 className="display-xl mt-4 max-w-[640px] whitespace-pre-line text-bone">
-            {headline}
-          </h1>
-
-          <p className="body-l mt-5 max-w-[420px] text-bone/80">{subtitle}</p>
-
-          <div className="mt-8 flex flex-wrap gap-3">
-            <PendingLink href={primaryCta.href} className="btn btn-over-image gap-2.5">
-              {primaryCta.label}
-              <ArrowGlyph />
-            </PendingLink>
-            {secondaryCta ? (
-              <PendingLink
-                href={secondaryCta.href}
-                className="btn btn-over-image gap-2.5 !border-bone/40"
-              >
-                {secondaryCta.label}
-              </PendingLink>
-            ) : null}
-          </div>
-
-          {stats.length > 0 ? (
-            <dl className="mt-12 flex gap-8">
-              {stats.map((stat) => (
-                <div key={stat.label}>
-                  <dd className="serif text-[clamp(28px,3vw,44px)] font-light leading-none text-bone">
-                    {stat.value}
-                  </dd>
-                  <dt className="eyebrow mt-1.5 text-bone/65">{stat.label}</dt>
-                </div>
-              ))}
-            </dl>
-          ) : null}
+      {/* Copy block, bottom-left at the prototype's 20px gutter (widening on desktop so
+          it tracks `.container-page`'s own gutter rather than hugging the edge). */}
+      <div className="absolute inset-x-0 bottom-5 px-5 md:px-[clamp(20px,4vw,64px)]">
+        <div className="mx-auto w-full max-w-container">
+          <h1 className="display-xl mb-1 whitespace-pre-line text-paper">{headline}</h1>
+          <p className="body-s mb-4 text-paper/75">{subtitle}</p>
+          <PendingLink
+            href={primaryCta.href}
+            className="btn btn-over-image h-10 gap-2 rounded-pill px-4 text-[11px] tracking-[0.12em]"
+          >
+            {primaryCta.label}
+            <ArrowGlyph />
+          </PendingLink>
         </div>
       </div>
     </section>

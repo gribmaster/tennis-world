@@ -1,114 +1,98 @@
 import Image from 'next/image';
 import type { ArticleDTO } from '@tennis/contracts';
 import { PageContainer } from '@/components/layout';
-import { SectionHeader } from '@/components/ui';
 import { PendingLink, PendingCardLink } from '@/components/navigation';
 
-// HomeJournalTeaser — the "Journal / Reading list" teaser, ported from the journal
-// section in `files/home.html` (and matching the article card treatment in
-// `files/journal.html`). A small grid of article cards that links onward to the
-// full /journal page (which this feature does NOT build).
+// HomeJournalTeaser — the v2 journal list (Feature 74), rebuilt from the prototype's
+// HomeScreen (design_v2_stripped.html:602–623).
 //
-// Purely PRESENTATIONAL & data-driven (Phase 1 §4), like the other Home sections:
-//   • Receives the articles to show via the `articles` prop — it does NOT call a
-//     repository and does NOT import `@tennis/mock-data`. The page (a server
-//     component) fetches via `@/lib/repositories` and passes the result in.
-//   • Renders content from the DTOs only; the eyebrow/title/CTA are section chrome.
+// Prototype geometry, from the file:
+//   • section `padding:'28px 20px 40px'` (line 603); `.sec-hdr` with the serif 20px title
+//     and the 13px stone "View all" (lines 604–607).
+//   • the list is a vertical stack at `gap:12` — NOT a scrolling strip (line 608).
+//   • card: `background:'var(--ivory)'`, `borderRadius:14` (line 610); image band
+//     `height:160` (line 611); a gold tag chip at `top:10 left:12`, 9px/600, 0.12em,
+//     uppercase, pill (line 617); text block `padding:'14px 14px 16px'` holding the serif
+//     20px title and a 13px stone blurb at `marginTop:5`, `lineHeight:1.45` (lines
+//     619–621).
+//   • ONE template for every article (the prototype's own note, line 602) — no alternate
+//     "guide" card.
 //
-// Layout: a mobile-first responsive grid (1 col → 2 at sm → 3 at lg) of cards with a
-// 16:9 cover image, a category (clay accent) · read-time meta line, a serif title,
-// and the subtitle. CSS/grid only — no JS.
+// The prototype's tag is a made-up NEW/TRAVEL/PLACES vocabulary; the real chip is
+// `article.category`, which is the field that actually exists on `ArticleDTO`.
+//
+// `/journal` STAYS REACHABLE (brief §8): Feature 84 drops Journal from the bottom tab bar,
+// so this section's "View all" link is about to become the app's primary route into that
+// surface. It points at `/journal` (the section index), not only at individual articles,
+// and must not be reduced to article links alone.
+//
+// PRESENTATIONAL & data-driven: articles arrive as a prop from `app/page.tsx`, the single
+// repository boundary. No fetching, no @tennis/mock-data.
+//
+// PENDING STATES (CLAUDE.md §4 rule 1): whole card navigates ⇒ `PendingCardLink`; the
+// "View all" link ⇒ `PendingLink`. Nothing here mutates.
 
 export interface HomeJournalTeaserProps {
-  /** The articles to tease. Expected to be a small set (the teaser shows 2–3). */
   articles: ArticleDTO[];
-  /** Eyebrow caption above the title. */
-  eyebrow?: string;
-  /** Section title. */
   title?: string;
-  /** Label + href for the "view all" action beside the title. */
   cta?: { label: string; href: string };
 }
 
-function ArrowGlyph() {
-  return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M5 12h14M13 6l6 6-6 6" />
-    </svg>
-  );
-}
-
-// Section chrome copy, ported from home.html's journal section. Kept as named
-// defaults (not inline JSX) so strings live in one place and the caller can override.
-const DEFAULT_EYEBROW = 'Journal';
-const DEFAULT_TITLE = 'Reading list';
-const DEFAULT_CTA = { label: 'All articles', href: '/journal' } as const;
+const DEFAULT_TITLE = 'Journal';
+const DEFAULT_CTA = { label: 'View all', href: '/journal' } as const;
 
 export function HomeJournalTeaser({
   articles,
-  eyebrow = DEFAULT_EYEBROW,
   title = DEFAULT_TITLE,
   cta = DEFAULT_CTA,
 }: HomeJournalTeaserProps) {
   if (articles.length === 0) return null;
 
   return (
-    <section className="bg-ivory py-section-lg md:py-section-xl">
+    <section className="pb-10 pt-7">
       <PageContainer>
-        <SectionHeader
-          eyebrow={eyebrow}
-          title={title}
-          action={
-            <PendingLink
-              href={cta.href}
-              className="btn btn-ghost inline-flex items-center gap-1.5 !px-0 text-stone"
-            >
-              {cta.label}
-              <ArrowGlyph />
-            </PendingLink>
-          }
-        />
+        <div className="mb-4 flex items-baseline justify-between gap-4">
+          <h2 className="serif text-[20px] font-normal leading-tight text-ink">{title}</h2>
+          <PendingLink
+            href={cta.href}
+            className="body-s shrink-0 text-stone transition-colors hover:text-ink"
+          >
+            {cta.label}
+          </PendingLink>
+        </div>
 
-        <ul className="mt-section grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
+        {/* One template for every article, stacked (prototype line 608). On wide screens
+            the same cards flow into a grid rather than stretching to 1280px each. */}
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
           {articles.map((article) => (
             <li key={article.id}>
               <PendingCardLink
                 href={`/journal/${article.slug}`}
                 ariaLabel={article.title}
-                className="court-card group block"
+                className="block h-full overflow-hidden rounded-[14px] bg-ivory"
               >
-                <div className="relative aspect-[16/9] overflow-hidden">
+                <span className="relative block h-40 overflow-hidden">
                   <Image
                     src={article.heroImageUrl}
                     alt=""
                     fill
-                    sizes="(max-width: 480px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="object-cover"
                   />
-                </div>
-                <div className="pt-5">
-                  <p className="flex items-center gap-2">
-                    <span className="eyebrow text-clay">{article.category}</span>
-                    <span className="eyebrow text-mist">·</span>
-                    <span className="eyebrow text-stone">{article.readTimeMinutes} min read</span>
-                  </p>
-                  <h3 className="serif mt-2.5 text-[clamp(18px,1.5vw,24px)] font-medium leading-tight text-ink">
+                  <span className="absolute left-3 top-2.5 inline-flex rounded-pill bg-gold px-2 py-[3px] text-[9px] font-semibold uppercase tracking-[0.12em] text-paper">
+                    {article.category}
+                  </span>
+                </span>
+                <span className="block px-3.5 pb-4 pt-3.5">
+                  <span className="serif block text-[20px] font-normal leading-tight text-ink">
                     {article.title}
-                  </h3>
+                  </span>
                   {article.subtitle ? (
-                    <p className="body-m mt-2.5 text-stone">{article.subtitle}</p>
+                    <span className="mt-[5px] block text-[13px] leading-[1.45] text-stone">
+                      {article.subtitle}
+                    </span>
                   ) : null}
-                </div>
+                </span>
               </PendingCardLink>
             </li>
           ))}

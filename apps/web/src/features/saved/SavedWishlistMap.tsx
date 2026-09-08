@@ -5,6 +5,14 @@ import { SavedEmptyState } from './SavedEmptyState';
 
 // SavedWishlistMap — the Wishlist Map tab of the Saved page (FEATURE_19 §3.3).
 //
+// ── FEATURE 77 TOUCHED ONLY THIS TAB'S CHROME ───────────────────────────────────────────
+// The v2 redesign restyled the frame this panel sits in (its rounding matches the v2 cards,
+// its CTA takes the compact `.btn` sizing the redesign uses) and nothing else. The MAP
+// SURFACE and every behaviour below are deliberately untouched: the map is blocked on the
+// Leaflet → Google Maps migration (`docs/MAP_PROVIDER_DECISION.md`), which is its own
+// feature. The tab itself stays — the prototype models only Courts and Collections, but a
+// shipped feature is not deleted as a redesign side effect (intake §8 Q2, decided).
+//
 // REAL MAP (Feature 74): the abstract StylizedMapCanvas is gone. Saved courts are
 // plotted on a real Leaflet map (env-configured tiles) at their APPROXIMATE geo.
 //
@@ -42,11 +50,11 @@ export function SavedWishlistMap({ courts }: SavedWishlistMapProps) {
       <LeafletMap
         markers={markers}
         navigateOnClick
-        className="h-[60vh] max-h-[500px] w-full rounded-md border border-hairline"
+        className="h-[60vh] max-h-[500px] w-full overflow-hidden rounded-[14px] border border-mist/30"
       />
 
       {/* Opens the shared Consultation modal (presentational only). No mutation here. */}
-      <ConsultationTrigger source="saved" className="btn btn-primary mt-5">
+      <ConsultationTrigger source="saved" className="btn btn-primary mt-4 h-11 px-5 text-[11px]">
         Plan a Trip
       </ConsultationTrigger>
     </div>

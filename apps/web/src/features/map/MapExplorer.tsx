@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CourtSummaryDTO, MapPinDTO } from '@tennis/contracts';
-import { MapFilterBar, MAP_FILTERS, type MapFilter } from './MapFilterBar';
+import {
+  FilterSheet,
+  EMPTY_COURT_FILTER_STATE,
+  countActiveFilters,
+  narrowCourts,
+  toggleFilterValue,
+  type CourtFilterOption,
+  type CourtFilterState,
+} from '@/components/filters';
+import { MapFilterBar } from './MapFilterBar';
 import { MapCourtList } from './MapCourtList';
 import { LeafletMap } from './LeafletMap';
 import { MapLocateControl } from './MapLocateControl';
@@ -13,8 +22,14 @@ import { courtToMarker, pinStateToMarkerState, type MapMarkerState } from './map
 
 // MapExplorer — the ONE `'use client'` boundary on the Map screen.
 //
-// It holds the interactive state (`query` + `activeFilter`) and derives the
-// visible set in memory FROM THE PROPS it was handed. It does NOT call a
+// It holds the interactive state (a single `CourtFilterState` — search text plus every
+// selected chip — and the sheet's open/closed flag) and derives the
+// visible set in memory FROM THE PROPS it was handed. Feature 76 added ONE thing to that:
+// the search text can be SEEDED from `?q=` via the `initialQuery` prop (see below), which
+// is how a country card on /collections lands here pre-filtered. It is an initial value
+// only — this component is still the single owner of the live filter state, and every
+// other behaviour on this screen (chips, sheet, reset, geolocation focus) is untouched.
+// It does NOT call a
 // repository and does NOT import @tennis/mock-data — the server page
 // (app/map/page.tsx) is the single data boundary and passes the full, unfiltered
 // `courts` + `pins` arrays in as props.
@@ -40,44 +55,51 @@ import { courtToMarker, pinStateToMarkerState, type MapMarkerState } from './map
 /** Target zoom for the nearest-court focus — clamped to the map's real range downstream. */
 const NEAREST_COURT_ZOOM = 17;
 
-/** Chip → predicate over a `CourtSummaryDTO`, mirroring `CourtFilter` semantics. */
-const FILTER_PREDICATE: Record<MapFilter, (court: CourtSummaryDTO) => boolean> = {
-  All: () => true,
-  Resorts: (c) => c.access === 'Resort',
-  Clubs: (c) => c.access === 'Club',
-  Private: (c) => c.access === 'Private',
-  Indoor: (c) => c.indoorOutdoor === 'Indoor',
-  Scenic: (c) => c.isScenic,
-};
-
-/** Free-text match over name/country/region/setting (mirrors the mock repo). */
-function matchesQuery(court: CourtSummaryDTO, q: string): boolean {
-  return (
-    court.name.toLowerCase().includes(q) ||
-    court.country.toLowerCase().includes(q) ||
-    court.region.toLowerCase().includes(q) ||
-    court.setting.toLowerCase().includes(q)
-  );
-}
+// FILTERING (Feature 73): the old single-select `FILTER_PREDICATE` / `matchesQuery`
+// pair is gone. Narrowing now runs through `narrowCourts`, which is derived from the
+// same per-dimension descriptors as `toCourtQuery` in
+// `components/filters/court-filter-state.ts` — one definition of what each chip means,
+// so the in-memory predicate and the eventual wire query cannot drift apart. It stays
+// in memory over the already-fetched array (see the file header).
 
 export interface MapExplorerProps {
   /** Full published set — the source the client narrows over (never re-fetched). */
   courts: CourtSummaryDTO[];
   /** Pin positions + state, one per court. Used ONLY for `state`, keyed by `slug`. */
   pins: MapPinDTO[];
+  /**
+   * Free-text query to START with (Feature 76). Supplied by `app/map/page.tsx` from
+   * `?q=`, which is how the Collections screen's "By Country" strip arrives here
+   * (`/map?q=<country name>`). Defaults to `''` — the previous always-empty behaviour, so
+   * every other entry point to /map is unchanged.
+   *
+   * SEED ONLY, NOT A CONTROLLED VALUE: it is the initial value of the `q` field inside
+   * this component's own filter state, and nothing here writes it back to the URL or
+   * re-reads it. MapExplorer stays the single owner of the live filter state — typing in
+   * the search box, toggling a chip, or hitting "reset" all behave exactly as before, and
+   * reset clears back to EMPTY (not back to the seed), because reset means "show
+   * everything".
+   */
+  initialQuery?: string;
 }
 
-export function MapExplorer({ courts, pins }: MapExplorerProps) {
-  const [query, setQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<MapFilter>('All');
+export function MapExplorer({ courts, pins, initialQuery = '' }: MapExplorerProps) {
+  // ONE state object for every dimension the user can narrow by (chips + free text),
+  // shaped one-to-one against the API's query params. The sheet's open/closed flag is
+  // separate: it is view state, not filter state.
+  //
+  // Lazy initializer so the seed is read ONCE on mount and never on a re-render; `q` is
+  // the only field it can set, so every chip dimension still starts empty.
+  const [filters, setFilters] = useState<CourtFilterState>(() =>
+    initialQuery ? { ...EMPTY_COURT_FILTER_STATE, q: initialQuery } : EMPTY_COURT_FILTER_STATE,
+  );
+  const [sheetOpen, setSheetOpen] = useState(false);
 
-  // Derive the visible courts once, in memory, from the chip predicate AND the
-  // (case-insensitive) query — exactly as the prototype's `filtered` memo does.
-  const visibleCourts = useMemo(() => {
-    const predicate = FILTER_PREDICATE[activeFilter] ?? FILTER_PREDICATE.All;
-    const q = query.trim().toLowerCase();
-    return courts.filter((court) => predicate(court) && (!q || matchesQuery(court, q)));
-  }, [courts, activeFilter, query]);
+  const activeCount = useMemo(() => countActiveFilters(filters), [filters]);
+
+  // Derive the visible courts once, in memory: OR within each dimension, AND across
+  // dimensions, plus the case-insensitive free-text query.
+  const visibleCourts = useMemo(() => narrowCourts(courts, filters), [courts, filters]);
 
   // Authoritative pin state (open/locked/featured) keyed by slug — from the API's
   // `/courts/map` read, so the marker color matches the pin state the backend
@@ -158,18 +180,45 @@ export function MapExplorer({ courts, pins }: MapExplorerProps) {
     void focusNearestCourt({ automatic: false });
   }, [focusNearestCourt]);
 
-  const handleReset = () => {
-    setQuery('');
-    setActiveFilter('All');
-  };
+  // ── Filter handlers (all purely local UI — no navigation, no repository call) ──────
+  const handleQueryChange = useCallback((q: string) => {
+    setFilters((prev) => ({ ...prev, q }));
+  }, []);
+
+  const handleToggleOption = useCallback((option: CourtFilterOption) => {
+    setFilters((prev) => toggleFilterValue(prev, option.key, option.value));
+  }, []);
+
+  const handleApplyFilters = useCallback((next: CourtFilterState) => {
+    setFilters(next);
+    setSheetOpen(false);
+  }, []);
+
+  const handleCloseSheet = useCallback(() => setSheetOpen(false), []);
+
+  /** Empty-state / "reset" escape hatch: clears every chip AND the search text. */
+  const handleReset = useCallback(() => {
+    setFilters(EMPTY_COURT_FILTER_STATE);
+  }, []);
 
   return (
     <div>
       <MapFilterBar
-        query={query}
-        activeFilter={activeFilter}
-        onQueryChange={setQuery}
-        onFilterChange={setActiveFilter}
+        state={filters}
+        activeCount={activeCount}
+        onQueryChange={handleQueryChange}
+        onToggleOption={handleToggleOption}
+        onOpenSheet={() => setSheetOpen(true)}
+      />
+
+      {/* The SHARED sheet (components/filters) — Home reuses this same component
+          unmodified in Feature 74. Draft-then-apply lives inside it: nothing here
+          changes until "Show results" fires `onApply`. */}
+      <FilterSheet
+        open={sheetOpen}
+        state={filters}
+        onApply={handleApplyFilters}
+        onClose={handleCloseSheet}
       />
 
       <div className="map-layout">
@@ -192,15 +241,11 @@ export function MapExplorer({ courts, pins }: MapExplorerProps) {
 
         <MapCourtList
           courts={visibleCourts}
-          activeFilter={activeFilter}
-          hasQuery={query.trim().length > 0}
+          filters={filters}
+          activeCount={activeCount}
           onReset={handleReset}
         />
       </div>
     </div>
   );
 }
-
-// Re-exported so the page/tests can reference the chip vocabulary if needed.
-export { MAP_FILTERS };
-export type { MapFilter };

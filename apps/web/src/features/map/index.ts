@@ -8,8 +8,12 @@
 export { MapExplorer } from './MapExplorer';
 export type { MapExplorerProps } from './MapExplorer';
 
-export { MapFilterBar, MAP_FILTERS } from './MapFilterBar';
-export type { MapFilterBarProps, MapFilter } from './MapFilterBar';
+// Feature 73: the single-select `MAP_FILTERS` / `MapFilter` vocabulary is gone. The
+// filter MODEL now lives in the shared, feature-agnostic `@/components/filters`
+// (`CourtFilterState` + the `FilterSheet` Home reuses); what remains here is the map
+// screen's own quick-filter subset — a curated fast path over that same model.
+export { MapFilterBar, MAP_QUICK_FILTERS } from './MapFilterBar';
+export type { MapFilterBarProps } from './MapFilterBar';
 
 // Real Leaflet map (Feature 74) — the SSR-safe wrapper + its marker model. This is
 // the map surface used by /map, the Saved Wishlist Map, and Court Detail. It plots

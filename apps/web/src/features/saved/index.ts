@@ -21,3 +21,9 @@ export type { SavedWishlistMapProps } from './SavedWishlistMap';
 
 export { SavedEmptyState } from './SavedEmptyState';
 export type { SavedEmptyStateProps } from './SavedEmptyState';
+
+export { SavedDreamListCta } from './SavedDreamListCta';
+export type { SavedDreamListCtaProps } from './SavedDreamListCta';
+
+export { SavedSortControl, sortSavedCourts } from './SavedSortControl';
+export type { SavedSortControlProps, SavedSortKey } from './SavedSortControl';

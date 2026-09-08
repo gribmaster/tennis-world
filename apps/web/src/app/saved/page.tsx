@@ -4,9 +4,12 @@ import { SavedTabs } from '@/features/saved';
 import { getRepositoriesForRequest } from '@/lib/repositories.server';
 import { loadOrSignIn } from '@/lib/auth-redirect';
 
-// Saved page (`/saved`) — a Phase-1 screen (Feature 20), built from
-// docs/FEATURE_19_SAVED_PAGE_LAYOUT.md. Resolves the desktop AppHeader bookmark icon
-// and the mobile BottomNavigation "Saved" tab (both already point at /saved).
+// Saved page (`/saved`) — originally a Phase-1 screen (Feature 20, built from
+// docs/FEATURE_19_SAVED_PAGE_LAYOUT.md), rebuilt to the v2 prototype's `SavedScreen` in
+// Feature 77. That rebuild is PRESENTATION ONLY: this file's reads, its auth flow and its
+// props are byte-for-byte what they were — no new model, endpoint or repository method.
+// Resolves the desktop AppHeader bookmark icon and the mobile BottomNavigation "Saved" tab
+// (both already point at /saved).
 //
 // This is a thin SERVER component and the ONLY repository boundary on the screen: it
 // fetches the saved courts + wishlist folders once and passes them down as props. The
@@ -21,6 +24,9 @@ import { loadOrSignIn } from '@/lib/auth-redirect';
 //
 // NOT `overHero` — Saved has no full-bleed hero, so the header uses its standard solid
 // bar + 72px offset.
+//
+// TOP-LEVEL NAV ROUTE (CLAUDE.md §5): `/saved` is in `nav-items.ts`, so it gets NO Back
+// button. The screen opens with its own title header instead.
 
 export const metadata: Metadata = {
   title: 'Saved — Tennis World',
