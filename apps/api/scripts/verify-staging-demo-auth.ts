@@ -14,8 +14,8 @@
 //   pnpm db:up
 //   pnpm --filter @tennis/api prisma:migrate:deploy && pnpm --filter @tennis/api db:seed
 //   STAGING_DEMO_AUTH_ENABLED=true STAGING_DEMO_AUTH_SECRET=<secret> \
-//     pnpm --filter @tennis/api dev                  # API on :3001 with demo auth on
-//   DATABASE_URL=... NEXT_PUBLIC_API_BASE_URL=http://localhost:3001/v1 \
+//     pnpm --filter @tennis/api dev                  # API on :18001 with demo auth on
+//   DATABASE_URL=... NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:18001/v1 \
 //     STAGING_DEMO_AUTH_SECRET=<same secret> \
 //     pnpm --filter @tennis/api verify:staging-demo-auth
 //
@@ -41,7 +41,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://localhost:3001/v1';
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://127.0.0.1:18001/v1';
 
 const DEMO_HEADER = 'X-Tennis-Demo-Auth';
 const DEMO_SECRET = process.env.STAGING_DEMO_AUTH_SECRET?.trim();

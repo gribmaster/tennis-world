@@ -27,9 +27,9 @@
 // AUTH: bearer token (the AuthGuard's `Authorization: Bearer` path — easiest to script,
 // same guard the cookie path hits). Obtain one via the magic-link flow exactly as
 // verify-user-saved-http.ts documents:
-//   curl -s -X POST http://localhost:3001/v1/auth/request-link -H 'content-type: application/json' -d '{"email":"feature58@example.com"}'
+//   curl -s -X POST http://127.0.0.1:18001/v1/auth/request-link -H 'content-type: application/json' -d '{"email":"feature58@example.com"}'
 //   # copy the ?token=... the API logs ([dev magic-link] …), then:
-//   curl -s -X POST http://localhost:3001/v1/auth/verify -H 'content-type: application/json' -d '{"token":"<RAW>"}'
+//   curl -s -X POST http://127.0.0.1:18001/v1/auth/verify -H 'content-type: application/json' -d '{"token":"<RAW>"}'
 //   AUTH_BEARER_TOKEN=<accessToken> pnpm --filter @tennis/web verify:persisted-saved-flow
 //
 // CLEANUP: every court this script toggles into a folder is toggled back OUT at the end,
@@ -43,6 +43,18 @@
 
 import { getRepositories, type Repositories } from '../src/domain';
 import { AuthRequiredError, HttpError } from '../src/domain/http/http-client';
+
+// ── API base URL (Task 05, Fix 2) ─────────────────────────────────────────────
+// SET the env var, don't just read it. The Http*Repository classes resolve their
+// base URL inside http-client.ts's resolveBaseUrl(), which reads process.env at
+// CALL time (its own comment says so) — so assigning here is picked up by every
+// later request. Reading the value into a local const only fixes the message and
+// leaves the requests going to http-client's own default.
+// http-client.ts's DEFAULT_API_BASE_URL is deliberately left at :3001 — it is
+// product code baked into the client bundle, and production always sets
+// NEXT_PUBLIC_API_BASE_URL explicitly.
+process.env.NEXT_PUBLIC_API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://127.0.0.1:18001/v1';
 
 // ── Tiny assertion harness (matches verify-api-parity / verify-user-saved-http) ─────
 
@@ -92,7 +104,7 @@ function assertNoExactCoords(name: string, payload: unknown): void {
 }
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://localhost:3001/v1';
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://127.0.0.1:18001/v1';
 
 // A real published court id (the seed's Grand Hotel Tremezzo). Stable across re-seeds.
 const COURT_ID = 'tremezzo';

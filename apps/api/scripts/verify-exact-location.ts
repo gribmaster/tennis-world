@@ -26,8 +26,8 @@
 // ── How to run ─────────────────────────────────────────────────────────────────────
 //   pnpm db:up
 //   pnpm --filter @tennis/api prisma:migrate:deploy   # (or migrate reset) + db:seed
-//   pnpm --filter @tennis/api dev                      # API on :3001
-//   DATABASE_URL=... NEXT_PUBLIC_API_BASE_URL=http://localhost:3001/v1 \
+//   pnpm --filter @tennis/api dev                      # API on :18001
+//   DATABASE_URL=... NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:18001/v1 \
 //     pnpm --filter @tennis/api verify:exact-location
 //
 // CLEANUP: every user + entitlement + token this script creates lives under the dedicated,
@@ -42,7 +42,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://localhost:3001/v1';
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://127.0.0.1:18001/v1';
 
 // Dedicated, namespaced identity prefix. `.test` can't be a real user; the seed creates
 // no users. Every row this harness writes is owned by an email starting with this.

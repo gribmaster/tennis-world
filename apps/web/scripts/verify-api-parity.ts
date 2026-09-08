@@ -4,7 +4,7 @@
 //
 // Proves that the MOCK repositories (`NEXT_PUBLIC_DATA_SOURCE=mock`) and the HTTP
 // repositories (`NEXT_PUBLIC_DATA_SOURCE=api`) return EQUIVALENT DTOs for the
-// public read domains (courts, collections, journal). It is the executable form of
+// public read domains (courts, collections, countries, journal). It is the executable form of
 // the "mock-first proof point" in docs/FEATURE_39_PHASE_2_API_PRISMA_INTAKE.md §6:
 // for each repository method the pages actually call, run BOTH implementations and
 // assert deep equality, plus security (coordinate-masking) and shape invariants on
@@ -22,7 +22,7 @@
 // factory) so a single process can drive both data sources at once: the mock repos
 // read `@tennis/mock-data` in-process; the HTTP repos `fetch` the live API. The
 // API base URL comes from `NEXT_PUBLIC_API_BASE_URL` (default
-// http://localhost:3001/v1) — the same resolution the real http-client uses.
+// http://127.0.0.1:18001/v1) — the same resolution the real http-client uses.
 //
 // ── Prerequisites (see docs/FEATURE_47_DUAL_MODE_PARITY.md) ───────────────────────
 //   pnpm db:up
@@ -37,11 +37,25 @@
 
 import { MockCourtRepository } from '../src/domain/courts/mock-court.repository';
 import { MockCollectionRepository } from '../src/domain/collections/mock-collection.repository';
+import { MockCountryRepository } from '../src/domain/countries/mock-country.repository';
 import { MockArticleRepository } from '../src/domain/journal/mock-article.repository';
 import { HttpCourtRepository } from '../src/domain/http/http-court.repository';
 import { HttpCollectionRepository } from '../src/domain/http/http-collection.repository';
+import { HttpCountryRepository } from '../src/domain/http/http-country.repository';
 import { HttpArticleRepository } from '../src/domain/http/http-article.repository';
 import { HttpError } from '../src/domain/http/http-client';
+
+// ── API base URL (Task 05, Fix 2) ─────────────────────────────────────────────
+// SET the env var, don't just read it. The Http*Repository classes resolve their
+// base URL inside http-client.ts's resolveBaseUrl(), which reads process.env at
+// CALL time (its own comment says so) — so assigning here is picked up by every
+// later request. Reading the value into a local const only fixes the message and
+// leaves the requests going to http-client's own default.
+// http-client.ts's DEFAULT_API_BASE_URL is deliberately left at :3001 — it is
+// product code baked into the client bundle, and production always sets
+// NEXT_PUBLIC_API_BASE_URL explicitly.
+process.env.NEXT_PUBLIC_API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://127.0.0.1:18001/v1';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tiny assertion + result harness (no test framework — prompt task 1: "do not
@@ -194,10 +208,12 @@ const mockCourts = new MockCourtRepository();
 const httpCourts = new HttpCourtRepository();
 const mockCollections = new MockCollectionRepository();
 const httpCollections = new HttpCollectionRepository();
+const mockCountries = new MockCountryRepository();
+const httpCountries = new HttpCountryRepository();
 const mockArticles = new MockArticleRepository();
 const httpArticles = new HttpArticleRepository();
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://localhost:3001/v1';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://127.0.0.1:18001/v1';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Preflight — fail fast with an actionable message if the API is not reachable.
@@ -221,7 +237,7 @@ async function preflight(): Promise<void> {
     console.error('    pnpm db:up');
     console.error('    pnpm --filter @tennis/api db:seed');
     console.error('    pnpm --filter @tennis/api dev    # (or: node apps/api/dist/main.js)\n');
-    console.error('  Optionally set NEXT_PUBLIC_API_BASE_URL (default http://localhost:3001/v1).\n');
+    console.error('  Optionally set NEXT_PUBLIC_API_BASE_URL (default http://127.0.0.1:18001/v1).\n');
     process.exit(2);
   }
 }
@@ -401,6 +417,93 @@ async function compareCollections(): Promise<void> {
   }
 }
 
+async function compareCountries(): Promise<void> {
+  console.log('\nCountries — MockCountryRepository vs HttpCountryRepository');
+
+  // The country aggregate (Feature 75). Both sides implement "THE COUNTRY AGGREGATE
+  // RULES" written in packages/mock-data/src/countries.ts: published-only
+  // eligibility, a published court count, a representative court chosen by
+  // (isFeatured desc, seedOrder asc), and a name-ascending response order. They query
+  // different stores, so this deep comparison is what actually holds them together —
+  // a drift in the count rule, the image pick, or the ordering fails HERE.
+  expectEqual('countries.list()', await mockCountries.list(), await httpCountries.list());
+
+  const apiCountries = await httpCountries.list();
+
+  // ── Security: no geo at any depth ────────────────────────────────────────────
+  // `Region.lat`/`lng` exist in the schema; this response must never carry them
+  // (nor `Court.lat`/`lng`), directly or nested. Same recursive key sweep the court
+  // masking assertions use.
+  assertNoExactCoords('countries.list', apiCountries);
+
+  // ── Shape: exactly the CountryDTO keys, no Prisma internals ──────────────────
+  const expectedCountryKeys = [
+    'continent', 'courtCount', 'imageUrl', 'isoCode', 'name',
+  ].sort();
+  const badShape = apiCountries.filter(
+    (c) =>
+      JSON.stringify(Object.keys(c as object).sort()) !==
+      JSON.stringify(expectedCountryKeys),
+  );
+  expectTrue(
+    'countries.list: every item has exactly the CountryDTO keys (no _count/courts/regions/id)',
+    apiCountries.length > 0 && badShape.length === 0,
+    badShape.length
+      ? `first offender: ${Object.keys(badShape[0] as object).sort().join(', ')}`
+      : 'empty set',
+  );
+
+  // ── Rule 1: no zero-count country, and every one carries a real image ─────────
+  const emptyCountries = apiCountries.filter(
+    (c) => !(typeof c.courtCount === 'number' && c.courtCount > 0),
+  );
+  expectTrue(
+    'countries.list: no country with a zero published-court count',
+    apiCountries.length > 0 && emptyCountries.length === 0,
+    emptyCountries.length ? `${emptyCountries.length} zero-count country/ies` : 'empty set',
+  );
+  const imagelessCountries = apiCountries.filter(
+    (c) => typeof c.imageUrl !== 'string' || c.imageUrl.length === 0,
+  );
+  expectTrue(
+    'countries.list: every country has a derived representative image',
+    apiCountries.length > 0 && imagelessCountries.length === 0,
+    imagelessCountries.length
+      ? `missing image: ${imagelessCountries.map((c) => c.name).join(', ')}`
+      : 'empty set',
+  );
+
+  // ── Rule 4: the response is name-ascending ───────────────────────────────────
+  const names = apiCountries.map((c) => c.name);
+  const sortedNames = [...names].sort((a, b) => a.localeCompare(b, 'en'));
+  expectTrue(
+    'countries.list: ordered by name ascending',
+    JSON.stringify(names) === JSON.stringify(sortedNames),
+    `got: ${names.join(', ')}`,
+  );
+
+  // ── Rule 2 cross-check against the courts endpoint ────────────────────────────
+  // The counts must agree with the published court list the API itself serves —
+  // this catches a count that respects a DIFFERENT filter than courts.service.ts.
+  const apiCourts = await httpCourts.list();
+  const countsFromCourts = new Map<string, number>();
+  for (const court of apiCourts as { country: string }[]) {
+    countsFromCourts.set(court.country, (countsFromCourts.get(court.country) ?? 0) + 1);
+  }
+  const countMismatches = apiCountries.filter(
+    (c) => countsFromCourts.get(c.name) !== c.courtCount,
+  );
+  expectTrue(
+    'countries.list: courtCount agrees with GET /v1/courts per country',
+    countMismatches.length === 0 && countsFromCourts.size === apiCountries.length,
+    countMismatches.length
+      ? countMismatches
+          .map((c) => `${c.name}: countries=${c.courtCount} courts=${countsFromCourts.get(c.name) ?? 0}`)
+          .join('; ')
+      : `country set sizes differ: countries=${apiCountries.length} courts=${countsFromCourts.size}`,
+  );
+}
+
 async function compareArticles(): Promise<void> {
   console.log('\nJournal — MockArticleRepository vs HttpArticleRepository');
 
@@ -452,6 +555,7 @@ async function main(): Promise<void> {
 
   await compareCourts();
   await compareCollections();
+  await compareCountries();
   await compareArticles();
 
   const failed = results.filter((r) => !r.ok);

@@ -20,8 +20,8 @@
 //   STRIPE_PRICE_MONTHLY=price_…             # required
 //   STRIPE_PRICE_QUARTERLY=price_…           # optional (enables the quarterly check)
 //   pnpm db:up && pnpm --filter @tennis/api prisma:migrate:deploy && pnpm --filter @tennis/api db:seed
-//   pnpm --filter @tennis/api dev            # API on :3001 (loads the same .env)
-//   DATABASE_URL=… NEXT_PUBLIC_API_BASE_URL=http://localhost:3001/v1 \
+//   pnpm --filter @tennis/api dev            # API on :18001 (loads the same .env)
+//   DATABASE_URL=… NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:18001/v1 \
 //     pnpm --filter @tennis/api verify:billing-checkout
 //
 // Scenarios:
@@ -48,7 +48,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://localhost:3001/v1';
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://127.0.0.1:18001/v1';
 
 const EMAIL_PREFIX = 'f65-';
 const EMAIL_DOMAIN = '@tennis.test';

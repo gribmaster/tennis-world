@@ -35,7 +35,7 @@
 // ── How to run ─────────────────────────────────────────────────────────────────────
 //   pnpm db:up
 //   pnpm --filter @tennis/api prisma:migrate:deploy && pnpm --filter @tennis/api db:seed
-//   pnpm --filter @tennis/api dev                       # API on :3001
+//   pnpm --filter @tennis/api dev                       # API on :18001
 //   # Always-on checks only:
 //   NEXT_PUBLIC_DATA_SOURCE=api pnpm --filter @tennis/web verify:web-exact-location
 //   # With the 403 + 200 paths (mint tokens via the magic-link flow; seed an Entitlement
@@ -50,13 +50,25 @@ import type { ExactLocationDTO } from '@tennis/contracts';
 import { getRepositories } from '../src/domain';
 import type { HttpAuthOptions } from '../src/domain/http/http-client';
 
+// ── API base URL (Task 05, Fix 2) ─────────────────────────────────────────────
+// SET the env var, don't just read it. The Http*Repository classes resolve their
+// base URL inside http-client.ts's resolveBaseUrl(), which reads process.env at
+// CALL time (its own comment says so) — so assigning here is picked up by every
+// later request. Reading the value into a local const only fixes the message and
+// leaves the requests going to http-client's own default.
+// http-client.ts's DEFAULT_API_BASE_URL is deliberately left at :3001 — it is
+// product code baked into the client bundle, and production always sets
+// NEXT_PUBLIC_API_BASE_URL explicitly.
+process.env.NEXT_PUBLIC_API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://127.0.0.1:18001/v1';
+
 // A real, seeded, PUBLISHED court (the same fixture the API parity + exact-location
 // harnesses use). Its slug is what we ask the endpoint to unlock.
 const REAL_SLUG = 'grand-hotel-tremezzo';
 const UNKNOWN_SLUG = 'not-a-real-court-f64';
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://localhost:3001/v1';
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://127.0.0.1:18001/v1';
 
 // ── Tiny assertion harness (matches verify-api-parity / verify-persisted-saved-flow) ──
 

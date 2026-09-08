@@ -39,7 +39,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://localhost:3001/v1';
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://127.0.0.1:18001/v1';
 
 // Per-run id so each user's in-memory counter starts fresh (see header).
 const RUN_ID = randomBytes(4).toString('hex');

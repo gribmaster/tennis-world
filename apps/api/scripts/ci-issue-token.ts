@@ -29,7 +29,7 @@
 // real or seeded user (the seed creates NO users).
 //
 // Run (after the API is up and migrated/seeded):
-//   DATABASE_URL=... NEXT_PUBLIC_API_BASE_URL=http://localhost:3001/v1 \
+//   DATABASE_URL=... NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:18001/v1 \
 //     tsx apps/api/scripts/ci-issue-token.ts
 // Prints the bearer token on the LAST stdout line; everything else goes to stderr.
 //
@@ -50,7 +50,7 @@ const prisma = new PrismaClient();
 const CI_EMAIL = 'ci-verify@tennis.test';
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://localhost:3001/v1';
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://127.0.0.1:18001/v1';
 
 /** SHA-256 hex — mirrors AuthService.sha256 (the only thing that must stay in lockstep). */
 function sha256(value: string): string {

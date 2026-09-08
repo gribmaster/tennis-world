@@ -3,8 +3,12 @@
 // finalized Phase-2 schema so the seeded API output matches the Phase-1 mock
 // repositories byte-for-byte. DATA flows one way: @tennis/mock-data → Postgres.
 //
-// Idempotent: every write is an `upsert` keyed on a stable id/slug, so running the
-// seed twice produces no duplicates and no drift. Run with:
+// Idempotent: every write is an `upsert` keyed on the row's UNIQUE BUSINESS KEY
+// (Court/Collection/Article `slug`, Country `isoCode`, Region id, the join-row
+// composite) rather than on the mock-authored `id`, so re-seeding a database whose
+// rows were written by another tool updates them in place instead of failing P2002.
+// The steps that write court/collection foreign keys use the ids the upserts return.
+// Run with:
 //   pnpm --filter @tennis/api db:seed         (or `prisma db seed`)
 //
 // FK write order: Country → Region → Court → CourtImage → Collection →
@@ -22,6 +26,7 @@ import {
   COLLECTION_COURTS,
   COLLECTIONS,
   COURTS,
+  countryMetadata,
 } from '@tennis/mock-data';
 
 const prisma = new PrismaClient();
@@ -38,41 +43,13 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-/**
- * Continent per country — seed-only data (mock-data carries no continent and the
- * Prisma `Country.continent` column is non-null). Not exposed by any Phase-2 DTO.
- */
-const CONTINENT_BY_COUNTRY: Record<string, string> = {
-  Italy: 'Europe',
-  Spain: 'Europe',
-  France: 'Europe',
-  Monaco: 'Europe',
-  Portugal: 'Europe',
-  UK: 'Europe',
-  Morocco: 'Africa',
-  Indonesia: 'Asia',
-  Japan: 'Asia',
-  Maldives: 'Asia',
-  USA: 'Americas',
-};
-
-/**
- * Stable ISO code per country — seed-only (the `Country.isoCode` column is unique
- * and non-null). Not exposed by any Phase-2 DTO. `UK` uses `GB` per ISO-3166.
- */
-const ISO_CODE_BY_COUNTRY: Record<string, string> = {
-  Italy: 'IT',
-  Spain: 'ES',
-  France: 'FR',
-  Monaco: 'MC',
-  Portugal: 'PT',
-  UK: 'GB',
-  Morocco: 'MA',
-  Indonesia: 'ID',
-  Japan: 'JP',
-  Maldives: 'MV',
-  USA: 'US',
-};
+// Country `continent` / `isoCode` (both non-null on the `Country` row, neither
+// derivable from `CourtDTO.country`) come from `COUNTRY_METADATA` in
+// `@tennis/mock-data` (`countryMetadata()`), which is the SINGLE authored table for
+// this dataset. It used to be two private literals in this file; the web-side
+// `MockCountryRepository` needs the same two facts, and one shared table is what
+// keeps the seeded API and the mock from drifting. Neither field is geo, and both
+// ARE now exposed — by `GET /v1/countries` (Feature 75).
 
 /** Deterministic Country id from its name. */
 const countryId = (country: string): string => slugify(country);
@@ -107,17 +84,15 @@ function parsePublishedAt(value: string | undefined): Date | null {
 async function seedCountries(): Promise<number> {
   const names = Array.from(new Set(COURTS.map((c) => c.country)));
   for (const name of names) {
-    const continent = CONTINENT_BY_COUNTRY[name];
-    const isoCode = ISO_CODE_BY_COUNTRY[name];
-    if (!continent || !isoCode) {
-      throw new Error(
-        `Seed: missing continent/isoCode mapping for country "${name}". ` +
-          `Add it to CONTINENT_BY_COUNTRY / ISO_CODE_BY_COUNTRY.`,
-      );
-    }
+    // Throws loudly on a country with no authored metadata (same failure the two
+    // inline maps used to raise, now owned by @tennis/mock-data).
+    const { continent, isoCode } = countryMetadata(name);
     const data = { name, isoCode, continent: continent as never };
+    // Keyed on `isoCode` (the unique business key) rather than the derived id: both
+    // columns are independently unique, so an id-keyed upsert against a row written
+    // with a different id would take the create branch and fail P2002 on `isoCode`.
     await prisma.country.upsert({
-      where: { id: countryId(name) },
+      where: { isoCode },
       create: { id: countryId(name), ...data },
       update: data,
     });
@@ -147,6 +122,15 @@ async function seedRegions(): Promise<number> {
   }
   return pairs.length;
 }
+
+/**
+ * Court slug → the id the court row actually has in this database. Populated by
+ * `seedCourts()` and consumed by the steps that write court foreign keys. Usually
+ * identical to the mock-authored `c.id`, but a court previously written by
+ * `scripts/import-courts-from-content.ts` carries a generated cuid instead, and the
+ * FK must follow the row rather than the mock constant.
+ */
+const courtIdBySlug = new Map<string, string>();
 
 async function seedCourts(): Promise<number> {
   for (let i = 0; i < COURTS.length; i++) {
@@ -183,11 +167,21 @@ async function seedCourts(): Promise<number> {
       blurb: c.blurb,
       seedOrder: i, // reproduce mock-data COURTS array order
     };
-    await prisma.court.upsert({
-      where: { id: c.id },
+    // Keyed on `slug` (the unique business key), not `id`: a database that has had
+    // the content importer run against it holds courts with mock-data slugs but
+    // importer-generated cuid ids, so an id-keyed upsert would miss, take the create
+    // branch and die with P2002 on `slug`. `id` stays in the create branch so a fresh
+    // seed still produces the mock-authored ids. The resulting row's real id is
+    // recorded in `courtIdBySlug` because it may differ from `c.id` on such a
+    // database, and downstream steps (images, collection join rows) need the id the
+    // row actually has.
+    const row = await prisma.court.upsert({
+      where: { slug: c.slug },
       create: { id: c.id, ...data },
       update: data,
+      select: { id: true },
     });
+    courtIdBySlug.set(c.slug, row.id);
   }
   return COURTS.length;
 }
@@ -195,11 +189,18 @@ async function seedCourts(): Promise<number> {
 async function seedCourtImages(): Promise<number> {
   let total = 0;
   for (const c of COURTS) {
+    // The id the court row actually has (see `courtIdBySlug`), which is `c.id` on a
+    // freshly seeded database but an importer-generated cuid on one the content
+    // importer has touched.
+    const courtId = courtIdBySlug.get(c.slug);
+    if (!courtId) {
+      throw new Error(`Seed: no persisted court id for slug "${c.slug}".`);
+    }
     for (const img of c.images) {
       // Deterministic id from court + slot so re-seeds upsert in place.
-      const id = `${c.id}-img-${img.sortOrder}`;
+      const id = `${courtId}-img-${img.sortOrder}`;
       const data = {
-        courtId: c.id,
+        courtId,
         url: img.url,
         alt: img.alt ?? null,
         sortOrder: img.sortOrder,
@@ -216,6 +217,9 @@ async function seedCourtImages(): Promise<number> {
   return total;
 }
 
+/** Collection slug → the id that collection row actually has (see `courtIdBySlug`). */
+const collectionIdBySlug = new Map<string, string>();
+
 async function seedCollections(): Promise<number> {
   for (let i = 0; i < COLLECTIONS.length; i++) {
     const col = COLLECTIONS[i]!;
@@ -228,19 +232,22 @@ async function seedCollections(): Promise<number> {
       type: col.type as never,
       sortOrder: i, // reproduce mock-data COLLECTIONS list order
     };
-    await prisma.collection.upsert({
-      where: { id: col.id },
+    // Keyed on `slug` (unique) rather than `id`, for the same reason as Court above.
+    const row = await prisma.collection.upsert({
+      where: { slug: col.slug },
       create: { id: col.id, ...data },
       update: data,
+      select: { id: true },
     });
+    collectionIdBySlug.set(col.slug, row.id);
   }
   return COLLECTIONS.length;
 }
 
 async function seedCollectionCourts(): Promise<number> {
-  // Resolve slugs → ids once.
-  const collectionIdBySlug = new Map(COLLECTIONS.map((c) => [c.slug, c.id]));
-  const courtIdBySlug = new Map(COURTS.map((c) => [c.slug, c.id]));
+  // Both id maps are populated by the steps above (`seedCourts` / `seedCollections`)
+  // so the join rows reference the ids the rows actually have, not the mock-authored
+  // constants — the two can differ on a database the content importer has touched.
 
   for (const link of COLLECTION_COURTS) {
     const collectionId = collectionIdBySlug.get(link.collectionSlug);
@@ -278,8 +285,9 @@ async function seedArticles(): Promise<number> {
       // Optional byline (Feature 44) — null when the mock omits it.
       author: a.author ?? null,
     };
+    // Keyed on `slug` (unique) rather than `id`, for the same reason as Court above.
     await prisma.article.upsert({
-      where: { id: a.id },
+      where: { slug: a.slug },
       create: { id: a.id, ...data },
       update: data,
     });

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { HealthController } from './health/health.controller';
 import { CourtsModule } from './courts/courts.module';
 import { CollectionsModule } from './collections/collections.module';
+import { CountriesModule } from './countries/countries.module';
 import { ArticlesModule } from './articles/articles.module';
 import { ConsultationsModule } from './consultations/consultations.module';
 import { AuthModule } from './auth/auth.module';
@@ -15,6 +16,7 @@ import { PrismaModule } from './prisma/prisma.module';
     PrismaModule,
     CourtsModule,
     CollectionsModule,
+    CountriesModule,
     ArticlesModule,
     ConsultationsModule,
     AuthModule,

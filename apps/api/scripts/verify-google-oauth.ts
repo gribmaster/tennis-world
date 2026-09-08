@@ -21,7 +21,7 @@
 //   GOOGLE_AUTH_ENABLED=true
 //   GOOGLE_CLIENT_ID=fake-client-id.apps.googleusercontent.com
 //   GOOGLE_CLIENT_SECRET=fake-client-secret
-//   GOOGLE_REDIRECT_URI=http://localhost:3001/v1/auth/google/callback
+//   GOOGLE_REDIRECT_URI=http://127.0.0.1:18001/v1/auth/google/callback
 //   WEB_APP_URL=http://localhost:3000          (already the local default)
 //
 //   pnpm --filter @tennis/api dev
@@ -54,7 +54,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://localhost:3001/v1';
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://127.0.0.1:18001/v1';
 const RUN_GATED = process.env.RUN_GOOGLE_OAUTH_VERIFY === '1';
 
 // ── Tiny assertion harness (matches the other verify-* scripts) ──────────────────────

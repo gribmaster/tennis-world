@@ -17,7 +17,7 @@
 // outbound Stripe call, so no live Stripe account/network is touched. That means it runs
 // with a FAKE test key (any `sk_test_…` string) + a chosen `STRIPE_WEBHOOK_SECRET` — do not
 // read a green run as "the live Stripe integration works"; for that use the Stripe CLI
-// (`stripe listen --forward-to localhost:3001/v1/webhooks/stripe` + `stripe trigger …`).
+// (`stripe listen --forward-to 127.0.0.1:18001/v1/webhooks/stripe` + `stripe trigger …`).
 //
 // ── OPT-IN / CI SAFETY (prompt task 9/13) ────────────────────────────────────────────
 // NOT in the required CI gate. Two modes:
@@ -34,8 +34,8 @@
 //   STRIPE_SECRET_KEY=sk_test_dummy
 //   STRIPE_WEBHOOK_SECRET=whsec_dummy_choose_any
 //   pnpm db:up && pnpm --filter @tennis/api prisma:migrate:deploy && pnpm --filter @tennis/api db:seed
-//   pnpm --filter @tennis/api dev            # API on :3001 (loads the same .env)
-//   DATABASE_URL=… NEXT_PUBLIC_API_BASE_URL=http://localhost:3001/v1 \
+//   pnpm --filter @tennis/api dev            # API on :18001 (loads the same .env)
+//   DATABASE_URL=… NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:18001/v1 \
 //     STRIPE_SECRET_KEY=sk_test_dummy STRIPE_WEBHOOK_SECRET=whsec_dummy_choose_any \
 //     pnpm --filter @tennis/api verify:stripe-webhook
 //
@@ -76,7 +76,7 @@ import Stripe from 'stripe';
 const prisma = new PrismaClient();
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://localhost:3001/v1';
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://127.0.0.1:18001/v1';
 
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET?.trim() ?? '';
 const SECRET_KEY = process.env.STRIPE_SECRET_KEY?.trim() ?? '';

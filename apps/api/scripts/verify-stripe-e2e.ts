@@ -31,7 +31,7 @@
 //       HMAC the API's `constructEvent` verifies), and POSTs it to the real
 //       `POST /v1/webhooks/stripe`. This is a HYBRID: real Stripe checkout objects + a signed
 //       synthetic delivery. It is NOT full Stripe-CLI event delivery — for that, run:
-//         stripe listen --forward-to localhost:3001/v1/webhooks/stripe
+//         stripe listen --forward-to 127.0.0.1:18001/v1/webhooks/stripe
 //         stripe trigger checkout.session.completed
 //       (documented in the intake note; hard to automate in CI without the Stripe CLI binary).
 //
@@ -56,7 +56,7 @@
 //     STRIPE_WEBHOOK_SECRET=whsec_…      (the SAME value the running API is configured with)
 //     A Stripe price id for the chosen plan — one of:
 //       STRIPE_PRICE_MONTHLY=price_…  STRIPE_PRICE_QUARTERLY=price_…  STRIPE_PRICE_YEARLY=price_…
-//     NEXT_PUBLIC_API_BASE_URL / API base (defaults to http://localhost:3001/v1)
+//     NEXT_PUBLIC_API_BASE_URL / API base (defaults to http://127.0.0.1:18001/v1)
 //     DATABASE_URL                        (to seed the user + read entitlements/customer id)
 // Optional:
 //     STRIPE_E2E_PLAN=monthly|quarterly|yearly   (which recurring plan to exercise; default 'monthly')
@@ -99,7 +99,7 @@ import { loadBillingConfig } from '../src/billing/billing.config';
 const prisma = new PrismaClient();
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://localhost:3001/v1';
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://127.0.0.1:18001/v1';
 
 const SECRET_KEY = process.env.STRIPE_SECRET_KEY?.trim() ?? '';
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET?.trim() ?? '';

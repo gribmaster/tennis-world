@@ -23,6 +23,8 @@ import { MockCourtRepository } from './courts/mock-court.repository';
 import type { CourtRepository } from './courts/court.repository';
 import { MockCollectionRepository } from './collections/mock-collection.repository';
 import type { CollectionRepository } from './collections/collection.repository';
+import { MockCountryRepository } from './countries/mock-country.repository';
+import type { CountryRepository } from './countries/country.repository';
 import { MockArticleRepository } from './journal/mock-article.repository';
 import type { ArticleRepository } from './journal/article.repository';
 import { MockSavedRepository } from './saved/mock-saved.repository';
@@ -37,6 +39,7 @@ import type { BillingRepository } from './billing/billing.repository';
 // Phase-2 HTTP implementations — wired in only for the `api` data source.
 import { HttpCourtRepository } from './http/http-court.repository';
 import { HttpCollectionRepository } from './http/http-collection.repository';
+import { HttpCountryRepository } from './http/http-country.repository';
 import { HttpArticleRepository } from './http/http-article.repository';
 import { HttpConsultationRepository } from './consultation/http-consultation.repository';
 
@@ -78,6 +81,8 @@ export { BillingNotAvailableError } from './billing/mock-billing.repository';
 export interface Repositories {
   courts: CourtRepository;
   collections: CollectionRepository;
+  /** Country aggregate for the Collections screen's "By Country" strip (Feature 75). */
+  countries: CountryRepository;
   journal: ArticleRepository;
   saved: SavedRepository;
   user: UserRepository;
@@ -146,6 +151,7 @@ export function getRepositories(
       return {
         courts: new MockCourtRepository(),
         collections: new MockCollectionRepository(),
+        countries: new MockCountryRepository(),
         journal: new MockArticleRepository(),
         saved: new MockSavedRepository(),
         user: new MockUserRepository(),
@@ -164,6 +170,8 @@ export function getRepositories(
         // simply resolves to `null` (locked), never crashing a public court page.
         courts: new HttpCourtRepository(auth),
         collections: new HttpCollectionRepository(),
+        // Public aggregate — no auth (GET /v1/countries takes no session).
+        countries: new HttpCountryRepository(),
         journal: new HttpArticleRepository(),
         consultation: new HttpConsultationRepository(),
         // Protected /v1/me/* — carry the caller's auth transport (Feature 57).

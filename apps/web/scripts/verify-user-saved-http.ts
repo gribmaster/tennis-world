@@ -21,19 +21,19 @@
 //      token HASH, so the RAW token comes from the dev mailer log — MAGIC_LINK_DEV_LOG
 //      defaults to true):
 //        # request a link (always 202):
-//        curl -s -X POST http://localhost:3001/v1/auth/request-link \
+//        curl -s -X POST http://127.0.0.1:18001/v1/auth/request-link \
 //          -H 'content-type: application/json' \
 //          -d '{"email":"feature56@example.com"}'
 //        # copy the `?token=...` value the API logs at WARN ("[dev magic-link] ..."),
 //        # then exchange it for a session (returns { accessToken }):
-//        curl -s -X POST http://localhost:3001/v1/auth/verify \
+//        curl -s -X POST http://127.0.0.1:18001/v1/auth/verify \
 //          -H 'content-type: application/json' \
 //          -d '{"token":"<RAW_TOKEN_FROM_LOG>"}'
 //   3. Run this script with that token:
 //        AUTH_BEARER_TOKEN=<accessToken> pnpm --filter @tennis/web verify:user-saved-http
 //
 // The API base URL comes from `NEXT_PUBLIC_API_BASE_URL` (default
-// http://localhost:3001/v1) — the same resolution the real http-client uses.
+// http://127.0.0.1:18001/v1) — the same resolution the real http-client uses.
 //
 // Repos are imported by RELATIVE path (not the `@/` alias): `tsx` does not read the
 // Next tsconfig `paths`. The workspace packages resolve normally through node_modules.
@@ -48,6 +48,18 @@
 import { HttpUserRepository } from '../src/domain/http/http-user.repository';
 import { HttpSavedRepository } from '../src/domain/http/http-saved.repository';
 import { AuthRequiredError, HttpError } from '../src/domain/http/http-client';
+
+// ── API base URL (Task 05, Fix 2) ─────────────────────────────────────────────
+// SET the env var, don't just read it. The Http*Repository classes resolve their
+// base URL inside http-client.ts's resolveBaseUrl(), which reads process.env at
+// CALL time (its own comment says so) — so assigning here is picked up by every
+// later request. Reading the value into a local const only fixes the message and
+// leaves the requests going to http-client's own default.
+// http-client.ts's DEFAULT_API_BASE_URL is deliberately left at :3001 — it is
+// product code baked into the client bundle, and production always sets
+// NEXT_PUBLIC_API_BASE_URL explicitly.
+process.env.NEXT_PUBLIC_API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://127.0.0.1:18001/v1';
 
 // ── Tiny assertion harness (no test framework — matches verify-api-parity.ts) ───────
 
@@ -97,7 +109,7 @@ function assertNoExactCoords(name: string, payload: unknown): void {
 }
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://localhost:3001/v1';
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://127.0.0.1:18001/v1';
 
 // A real published court id (the seed's Grand Hotel Tremezzo). Stable across re-seeds.
 const COURT_ID = 'tremezzo';
