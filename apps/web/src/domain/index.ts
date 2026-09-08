@@ -33,6 +33,8 @@ import { MockUserRepository } from './user/mock-user.repository';
 import type { UserRepository } from './user/user.repository';
 import { MockConsultationRepository } from './consultation/mock-consultation.repository';
 import type { ConsultationRepository } from './consultation/consultation.repository';
+import { MockReviewRepository } from './reviews/mock-review.repository';
+import type { ReviewRepository } from './reviews/review.repository';
 import { MockBillingRepository } from './billing/mock-billing.repository';
 import type { BillingRepository } from './billing/billing.repository';
 
@@ -42,6 +44,11 @@ import { HttpCollectionRepository } from './http/http-collection.repository';
 import { HttpCountryRepository } from './http/http-country.repository';
 import { HttpArticleRepository } from './http/http-article.repository';
 import { HttpConsultationRepository } from './consultation/http-consultation.repository';
+
+// Feature 80 — the protected review WRITE path. Wired in only for the `api` data source,
+// and only with an auth context (browser include / server cookie / bearer): POST /v1/reviews
+// is AuthGuard-protected, unlike the public consultation submit above it.
+import { HttpReviewRepository } from './reviews/http-review.repository';
 
 // Phase-4 (Feature 57) protected HTTP implementations — wired in only for the `api`
 // data source, and only with an auth context (server cookie / browser include / bearer).
@@ -67,6 +74,9 @@ export { AuthRequiredError, HttpError } from './http/http-client';
 // outside src/domain/**). Type-only — no runtime coupling.
 export type { SavedRepository } from './saved/saved.repository';
 
+// Same reasoning for UserRepository (Feature 81/82's demo-mode updateProfile bridge).
+export type { UserRepository } from './user/user.repository';
+
 // Re-exported so the billing client action helper (UI layer) can recognise "billing is
 // unavailable in this environment" (mock mode has no payment provider) and show a calm
 // message instead of a scary error — without importing a concrete `*.repository` module
@@ -87,6 +97,11 @@ export interface Repositories {
   saved: SavedRepository;
   user: UserRepository;
   consultation: ConsultationRepository;
+  /**
+   * Court review SUBMISSION (Feature 80). WRITE-ONLY — the interface has one method and
+   * nothing in the app reads a review, a rating average or a review count.
+   */
+  reviews: ReviewRepository;
   billing: BillingRepository;
 }
 
@@ -156,6 +171,7 @@ export function getRepositories(
         saved: new MockSavedRepository(),
         user: new MockUserRepository(),
         consultation: new MockConsultationRepository(),
+        reviews: new MockReviewRepository(),
         // No payment provider in mock mode — a checkout/portal action throws a clear
         // "not available in mock mode" error (see MockBillingRepository). The billing
         // buttons still render; clicking one in mock mode is a no-op-with-message.
@@ -174,6 +190,10 @@ export function getRepositories(
         countries: new HttpCountryRepository(),
         journal: new HttpArticleRepository(),
         consultation: new HttpConsultationRepository(),
+        // Protected POST /v1/reviews — carries the caller's auth transport (Feature 80).
+        // The review modal is a browser island, so it gets `auth: 'include'`; with no auth
+        // a submit is a loud AuthRequiredError, never a silent anonymous write.
+        reviews: new HttpReviewRepository(auth),
         // Protected /v1/me/* — carry the caller's auth transport (Feature 57).
         saved: new HttpSavedRepository(auth),
         user: new HttpUserRepository(auth),

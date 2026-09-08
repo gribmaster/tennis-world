@@ -5,6 +5,7 @@ import { CollectionsModule } from './collections/collections.module';
 import { CountriesModule } from './countries/countries.module';
 import { ArticlesModule } from './articles/articles.module';
 import { ConsultationsModule } from './consultations/consultations.module';
+import { ReviewsModule } from './reviews/reviews.module';
 import { AuthModule } from './auth/auth.module';
 import { MeModule } from './me/me.module';
 import { BillingModule } from './billing/billing.module';
@@ -19,6 +20,7 @@ import { PrismaModule } from './prisma/prisma.module';
     CountriesModule,
     ArticlesModule,
     ConsultationsModule,
+    ReviewsModule,
     AuthModule,
     MeModule,
     BillingModule,

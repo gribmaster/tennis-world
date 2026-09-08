@@ -10,9 +10,10 @@ import type { MembershipStatus, UserProfileDTO } from '@tennis/contracts';
 //   - id          : the User row id.
 //   - name        : `User.name` is nullable (a magic-link signup may not supply one).
 //                   When absent we derive a friendly fallback from the email local-part
-//                   so the UI never renders an empty name. EMAIL IS NOT EXPOSED as a
-//                   field — only used to compute a display name when `name` is null
-//                   (Feature 50 §5.3: the shared profile DTO carries no `email`).
+//                   so the UI never renders an empty name.
+//   - email       : `User.email`, passed through READ-ONLY (Feature 81/82: the edit-profile
+//                   UI needs to display it). There is still no write path for it — see
+//                   `UpdateProfileSchema`, which only accepts `name`.
 //   - initials    : DERIVED from the resolved name (first letters of up to two words,
 //                   upper-cased), mirroring the mock's "Eleanor Morgan" → "EM".
 //   - membership  : a REQUIRED ARGUMENT (Feature 62, values extended in the F62-follow-up
@@ -93,7 +94,7 @@ export interface EntitlementDisplayInfo {
 }
 
 /**
- * Map a User row to the public `UserProfileDTO` (no email). `membership` is supplied by
+ * Map a User row to the public `UserProfileDTO`. `membership` is supplied by
  * the caller (entitlement-derived — Feature 62); it defaults to 'free' for callers with
  * no entitlement context. `entitlement` (optional, scheduled-cancellation follow-up)
  * supplies the raw `activeUntil`/`cancelAtPeriodEnd` from the effective entitlement — the
@@ -117,6 +118,7 @@ export function toUserProfileDTO(
     initials: deriveInitials(name),
     membership,
     avatarUrl: toSafeAvatarUrl(user.avatarUrl),
+    email: user.email,
   };
   if (membership === 'subscription' && entitlement) {
     dto.activeUntil = entitlement.activeUntil;

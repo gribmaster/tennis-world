@@ -162,8 +162,8 @@ async function verifyAuthedFlow(token: string): Promise<void> {
     `got: ${JSON.stringify(profile)}`,
   );
   expectTrue(
-    'getCurrentUser() does NOT expose email',
-    !('email' in (profile as Record<string, unknown>)),
+    'getCurrentUser() exposes email read-only, matching the authed token identity',
+    typeof profile.email === 'string' && profile.email.length > 0,
     `keys: ${Object.keys(profile).join(', ')}`,
   );
 

@@ -252,6 +252,7 @@ async function main(): Promise<void> {
   const articleHero = readSrc('features/journal-detail/ArticleHero.tsx');
   const userCollectionHero = readSrc('features/user-collection-detail/UserCollectionHero.tsx');
   const billingReturn = readSrc('features/billing/BillingReturn.tsx');
+  const profileSettingsPage = readSrc('app/profile/settings/page.tsx');
 
   for (const [label, src, expectedFallback] of [
     ['Court detail page', courtDetailPage, '/map'],
@@ -259,6 +260,7 @@ async function main(): Promise<void> {
     ['Article detail hero', articleHero, '/journal'],
     ['User wishlist-folder hero', userCollectionHero, '/saved'],
     ['Billing return page', billingReturn, '/profile'],
+    ['Profile settings page', profileSettingsPage, '/profile'],
   ] as const) {
     expectTrue(`${label} renders <BackButton>`, /<BackButton\b/.test(src));
     expectTrue(

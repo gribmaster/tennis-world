@@ -1,17 +1,26 @@
 import type { UserProfileDTO } from '@tennis/contracts';
 import { Badge, UserAvatar } from '@/components/ui';
 import { isDemoMode } from '@/lib/demo-auth';
+import { ProfileEditTrigger } from './ProfileEditTrigger';
 
-// ProfileHeader — the top section of the Profile screen, ported from profile.html's
-// header (avatar + serif name + membership status line).
+// ProfileHeader — the top "profile block" of the /profile screen (v2 prototype's
+// ProfileScreen, `new design/tennis_world_v2_standalone.html` lines 1400-1412): an 80px
+// circular avatar, serif name, and an "Edit profile" pill that opens EditProfileModal.
+// The gear icon + wordmark row above this block is the PAGE's job, not this
+// component's — AppHeader already owns the wordmark (CLAUDE.md instruction), so this
+// component starts at the avatar row.
 //
-// PRESENTATIONAL ONLY: receives the already-fetched user via props (the page is the
-// only repository boundary). No repository, no @tennis/mock-data, no state.
+// PRESENTATIONAL, plus ONE client island (`ProfileEditTrigger`, which owns the modal's
+// open state and the save mutation) dropped in for the edit affordance — same pattern
+// as ProfileMembershipCard's PaywallTrigger / ProfileMenuRow's ConsultationTrigger. No
+// repository read of its own; the user DTO arrives via props from the page.
 //
-// VISUAL: an 80px circular avatar — the user's Google profile photo when
-// `avatarUrl` is set and loads, else the ink-circle serif-INITIALS fallback
-// (`UserAvatar`, `@/components/ui`) — the serif name, and a membership status that
-// branches on `membership`:
+// AVATAR: the user's Google profile photo when `avatarUrl` is set and loads, else the
+// ink-circle serif-INITIALS fallback (`UserAvatar`, `@/components/ui`). NO avatar-change
+// control — `PATCH /v1/me` has no image field and there is no upload storage (TASK_14
+// point 1); the prototype's photo-cycle button is intentionally not built.
+//
+// MEMBERSHIP STATUS branches on `membership`:
 //   • lifetime     → gold "Lifetime Member" Badge (the Badge component's documented Profile use)
 //   • subscription → gold "Active Subscriber" Badge (active recurring Stripe subscription)
 //   • free         → "Explorer · Free" eyebrow in stone
@@ -69,17 +78,18 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
       : null;
 
   return (
-    <div className="flex items-center gap-6 border-b border-hairline pb-10">
+    <div className="flex items-start gap-4">
       <UserAvatar
         name={user.name}
         initials={user.initials}
         avatarUrl={user.avatarUrl}
         size="lg"
+        className="shadow-[0_2px_12px_rgba(15,15,15,0.15)] ring-[3px] ring-paper"
       />
 
-      <div>
-        <h1 className="display-m text-ink">{user.name}</h1>
-        <div className="mt-2 flex items-center gap-2">
+      <div className="flex-1">
+        <h1 className="serif text-[26px] font-normal leading-[1.1] text-ink">{user.name}</h1>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           {badgeLabel ? (
             <Badge tone="gold">{badgeLabel}</Badge>
           ) : (
@@ -99,6 +109,8 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
             {cancelsOn ? `Access until ${cancelsOn}` : 'Cancellation scheduled'}
           </p>
         ) : null}
+
+        <ProfileEditTrigger name={user.name} email={user.email} />
       </div>
     </div>
   );

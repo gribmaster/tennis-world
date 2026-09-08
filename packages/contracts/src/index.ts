@@ -8,6 +8,7 @@ export * from './collection';
 export * from './country';
 export * from './article';
 export * from './consultation';
+export * from './review';
 export * from './user';
 export * from './auth';
 export * from './billing';

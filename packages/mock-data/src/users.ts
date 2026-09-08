@@ -11,6 +11,7 @@ export const MOCK_USERS: UserProfileDTO[] = [
     name: 'Eleanor Morgan',
     initials: 'EM',
     membership: 'free',
+    email: 'eleanor.morgan@example.com',
   },
 ];
 

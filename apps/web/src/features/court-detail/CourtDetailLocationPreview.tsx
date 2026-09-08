@@ -2,22 +2,38 @@ import type { ExactLocationDTO } from '@tennis/contracts';
 import { LeafletMap, type MapMarker } from '@/features/map';
 import { PaywallTrigger } from '@/features/paywall';
 
-// CourtDetailLocationPreview — the location block on Court Detail (Feature 11 §2),
-// now a REAL Leaflet map (Feature 74) instead of the old abstract placeholder.
+// CourtDetailLocationPreview — the location block on Court Detail (Feature 11 §2), a REAL
+// Leaflet map (Feature 74), restyled for the v2 redesign (Feature 78).
 //
-// COORDINATE SAFETY (Architecture Plan §9 Risk #17) — two strictly separate paths:
+// COORDINATE SAFETY (Architecture Plan §9 Risk #17) — two strictly separate paths, both
+// UNCHANGED by the redesign:
 //   • LOCKED / free viewer: the map is centered on the ALWAYS-PUBLIC approximate geo
 //     (`approxLat`/`approxLng`), rendered BLURRED and non-interactive behind the lock
 //     glyph + Unlock CTA. No exact coordinate is ever sent to this state.
 //   • ENTITLED viewer: `exactLocation` (from the PROTECTED
 //     `GET /v1/me/courts/:slug/exact-location` endpoint — an authenticated, premium
 //     read, never a public one) supplies the exact `lat`/`lng` for a single precise
-//     marker, plus the server-built `directionsUrl` for the real Get Directions link.
-//     Exact coords reach the client ONLY on this entitled path, exactly as the
-//     endpoint intends — the public court reads that back this page still mask them.
+//     marker, plus the server-built `directionsUrl` for the real directions link. The
+//     component NEVER assembles a maps URL from coordinates itself.
 //
 // `locked` and `exactLocation` are computed once at the page level (Feature 64); the
 // component never derives its own lock state.
+//
+// LAYOUT VARIANTS (Feature 78). The v2 redesign changed only the ARRANGEMENT, never the
+// branching above:
+//   • `variant="v2"` — the prototype's two-column arrangement (design_v2_stripped.html:
+//     1091–1114): a 100px-tall map box on the left, the location text and the directions
+//     button stacked on the right. Feature 79 moved the LOCKED page onto this variant too,
+//     so both readings of Court Detail now render the same block; only the strings and the
+//     directions control differ, exactly as the prototype's `isLocked` branches do.
+//   • `variant="rail"` — the original single-column block (eyebrow, 16/9 map, directions
+//     button underneath). No longer used by Court Detail; kept because it is the component's
+//     default and its locked branch carries its own paywall CTA.
+//
+// NO STREET ADDRESS. The prototype prints `court.address` (line 1108) — an invented field.
+// The real data model has no `address`, and this feature does not add one (brief §6), so
+// the right column shows the country · region line the rest of the app uses. A fabricated
+// address next to a paywall would be worse than none.
 
 function LockGlyph() {
   return (
@@ -56,6 +72,26 @@ function ArrowGlyph() {
   );
 }
 
+function PinGlyph({ size = 12 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className="shrink-0"
+    >
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  );
+}
+
 export interface CourtDetailLocationPreviewProps {
   /** Whether the exact location is locked. Computed at the page level — see Feature 64. */
   locked: boolean;
@@ -72,6 +108,16 @@ export interface CourtDetailLocationPreviewProps {
    * map then centers on the approximate geo and Get Directions falls back to inert.
    */
   exactLocation: ExactLocationDTO | null;
+  /**
+   * Layout only — see the header note. `"rail"` is the pre-Feature-78 single-column
+   * block (the locked page keeps it); `"v2"` is the redesigned two-column block.
+   */
+  variant?: 'rail' | 'v2';
+  /**
+   * The court's public "Country · Region" line, shown beside the map in the `v2`
+   * variant in place of the prototype's invented street address. Not a coordinate.
+   */
+  locationLine?: string;
 }
 
 export function CourtDetailLocationPreview({
@@ -80,6 +126,8 @@ export function CourtDetailLocationPreview({
   approxLat,
   approxLng,
   exactLocation,
+  variant = 'rail',
+  locationLine,
 }: CourtDetailLocationPreviewProps) {
   const entitled = !locked && exactLocation !== null;
 
@@ -106,6 +154,110 @@ export function CourtDetailLocationPreview({
           state: 'featured',
         };
 
+  // ── v2: the prototype's two-column Location block ───────────────────────────────────
+  if (variant === 'v2') {
+    return (
+      <div>
+        <h2 className="mb-3 text-[16px] font-semibold text-ink">Location</h2>
+        <div className="grid grid-cols-2 gap-2.5">
+          {/* Left: the map box. Prototype `height:100`, `borderRadius:10` (line 1096) —
+              allowed to grow on desktop where the two columns get much wider. */}
+          <div className="h-[100px] overflow-hidden rounded-[10px] border border-hairline md:h-[clamp(100px,14vw,180px)]">
+            {locked ? (
+              <div className="relative h-full w-full">
+                {/* Blurred APPROXIMATE map — no exact coord is present in this state. */}
+                <div aria-hidden className="absolute inset-0 scale-105 blur-[6px]">
+                  <LeafletMap
+                    markers={[]}
+                    center={[approxLat, approxLng]}
+                    zoom={6}
+                    interactive={false}
+                    className="h-full w-full"
+                  />
+                </div>
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-bone/60 text-stone backdrop-blur-[2px]">
+                  <LockGlyph />
+                  <span className="text-[10px]">Unlock to reveal</span>
+                </div>
+              </div>
+            ) : (
+              // Unlocked: entitled → exact marker; otherwise → approximate marker.
+              <LeafletMap
+                markers={marker ? [marker] : []}
+                center={[marker!.lat, marker!.lng]}
+                zoom={entitled ? 17 : 6}
+                interactive
+                className="h-full w-full"
+              />
+            )}
+          </div>
+
+          {/* Right: the location text over the directions button (prototype 1104–1113). */}
+          <div className="flex flex-col justify-between">
+            <p className="flex items-start gap-1 text-[11px] leading-[1.4] text-stone md:text-[13px]">
+              <PinGlyph />
+              {/* Country · region — NOT a street address; the model carries none. Locked ⇒
+                  the prototype's "Address hidden" (line 1106). Unlike the description
+                  below, this string is fully REPLACED — nothing to reveal in the DOM. */}
+              <span>{locked ? 'Address hidden' : (locationLine ?? '')}</span>
+            </p>
+
+            {locked ? (
+              // LOCKED: the prototype disables this button (line 1109, `disabled={isLocked}`)
+              // and relabels it "Unlock location" (line 1110). There is no `directionsUrl`
+              // for a locked viewer, so it must never be a link — a link needs a
+              // destination. We keep the prototype's DISABLED reading rather than making it
+              // a second paywall opener: the card below and the sticky footer are the two
+              // unlock entry points, and a control sitting inside the location block reads
+              // as "give me directions", which this cannot do.
+              //
+              // A real `disabled` attribute would drop the button out of the tab order and
+              // out of most screen-reader announcements, so the user would never learn WHY
+              // it is inert. Instead: `aria-disabled` (announced as unavailable, still
+              // focusable), no `onClick`, and a `title` + visually-hidden explanation that
+              // says what would unlock it.
+              <button
+                type="button"
+                aria-disabled="true"
+                title="Membership required to see this court's exact location"
+                className="btn btn-primary mt-2 w-full !h-10 cursor-not-allowed justify-center gap-1.5 !px-4 !text-[11px] opacity-40"
+              >
+                <PinGlyph size={11} />
+                Unlock location
+                <span className="sr-only">
+                  — unavailable, membership required to see this court&rsquo;s exact location
+                </span>
+              </button>
+            ) : exactLocation?.directionsUrl ? (
+              // Entitled viewer: the REAL server-built deep link, opened in a new tab.
+              // Never a URL this component assembled from coordinates.
+              <a
+                href={exactLocation.directionsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary mt-2 w-full !h-10 justify-center gap-1.5 !px-4 !text-[11px]"
+              >
+                <PinGlyph size={11} />
+                Open in Maps
+              </a>
+            ) : (
+              // Unlocked court with no exact-location fetch, or mock mode — inert
+              // placeholder, exactly as before this redesign.
+              <a
+                href="#"
+                className="btn btn-primary mt-2 w-full !h-10 justify-center gap-1.5 !px-4 !text-[11px]"
+              >
+                <PinGlyph size={11} />
+                Open in Maps
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── rail: the original single-column block, used by the LOCKED page (Feature 79) ─────
   return (
     <div>
       <p className="eyebrow mb-4 text-stone">Location</p>

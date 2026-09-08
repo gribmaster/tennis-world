@@ -17,8 +17,8 @@ import { UserProfileSchema } from './user';
 // Feature 50 §3.3/§7).
 //
 // PRIVACY: `AuthSessionDTO.user` reuses the existing `UserProfileSchema`
-// (id/name/initials/membership) — `email` is deliberately NOT exposed on the shared
-// profile (Feature 50 §5.3). Don't widen it here.
+// (id/name/initials/membership/email) — `email` is read-only there (Feature 81/82);
+// there is still no field on this session response that accepts a write to it.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**

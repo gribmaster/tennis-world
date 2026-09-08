@@ -367,14 +367,14 @@ async function verifyProfile(token: string): Promise<void> {
   console.log('\n5. Profile — user.getCurrentUser via the factory');
   const profile = await freshRepos(token).user.getCurrentUser();
   expectTrue(
-    'user.getCurrentUser returns a UserProfileDTO (no email)',
+    'user.getCurrentUser returns a UserProfileDTO (email read-only)',
     typeof profile.id === 'string' &&
       typeof profile.name === 'string' &&
       typeof profile.initials === 'string' &&
       (profile.membership === 'free' ||
         profile.membership === 'subscription' ||
         profile.membership === 'lifetime') &&
-      !('email' in (profile as Record<string, unknown>)),
+      typeof profile.email === 'string',
     `got: ${JSON.stringify(profile)}`,
   );
 }

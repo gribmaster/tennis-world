@@ -16,9 +16,16 @@
 // Signatures are typed against `@tennis/contracts` DTOs so the data shape is defined
 // exactly once and reused by both the mock and the future real repository.
 
-import type { UserProfileDTO } from '@tennis/contracts';
+import type { UpdateProfileDTO, UserProfileDTO } from '@tennis/contracts';
 
 export interface UserRepository {
   /** The current (Phase-1 mock) user: name, initials, membership status. */
   getCurrentUser(): Promise<UserProfileDTO>;
+
+  /**
+   * Update the current user's editable profile fields (Feature 81/82 — the edit-profile
+   * modal). Only `name` is accepted (matching `PATCH /v1/me`); `email`/`membership` are
+   * never writable through this method. Returns the updated profile.
+   */
+  updateProfile(patch: UpdateProfileDTO): Promise<UserProfileDTO>;
 }

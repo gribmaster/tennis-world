@@ -110,12 +110,13 @@ function collectStringValues(value: unknown, acc: string[] = []): string[] {
 }
 
 /**
- * Assert a profile-bearing payload never leaks email, exact coords, or provider ids —
- * the privacy invariants that must hold for EVERY auth/me response (intake §6).
+ * Assert a profile-bearing payload never leaks exact coords or provider ids — the
+ * privacy invariants that must hold for EVERY auth/me response (intake §6). `email` was
+ * dropped from this check (Feature 81/82): it is now an intentional, read-only field on
+ * `UserProfileDTO` (there is still no write path for it — only `name` is patchable).
  */
 function assertNoLeaks(name: string, payload: unknown): void {
   const keys = collectKeys(payload);
-  expectTrue(`${name}: no 'email' key`, !keys.has('email'), `keys: ${[...keys].join(', ')}`);
   const coords = ['lat', 'lng'].filter((k) => keys.has(k));
   expectTrue(`${name}: no exact lat/lng keys`, coords.length === 0, `leaked: ${coords.join(', ')}`);
   // Provider correlation ids never ride the wire (cus_…/sub_…/pi_…/cs_…).
@@ -417,11 +418,15 @@ async function main(): Promise<void> {
   )) as { membership?: string };
   // /v1/me only surfaces `membership` (UserProfileDTO has no activeUntil/reason) — the
   // tie-break's activeUntil/reason are internal. We assert what's observable: membership
-  // is 'lifetime' and the body shape is exactly the UserProfileDTO keys.
+  // is 'lifetime' and the body shape is exactly the UserProfileDTO keys — the full set
+  // the mapper always populates (`id/name/initials/membership/avatarUrl/email`), not
+  // just the four this scenario originally listed (that omitted `avatarUrl`, which the
+  // mapper has always set unconditionally to a value or `null` — Feature 81/82 added
+  // `email` the same way).
   expectTrue(
-    '9 non-expiring-wins: /v1/me body is exactly {id,name,initials,membership}',
+    '9 non-expiring-wins: /v1/me body is exactly {id,name,initials,membership,avatarUrl,email}',
     JSON.stringify(Object.keys(body9 as object).sort()) ===
-      JSON.stringify(['id', 'initials', 'membership', 'name']),
+      JSON.stringify(['avatarUrl', 'email', 'id', 'initials', 'membership', 'name']),
     `keys: ${Object.keys(body9 as object).join(', ')}`,
   );
 

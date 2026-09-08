@@ -29,6 +29,21 @@ import { InlineSpinner } from '@/components/ui';
 // optimistically on click (the button stays responsive; no server re-read on the happy
 // path). `pending` disables the button during the in-flight write so a double-click can't
 // race two opposite mutations.
+//
+// SHARED STATE (Feature 78, ADDITIVE — the mutation logic below is untouched): the v2
+// Court Detail renders this control TWICE — once over the hero image, once in the sticky
+// footer bar — and the two must never disagree about whether the court is saved. So the
+// state can optionally be LIFTED: `useCourtSaveState()` builds the exact same
+// `saved`/`pending`/`handleClick` triple once in the parent, and each button receives it
+// via the `state` prop instead of owning its own copy. With no `state` prop the component
+// behaves exactly as it always has (its own hook call), which is how every pre-existing
+// call site — the CTA panel's full-width button — still renders.
+//
+// APPEARANCE (Feature 78, ADDITIVE): `presentation="icon"` renders the heart glyph alone
+// with an accessible label, for the circular over-image control in the hero and the
+// 52×52 square in the footer. `presentation="label"` (the default) keeps the original
+// glyph + "Save Court" / "Saved" text. Either way the §4 triad is identical: `disabled`,
+// `aria-busy`, and an `InlineSpinner` swapped 1:1 for the glyph so the box never resizes.
 
 /** Heart glyph — same visual language as CourtCard's; `filled` toggles the saved look. */
 function HeartGlyph({ filled }: { filled: boolean }) {
@@ -49,33 +64,33 @@ function HeartGlyph({ filled }: { filled: boolean }) {
   );
 }
 
-export interface CourtSaveButtonProps {
-  /** The court to save/unsave (its `id`, matching COURTS[].id / CourtSummaryDTO.id). */
-  courtId: string;
-  /** The court's slug — used only to build the sign-in return path for a logged-out click. */
-  courtSlug: string;
-  /**
-   * Whether this court is already in the user's saved courts, computed on the server
-   * (page.tsx via `repositories.saved.isCourtSaved(court.id)`). Seeds the pressed state.
-   */
-  initialSaved: boolean;
-  /**
-   * Whether the visitor is signed in (Feature 57). When false (logged-out visitor in `api`
-   * mode on this PUBLIC page), the button performs NO mutation and routes to /signin.
-   * Always true in mock mode. Defaults to true so existing callers/tests are unaffected.
-   */
-  signedIn?: boolean;
-  /** Optional class names applied to the button (the CTA panel passes the shared btn width). */
-  className?: string;
+/** The lifted save state: exactly what the button needs to render and act. */
+export interface CourtSaveState {
+  saved: boolean;
+  pending: boolean;
+  signedIn: boolean;
+  onToggle: () => void;
 }
 
-export function CourtSaveButton({
+export interface UseCourtSaveStateOptions {
+  courtId: string;
+  courtSlug: string;
+  initialSaved: boolean;
+  signedIn?: boolean;
+}
+
+/**
+ * The save/unsave behaviour, verbatim from the original component body — extracted ONLY
+ * so two buttons (hero + sticky footer) can share one state instead of drifting apart.
+ * Nothing about the optimistic flip, the AuthRequiredError rollback, the sign-in routing
+ * or the `finally` reset changed.
+ */
+export function useCourtSaveState({
   courtId,
   courtSlug,
   initialSaved,
   signedIn = true,
-  className,
-}: CourtSaveButtonProps) {
+}: UseCourtSaveStateOptions): CourtSaveState {
   const router = useRouter();
   // Mutation repo: normal browser-cookie path, OR server-action-backed in staging demo mode
   // (no cookie there — the secret stays server-side). Reads still come from server props.
@@ -86,7 +101,7 @@ export function CourtSaveButton({
 
   const signInHref = `/signin?redirectTo=${encodeURIComponent(`/courts/${courtSlug}`)}`;
 
-  const handleClick = useCallback(() => {
+  const onToggle = useCallback(() => {
     // Logged-out on this public page: prompt sign-in instead of a silent failed write —
     // consistent with SaveToCollectionMenu / the private-page redirect behaviour.
     if (!signedIn) {
@@ -117,21 +132,98 @@ export function CourtSaveButton({
       .finally(() => setPending(false));
   }, [courtId, pending, savedRepo, router, saved, signInHref, signedIn]);
 
+  return { saved, pending, signedIn, onToggle };
+}
+
+export interface CourtSaveButtonProps {
+  /** The court to save/unsave (its `id`, matching COURTS[].id / CourtSummaryDTO.id). */
+  courtId: string;
+  /** The court's slug — used only to build the sign-in return path for a logged-out click. */
+  courtSlug: string;
+  /**
+   * Whether this court is already in the user's saved courts, computed on the server
+   * (page.tsx via `repositories.saved.isCourtSaved(court.id)`). Seeds the pressed state.
+   */
+  initialSaved: boolean;
+  /**
+   * Whether the visitor is signed in (Feature 57). When false (logged-out visitor in `api`
+   * mode on this PUBLIC page), the button performs NO mutation and routes to /signin.
+   * Always true in mock mode. Defaults to true so existing callers/tests are unaffected.
+   */
+  signedIn?: boolean;
+  /** Optional class names applied to the button (the CTA panel passes the shared btn width). */
+  className?: string;
+  /**
+   * LIFTED state (Feature 78). When supplied, this button renders and acts on the caller's
+   * shared `useCourtSaveState()` result instead of owning its own — so the hero control and
+   * the sticky-footer control are always in agreement. Omit it and the component is exactly
+   * what it was before: self-contained.
+   */
+  state?: CourtSaveState;
+  /**
+   * `"label"` (default) = the original heart + "Save Court" / "Saved" text.
+   * `"icon"` = the heart alone, with the text moved to `aria-label`/`title`, for the
+   * circular over-image control and the square footer control. Purely visual.
+   */
+  presentation?: 'label' | 'icon';
+  /**
+   * The court name AS DISPLAYED by the host page (Feature 79). When supplied, the icon
+   * presentation's accessible name names the court — "Save Sunset Club" — using the
+   * DISPLAYED string, which on the locked page is the masked placeholder. That keeps the
+   * mask out of the accessibility tree, the same rule `HomeCourtSaveHeart` follows.
+   * Omitted ⇒ the original generic "Save Court" / "Saved" label, unchanged.
+   */
+  courtLabel?: string;
+}
+
+export function CourtSaveButton({
+  courtId,
+  courtSlug,
+  initialSaved,
+  signedIn = true,
+  className,
+  state,
+  presentation = 'label',
+  courtLabel,
+}: CourtSaveButtonProps) {
+  // Own state when the caller didn't lift it. The hook is called unconditionally (rules of
+  // hooks); when `state` is supplied its result is simply not the one rendered.
+  const ownState = useCourtSaveState({ courtId, courtSlug, initialSaved, signedIn });
+  const { saved, pending, onToggle } = state ?? ownState;
+  const effectiveSignedIn = state ? state.signedIn : signedIn;
+
+  const label = saved && effectiveSignedIn ? 'Saved' : 'Save Court';
+  // Icon-only controls get a name that says WHAT is being saved. Built from the DISPLAYED
+  // name, never the real one behind a mask.
+  const iconLabel = courtLabel
+    ? saved && effectiveSignedIn
+      ? `Unsave ${courtLabel}`
+      : `Save ${courtLabel}`
+    : label;
+
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onToggle}
       disabled={pending}
       aria-busy={pending}
       aria-disabled={pending || undefined}
-      aria-pressed={signedIn ? saved : undefined}
+      aria-pressed={effectiveSignedIn ? saved : undefined}
+      aria-label={presentation === 'icon' ? iconLabel : undefined}
+      title={presentation === 'icon' ? iconLabel : undefined}
       className={
         className ??
         'inline-flex h-9 items-center gap-1.5 border border-hairline bg-transparent px-3.5 text-[12px] text-stone transition-colors hover:text-ink'
       }
     >
-      {pending ? <InlineSpinner label="Saving…" /> : <HeartGlyph filled={signedIn && saved} />}
-      {saved && signedIn ? 'Saved' : 'Save Court'}
+      {/* Spinner swaps 1:1 for the glyph (both 16px), so the control never resizes while
+          pending — CLAUDE.md §4 rule 5. */}
+      {pending ? (
+        <InlineSpinner label="Saving…" />
+      ) : (
+        <HeartGlyph filled={effectiveSignedIn && saved} />
+      )}
+      {presentation === 'label' ? label : null}
     </button>
   );
 }

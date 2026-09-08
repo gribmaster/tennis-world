@@ -1,14 +1,16 @@
-// ProfileStats — the three-cell stat row (Saved Courts · Collections · Countries),
-// ported from profile.html's stats grid.
+// ProfileStats — the three-cell stat row (Saved Courts · Collections · Countries).
 //
 // PRESENTATIONAL ONLY: the three counts are DERIVED server-side in the page from the
 // saved repository (saved courts length, wishlist-folder length, distinct-country
 // count) and passed in as plain numbers — never hardcoded (the prototype's literal
-// 12 / 3 / 8 are discarded; Phase 1 §3.10). No repository, no @tennis/mock-data, no state.
-//
-// VISUAL: a grid-cols-3 of centered cells, each a display-m number over an eyebrow
-// label, with a hairline divider beneath the row. Three short numbers fit across even
-// on the narrowest screens, matching the prototype (no responsive reflow).
+// 67/'Coming soon' stats are NOT reproduced here; Phase 1 §3.10 already established that
+// all three of THIS app's cells show real, derived counts, unlike the v2 prototype's
+// ProfileScreen, which has only one live stat (`Courts saved`) and two inert "Coming
+// soon" placeholders (`Courts visited`/`Courts liked`) it has no data for. TASK_14 says
+// keep the EXISTING logic — this file's three-live-stat behavior is exactly that;
+// restyled only to the prototype's rounded paper-card geometry (`new design/
+// tennis_world_v2_standalone.html` lines 1414-1427: `background:paper`, `borderRadius:12`,
+// `padding:'16px 0'`, hairline `borderRight` dividers between cells).
 //
 // Each cell is a whole-cell link (ProfileStatLink → PendingCardLink) to the matching
 // listing page. There is no dedicated "countries" route in the app, so Countries
@@ -35,7 +37,7 @@ export function ProfileStats({
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-2 border-b border-hairline py-8">
+    <div className="mt-5 grid grid-cols-3 divide-x divide-hairline rounded-lg bg-paper py-4">
       {cells.map(({ value, label, href, ariaLabel }) => (
         <ProfileStatLink key={label} href={href} value={value} label={label} ariaLabel={ariaLabel} />
       ))}

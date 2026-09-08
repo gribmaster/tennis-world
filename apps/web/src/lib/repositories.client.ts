@@ -23,8 +23,9 @@
 // HTTP repos are stateless thin adapters, and the mock repos read/write a module-level
 // singleton store, so a new `MockSavedRepository()` still sees the same in-memory state.
 
+import type { UpdateProfileDTO, UserProfileDTO } from '@tennis/contracts';
 import { getRepositories, type Repositories } from '@/domain';
-import type { SavedRepository } from '@/domain';
+import type { SavedRepository, UserRepository } from '@/domain';
 import { isDemoMode } from '@/lib/demo-auth';
 import {
   createUserCollectionAction,
@@ -32,6 +33,7 @@ import {
   saveCourtAction,
   toggleCourtInCollectionAction,
   unsaveCourtAction,
+  updateProfileAction,
 } from '@/lib/saved-actions';
 
 /**
@@ -113,5 +115,32 @@ class DemoActionSavedRepository implements SavedRepository {
   }
   isCourtSaved(): never {
     return DemoActionSavedRepository.unsupported('isCourtSaved');
+  }
+}
+
+/**
+ * The UserRepository a CLIENT ISLAND should use for MUTATIONS (Feature 81/82's
+ * edit-profile modal), mirroring {@link getMutationSavedRepository}: normal operation
+ * uses the browser HTTP repo (`credentials:'include'`); staging demo mode has no
+ * session cookie, so the write routes through a server action instead, where the demo
+ * secret lives. Reads still go through `getClientRepositories().user` / the page's own
+ * server-side load — this repository only supports `updateProfile`.
+ */
+export function getMutationUserRepository(): UserRepository {
+  if (!isDemoMode()) {
+    return getClientRepositories().user;
+  }
+  return new DemoActionUserRepository();
+}
+
+class DemoActionUserRepository implements UserRepository {
+  getCurrentUser(): never {
+    throw new Error(
+      'getCurrentUser is not available on the client in staging demo mode; it runs server-side. ' +
+        'Use a server component read.',
+    );
+  }
+  updateProfile(patch: UpdateProfileDTO): Promise<UserProfileDTO> {
+    return updateProfileAction(patch);
   }
 }

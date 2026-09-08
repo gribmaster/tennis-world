@@ -6,8 +6,8 @@ import { TAB_NAV, isActiveRoute } from './nav-items';
 import { PendingLink, useNavigationPendingRegistry } from '@/components/navigation';
 import { InlineSpinner } from '@/components/ui';
 
-// BottomNavigation — the mobile bottom tab bar (design prompt §Information
-// Architecture): Home · Map · Saved · Profile. Outlined icons at rest, ink color
+// BottomNavigation — the mobile bottom tab bar (Design V2 intake D1, "Option A"):
+// Home · Map · Collections · Saved · Profile. Outlined icons at rest, ink color
 // + heavier weight when active; stone when inactive. Mobile only — hidden at md+
 // where AppHeader's desktop nav takes over. Sits above the iOS home indicator via
 // safe-area padding.
@@ -17,6 +17,7 @@ import { InlineSpinner } from '@/components/ui';
 const ICONS: Record<string, (active: boolean) => ReactNode> = {
   '/': (active) => <HomeIcon active={active} />,
   '/map': (active) => <MapIcon active={active} />,
+  '/collections': (active) => <CollectionsIcon active={active} />,
   '/saved': (active) => <BookmarkIcon active={active} />,
   '/profile': (active) => <UserIcon active={active} />,
 };
@@ -54,8 +55,8 @@ export function BottomNavigation() {
                   ICONS[item.href]?.(active)
                 )}
                 <span
-                  className={`eyebrow ${active ? 'opacity-100' : 'opacity-70'}`}
-                  style={{ fontSize: 10 }}
+                  className={`eyebrow whitespace-nowrap ${active ? 'opacity-100' : 'opacity-70'}`}
+                  style={{ fontSize: 10, letterSpacing: '0.02em' }}
                 >
                   {item.label}
                 </span>
@@ -85,6 +86,17 @@ function MapIcon({ active }: { active: boolean }) {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 1.8 : 1.5} aria-hidden="true">
       <path d="M9 4 4 6v14l5-2 6 2 5-2V4l-5 2-6-2z" strokeLinejoin="round" />
       <path d="M9 4v14M15 6v14" />
+    </svg>
+  );
+}
+
+function CollectionsIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 1.8 : 1.5} aria-hidden="true">
+      <rect x="3" y="3" width="7" height="7" />
+      <rect x="14" y="3" width="7" height="7" />
+      <rect x="14" y="14" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" />
     </svg>
   );
 }

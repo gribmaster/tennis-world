@@ -18,11 +18,11 @@ import { MeService } from './me.service';
 // reads the `{ userId, email }` the guard attached; the service scopes its reads/writes
 // to that `userId` (a user only ever touches their OWN profile).
 //
-// No email is returned (the mapper strips it — Feature 50 §5.3); membership stays
-// 'free' (entitlement out of scope). `DELETE /v1/me` is documented for later (Feature
-// 50 §4.2) but intentionally NOT implemented here (the intake's Feature-53 scope is
-// GET + PATCH only; account deletion is an App-Store requirement that can land as its
-// own feature).
+// `email` is returned READ-ONLY (Feature 81/82, for the edit-profile view) — there is
+// still no write path for it, only `name` is patchable. `DELETE /v1/me` is documented
+// for later (Feature 50 §4.2) but intentionally NOT implemented here (the intake's
+// Feature-53 scope is GET + PATCH only; account deletion is an App-Store requirement
+// that can land as its own feature).
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Controller('me')

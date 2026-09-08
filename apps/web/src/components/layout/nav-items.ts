@@ -19,10 +19,11 @@ export const PRIMARY_NAV: readonly NavItem[] = [
   { href: '/journal', label: 'Journal' },
 ] as const;
 
-/** Mobile bottom tab bar (design prompt §Information Architecture). */
+/** Mobile bottom tab bar (Design V2 intake §5 Risk #6 / D1: 5-tab "Option A"). */
 export const TAB_NAV: readonly NavItem[] = [
   { href: '/', label: 'Home' },
   { href: '/map', label: 'Map' },
+  { href: '/collections', label: 'Collections' },
   { href: '/saved', label: 'Saved' },
   { href: '/profile', label: 'Profile' },
 ] as const;

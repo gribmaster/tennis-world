@@ -1,5 +1,48 @@
 # Phase 1 — Placeholder CTA Audit
 
+> ## ⚠️ Read this box first — refreshed by Feature 87 (Design V2 QA), 2026-09-09
+>
+> Everything below §0 is the **historical Phase-1–5 record** and is now **partly stale**. It
+> was written before Phase 4 (auth), Phase 5 (payments) and the Features 72–84 redesign, and
+> still describes several things that are no longer true — most importantly it calls the
+> saved/collection seams "mock-only, no backend, no auth, no persistence" and the auth
+> screens "UI-only". They are all **real and persisted** now. Where this document and §0
+> disagree, **§0 wins**; where §0 and the code disagree, the code wins.
+>
+> ### §0. The actual inert-control inventory (verified by sweep + click-through)
+>
+> The Feature 87 sweep found **exactly three** intentionally inert controls left in
+> `apps/web/src`. There are **no** `href="#"` links and **no** unhandled `<button>`s beyond
+> these:
+>
+> | Control | File | Form | Verdict |
+> |---|---|---|---|
+> | **"Continue with Apple"** | `features/auth/SignInForm.tsx`, `SignUpForm.tsx` | `<button type="button">`, no handler | **Still inert.** No Apple OAuth exists. Visually indistinguishable from the working Google button — flagged as an open item. |
+> | **"Continue with Google"** — *`mock` mode only* | same two files | `<button type="button">`, no handler | **Real in `api` mode**: renders as `<a href={buildGoogleSignInUrl(...)}>`, a genuine full-page navigation to the API's OAuth start route. Inert only in `mock` mode, where there is no API to navigate to. |
+> | **Article-detail "Share"** | `features/journal-detail/ArticleByline.tsx` | `<button disabled aria-label="Share (coming soon)">` | **Still inert, deliberately.** No Web Share API, no clipboard, no analytics. |
+>
+> **Not inert, though they may look it:**
+> - **"Unlock location"** on a locked court (`features/court-detail/CourtDetailLocationPreview.tsx`)
+>   uses `aria-disabled` + a `title` + an `sr-only` explanation rather than a real `disabled`
+>   attribute — a deliberate accessibility choice so the control stays focusable and
+>   screen-reader-announced, and the visitor learns *why* it is unavailable. Not a dead button.
+> - The Leaflet **`+` / `−`** zoom controls on `/map` render as `<a>` without an `href`; they
+>   are Leaflet's own controls and are fully functional.
+>
+> **What is now REAL** (contradicting the text below): magic-link sign-in/sign-up and Google
+> OAuth (Phase 4 + the Google commit); saved courts, user collections, create/rename/toggle —
+> all API-backed and persisted; Paywall checkout → hosted Stripe Checkout; Profile/Footer
+> "Restore"/"Subscription & Purchases" → hosted Stripe Customer Portal; court-detail "Get
+> Directions" → the entitled server-built `directionsUrl`; and the new **"Played here?"**
+> review card → a real authenticated `POST /v1/reviews` (Feature 80 — it stores, and by
+> design displays nothing).
+>
+> **Prototype dead buttons that were correctly NOT ported** (intake §4): "Search this area",
+> the Map "Show list" toggle, the Collections header search/filter icons, the filter sheet's
+> no-op "Show results" (ours really filters), and Payment Success's "View guide".
+>
+> Current handoff: `DESIGN_V2_COMPLETION_SUMMARY.md`.
+
 **Status:** Living QA artifact. Originally produced during the Feature 23 Phase-1 visual/link QA
 pass; **refreshed after Feature 24 (Paywall modal), Feature 25 (Consultation modal), Feature 26
 (cleanup/audit pass), Feature 29 (static pages — About / Privacy / Terms), Feature 30 (auth

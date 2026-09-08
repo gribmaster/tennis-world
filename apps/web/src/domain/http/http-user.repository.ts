@@ -20,22 +20,31 @@
 // We DO NOT catch it here; the caller (or the Feature-57 boundary) decides the UX.
 //
 // Response typing follows the same "type assertion, not zod" choice documented in the
-// other HTTP repositories; the DTO TYPE comes from `@tennis/contracts`. No `email` is
-// expected — `UserProfileDTO` deliberately omits it (the API mapper strips it).
+// other HTTP repositories; the DTO TYPE comes from `@tennis/contracts`. `email` is
+// included read-only (Feature 81/82) — there is still no write path for it.
 
-import type { UserProfileDTO } from '@tennis/contracts';
+import type { UpdateProfileDTO, UserProfileDTO } from '@tennis/contracts';
 import type { UserRepository } from '../user/user.repository';
-import { getJson, type HttpAuthOptions } from './http-client';
+import { getJson, patchJson, type HttpAuthOptions } from './http-client';
 
 export class HttpUserRepository implements UserRepository {
   constructor(private readonly auth: HttpAuthOptions = {}) {}
 
   /**
    * GET /v1/me — the authenticated user's public profile (`UserProfileDTO`:
-   * id/name/initials/membership; no email). Throws `AuthRequiredError` on 401
+   * id/name/initials/membership/email). Throws `AuthRequiredError` on 401
    * (no silent fallback), `HttpError` on any other non-2xx.
    */
   async getCurrentUser(): Promise<UserProfileDTO> {
     return getJson<UserProfileDTO>('/me', this.auth);
+  }
+
+  /**
+   * PATCH /v1/me — update the authenticated user's editable profile fields (Feature
+   * 81/82, the edit-profile modal). Only `name` is accepted by the API; an empty patch
+   * is rejected server-side with 400.
+   */
+  async updateProfile(patch: UpdateProfileDTO): Promise<UserProfileDTO> {
+    return patchJson<UserProfileDTO>('/me', patch, this.auth);
   }
 }

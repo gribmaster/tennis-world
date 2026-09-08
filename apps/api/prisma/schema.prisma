@@ -186,6 +186,9 @@ model Court {
   collections     CollectionCourt[]
   savedBy         SavedCourt[]
   userCollections UserCollectionCourt[]
+  // Feature 80 — back-relation for the write-only Review model. NO read path uses it:
+  // no court select includes it, no DTO derives a rating/average/count from it.
+  reviews         Review[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -284,6 +287,10 @@ model User {
   savedCourts          SavedCourt[]
   userCollections      UserCollection[]
   consultationRequests ConsultationRequest[]
+  // Feature 80 — back-relation for the write-only Review model (see `Review`). The
+  // relation is optional on the Review side (userId String?), so this is the
+  // signed-in author's reviews only.
+  reviews              Review[]
 }
 
 // Phase-5 groundwork (Feature 61, Decision #12). Provider-correlation + lifecycle
@@ -445,4 +452,70 @@ model MagicLinkToken {
 
   @@index([email])
   @@index([expiresAt])
+}
+
+// Review (Feature 80) — a court review submitted by a signed-in visitor.
+//
+// COLLECTION ONLY, NO DISPLAY. Nothing in the app reads this table: there is no GET
+// endpoint, no aggregate, no average, no count, and no field on any read DTO derives
+// from it. The rows are stored for a later, separately-designed surface (which will
+// bring its own moderation decisions). The `rating` value IS collected — that is the
+// point of collecting — it is simply never rendered.
+//
+// SHAPE MIRRORS ConsultationRequest (the closest existing write-only model):
+//   - `userId` is NULLABLE, exactly as ConsultationRequest.userId is, so anonymous
+//     submission stays possible later WITHOUT a migration. That is a schema
+//     affordance, not the current policy: `POST /v1/reviews` is guarded by AuthGuard
+//     and ReviewsService always writes a real userId. Nothing today can create a row
+//     with userId NULL.
+//   - `status` is a free-form String defaulting to "new" — the same moderation
+//     convention ConsultationRequest.status already uses, so a future admin surface
+//     vets both the same way. (The intake sketched "pending"; "new" is what the repo
+//     actually does, and the task says to follow ConsultationRequest.)
+//
+// ONE REVIEW PER USER PER COURT — `@@unique([userId, courtId])`. A person has one
+// opinion of a place at a time; letting the same account post unboundedly is a spam
+// vector on an endpoint with nothing reading it to notice. The service turns the
+// second submission into an UPDATE of that user's existing row (an upsert on this
+// constraint), so re-reviewing is "change your review", not "add another".
+//
+// HOW THAT INTERACTS WITH THE NULLABLE userId: Postgres treats NULLs as distinct in a
+// UNIQUE index, so the constraint binds ONLY rows with a real userId — many anonymous
+// (userId NULL) rows for the same court remain legal. That is the correct behavior for
+// both readings: signed-in submissions are deduplicated per court; a future anonymous
+// path is not falsely limited to one row per court globally (which a NULLS-NOT-DISTINCT
+// constraint would do). This is the same property Entitlement.providerPurchaseId's
+// nullable @unique already relies on.
+//
+// INDEXES: only the unique constraint above, which the write path itself uses (the
+// upsert resolves the row through it) and which Postgres backs with an index anyway.
+// It also covers a courtId-leading lookup only via its second column, so it is NOT a
+// substitute for a `courtId` index — and that is deliberate: NOTHING reads reviews yet.
+// A per-court listing index (`@@index([courtId, status, createdAt])`) and a moderation
+// queue index (`@@index([status, createdAt])`) belong to the feature that adds those
+// reads, sized against its real query plans. Speculating now would cost write
+// throughput for queries that do not exist.
+model Review {
+  id      String @id @default(cuid())
+  courtId String
+  court   Court  @relation(fields: [courtId], references: [id])
+  // Nullable BY DESIGN (see above) — the write path always sets it today.
+  userId  String?
+  user    User?  @relation(fields: [userId], references: [id])
+
+  // 1–5 whole stars. Stored, never displayed (no average, no count, no list).
+  // The bound is enforced by the contract's zod schema + the request DTO's
+  // @IsInt/@Min/@Max, not by a DB CHECK — the same place every other bound in this
+  // schema is enforced (there is no CHECK constraint anywhere in this file).
+  rating Int
+  // The free-text review. Optional, same as ConsultationRequest.additionalRequest:
+  // a rating alone is a complete submission.
+  body String?
+
+  // Moderation status. "new" until a future admin surface moves it. Same convention
+  // and default as ConsultationRequest.status.
+  status    String   @default("new")
+  createdAt DateTime @default(now())
+
+  @@unique([userId, courtId])
 }

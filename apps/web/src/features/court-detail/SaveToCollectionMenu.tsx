@@ -108,6 +108,19 @@ export interface SaveToCollectionMenuProps {
   signedIn?: boolean;
   /** Optional class names applied to the trigger button. */
   className?: string;
+  /**
+   * `"label"` (default) = the original bookmark glyph + "Add to Collection" text.
+   * `"icon"` = the glyph alone, with the text moved to `aria-label`/`title`, for the
+   * square control in the v2 sticky footer bar (Feature 78). Purely visual — the menu,
+   * its mutations and its signed-out prompt are unchanged.
+   */
+  presentation?: 'label' | 'icon';
+  /**
+   * Which side of the trigger the dropdown opens on. `"below"` (default) is the original
+   * behaviour. `"above"` is required in the v2 sticky footer bar (Feature 78), where a
+   * downward menu would open off the bottom of the viewport.
+   */
+  menuPlacement?: 'below' | 'above';
 }
 
 export function SaveToCollectionMenu({
@@ -116,6 +129,8 @@ export function SaveToCollectionMenu({
   initialMemberCollectionIds,
   signedIn = true,
   className,
+  presentation = 'label',
+  menuPlacement = 'below',
 }: SaveToCollectionMenuProps) {
   const menuId = useId();
 
@@ -257,13 +272,15 @@ export function SaveToCollectionMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
+        aria-label={presentation === 'icon' ? 'Add to Collection' : undefined}
+        title={presentation === 'icon' ? 'Add to Collection' : undefined}
         className={
           className ??
           'inline-flex h-9 items-center gap-1.5 border border-hairline bg-transparent px-3.5 text-[12px] text-stone transition-colors hover:text-ink'
         }
       >
         <BookmarkGlyph />
-        Add to Collection
+        {presentation === 'label' ? 'Add to Collection' : null}
       </button>
 
       {open ? (
@@ -271,7 +288,10 @@ export function SaveToCollectionMenu({
           id={menuId}
           role="menu"
           aria-label="Add to collection"
-          className="absolute right-0 top-[calc(100%+8px)] z-[60] w-[260px] border border-hairline bg-paper p-2 shadow-[0_8px_24px_rgba(0,0,0,0.12)]"
+          className={[
+            'absolute right-0 z-[60] w-[260px] border border-hairline bg-paper p-2 shadow-[0_8px_24px_rgba(0,0,0,0.12)]',
+            menuPlacement === 'above' ? 'bottom-[calc(100%+8px)]' : 'top-[calc(100%+8px)]',
+          ].join(' ')}
         >
           {!authed ? (
             // Logged-out (api mode) on this PUBLIC page: prompt sign-in instead of mutating.

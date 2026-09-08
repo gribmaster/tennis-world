@@ -1,22 +1,32 @@
+import type { MembershipStatus } from '@tennis/contracts';
 import { PaywallTrigger } from '@/features/paywall';
+import { ManageBillingButton } from '@/features/billing';
 
-// ProfileMembershipCard — the dark "Membership" unlock card, ported from
-// profile.html's `!unlocked` membership block (gold eyebrow + serif headline + gold
-// CTA on an ink background).
+// ProfileMembershipCard — the Profile screen's membership card, restyled to the v2
+// prototype's two variants (`new design/tennis_world_v2_standalone.html` lines
+// 1430-1449):
+//   • `membership === 'free'`         → the existing dark "Choose your membership." card
+//     (unchanged copy/CTA — PaywallTrigger opens the shared Paywall modal).
+//   • `membership !== 'free'` (active) → the prototype's gradient dark card with a
+//     status eyebrow + "✦ Active" badge, its CTA swapped for ManageBillingButton (the
+//     existing "Subscription & Purchases" mechanism — Feature 67 — not a new one).
 //
-// RENDERED ONLY WHEN `!unlocked` — the page decides whether to render it (matching the
-// prototype, which gates it on `!unlocked`). This component itself is unconditionally
-// presentational.
+// `lifetime` IS a real membership state (`MembershipStatus`, `EntitlementKind.
+// lifetime_unlock`) reachable via manual grant or promo — its handling is kept, not
+// collapsed into `subscription` (TASK_14 point 4).
 //
-// PRESENTATIONAL ONLY (Phase 1 — no auth, no payments, no real unlock; Decision #11 /
-// hard rules). The CTA opens the shared Paywall modal (presentational only — the
-// modal's checkout is a Phase 4 placeholder; no entitlement is read or mutated).
+// The page now renders this UNCONDITIONALLY (both branches are real UI, matching the
+// prototype's `!unlocked`/`unlocked` split at the SAME card, rather than the page
+// deciding whether to render it at all).
 //
-// DATA SOURCE: the copy + price live in a small feature-local config object below. This
-// component must NOT import `@tennis/mock-data` in UI (hard rule) — a `PAYWALL_COPY`
-// config does exist there for the future paywall modal, and in Phase 4 this card's copy
-// would flow from there through a sanctioned boundary. For now it is intentionally local
-// and presentational, exactly as HomePaywallBand keeps its copy local.
+// PRESENTATIONAL ONLY. The free-tier CTA opens the shared Paywall modal (Phase 1 —
+// checkout is Stripe-backed, Feature 66/67); the active-tier CTA opens the real hosted
+// Stripe Customer Portal via the existing ManageBillingButton — no new billing
+// mechanism, no Stripe artifact added here.
+//
+// DATA SOURCE: the free-tier copy + price live in a small feature-local config object
+// below (unchanged from before this restyle) — this component must NOT import
+// `@tennis/mock-data` in UI (hard rule).
 
 interface MembershipCardCopy {
   eyebrow: string;
@@ -31,6 +41,16 @@ const MEMBERSHIP_CARD_COPY: MembershipCardCopy = {
   eyebrow: 'Membership',
   headline: 'Choose your membership.',
   ctaLabel: 'See Membership',
+};
+
+const ACTIVE_STATUS_LABEL: Record<'subscription' | 'lifetime', string> = {
+  subscription: 'Active Subscriber',
+  lifetime: 'Lifetime Member',
+};
+
+const ACTIVE_SUBHEAD: Record<'subscription' | 'lifetime', string> = {
+  subscription: 'Full atlas access · Renews automatically',
+  lifetime: 'Full atlas access · Lifetime unlock',
 };
 
 function ArrowGlyph() {
@@ -52,11 +72,39 @@ function ArrowGlyph() {
 }
 
 export interface ProfileMembershipCardProps {
-  /** Override the default (prototype) copy if needed. */
+  membership: MembershipStatus;
+  /** Override the default (prototype) free-tier copy if needed. */
   copy?: MembershipCardCopy;
 }
 
-export function ProfileMembershipCard({ copy = MEMBERSHIP_CARD_COPY }: ProfileMembershipCardProps) {
+export function ProfileMembershipCard({
+  membership,
+  copy = MEMBERSHIP_CARD_COPY,
+}: ProfileMembershipCardProps) {
+  if (membership !== 'free') {
+    return (
+      <div
+        className="my-8 flex items-center justify-between gap-3 rounded-lg p-5 text-bone"
+        style={{ background: 'linear-gradient(135deg, #1A1A1A, #2A2A2A)' }}
+      >
+        <div>
+          <div className="eyebrow text-gold">{ACTIVE_STATUS_LABEL[membership]}</div>
+          <div className="body-m mt-1 text-bone/90">{ACTIVE_SUBHEAD[membership]}</div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="eyebrow inline-flex items-center gap-1 rounded-pill border border-gold px-2.5 py-1 text-gold">
+            ✦ Active
+          </span>
+          {/* Existing "manage subscription" mechanism (Feature 67) — the hosted Stripe
+              Customer Portal, not a new billing surface. */}
+          <ManageBillingButton className="body-s text-stone underline underline-offset-2 transition-colors hover:text-ink">
+            Manage
+          </ManageBillingButton>
+        </div>
+      </div>
+    );
+  }
+
   const { eyebrow, headline, ctaLabel } = copy;
 
   return (

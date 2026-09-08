@@ -18,13 +18,14 @@ apps/
   api/     NestJS 10 — the ONLY backend. Global prefix /v1. Owns Prisma
            (apps/api/prisma: schema, migrations, seed). Modules: auth (magic link +
            Google OAuth), me (profile, saved-courts, collections, exact-location),
-           courts, collections, articles, consultations, entitlements, billing
-           (Stripe checkout/portal), webhooks (Stripe), health, prisma.
+           courts, collections, countries, articles, consultations, reviews,
+           entitlements, billing (Stripe checkout/portal), webhooks (Stripe),
+           health, prisma.
   web/     Next.js 15 App Router + React 19 + Tailwind. All user-facing UI.
            src/app (routes), src/features (screen features), src/components
-           (ui / layout / navigation / court), src/domain (repository interfaces +
-           mock & http implementations), src/lib (repository factories, session,
-           demo auth, server actions), scripts (verify:* harnesses).
+           (ui / layout / navigation / court / filters), src/domain (repository
+           interfaces + mock & http implementations), src/lib (repository factories,
+           session, demo auth, server actions), scripts (verify:* harnesses).
   admin/   PLACEHOLDER ONLY. No Refine, no build. Exists so the workspace graph and
            CI are correct. MUST NOT be built out without an explicit request.
 packages/
@@ -78,7 +79,7 @@ pnpm verify:stripe-e2e     # optional, real Stripe test mode (opt-in)
 
 `pnpm --filter @tennis/web …`: `verify:api-parity`, `verify:user-saved-http`,
 `verify:persisted-saved-flow`, `verify:saved-court-toggle`, `verify:web-exact-location`,
-`verify:web-billing`, `verify:ux-pending-states`.
+`verify:web-billing`, `verify:ux-pending-states`, `verify:map-autofocus`.
 
 `pnpm --filter @tennis/api …`: `verify:effective-entitlement`, `verify:exact-location`,
 `verify:billing-checkout`, `verify:billing-rate-limit`, `verify:stripe-webhook`,
@@ -87,6 +88,23 @@ pnpm verify:stripe-e2e     # optional, real Stripe test mode (opt-in)
 Most harnesses need a running API (and some a seeded DB); each script's header comment
 states its own prerequisites. Touching UI pending/back-navigation ⇒ run
 `verify:ux-pending-states`. Touching billing UI ⇒ `verify:web-billing`.
+
+**Do not accept a skip as a pass.** Several harnesses skip silently when an env var is
+absent, and only one of those skips (real-Stripe) is genuinely opt-in:
+
+- Token-gated: `verify:web-exact-location` and `verify:web-billing` read
+  `FREE_BEARER_TOKEN` / `ENTITLED_BEARER_TOKEN`; `verify:saved-court-toggle`,
+  `verify:user-saved-http` and `verify:persisted-saved-flow` read `AUTH_BEARER_TOKEN`
+  (a different name — supplying only the first two silently skips the authed half).
+  Mint tokens through the real `POST /v1/auth/verify` path the way
+  `apps/api/scripts/ci-issue-token.ts` and `verify-exact-location.ts` do; seed an active
+  `Entitlement` row for the entitled one.
+- Config-gated: `verify:staging-demo-auth` and `verify:google-oauth` skip against a
+  default local API because the features are correctly off by default. Run them against a
+  second API instance started with the feature enabled (fake Google credentials are
+  sufficient — no real Google call is made). See
+  `docs/DESIGN_V2_COMPLETION_SUMMARY.md` §7.1 for the exact commands.
+- Genuinely opt-in: the real-Stripe checks (`RUN_STRIPE_CHECKOUT=1`, `verify:stripe-e2e`).
 
 CI (`.github/workflows/ci.yml`): `verify` job = install → prisma:generate → lint →
 typecheck → build; `parity` job = migrate deploy → seed → build+start API → parity +
@@ -189,7 +207,7 @@ timeout in each primitive.
 10. Modal open/close toggles, purely local UI controls (filters, tabs, disclosure),
     external links, and decorative controls need NO API/navigation loading behavior.
 
-`verify:ux-pending-states` (90 checks) asserts these invariants against the source. Run it
+`verify:ux-pending-states` (92 checks) asserts these invariants against the source. Run it
 after any change in this area.
 
 **Real usage from the current code**
@@ -241,8 +259,16 @@ after any change in this area.
   - User collection detail (`UserCollectionHero`): `/saved`.
   - Article detail (`ArticleHero`): `/journal`.
   - Billing return (`BillingReturn`): `/profile`.
+  - Settings (`app/profile/settings/page.tsx`): `/profile`.
 - **MUST NOT** add a Back button to top-level navigation pages (`/`, `/map`,
   `/collections`, `/journal`, `/saved`, `/profile` — see `components/layout/nav-items.ts`).
+  `/profile/settings` is NESTED, not top-level: it keeps its Back button, and
+  `isActiveRoute`'s prefix match correctly lights the Profile tab while it is open.
+- `nav-items.ts` is the single source for both navs, and the two sets differ on purpose:
+  mobile `TAB_NAV` is **five** tabs (Home · Map · Collections · Saved · Profile) while
+  desktop `PRIMARY_NAV` is **four** (Home · Map · Collections · Journal). Journal left the
+  MOBILE TAB BAR only — it is still a desktop nav destination and a Home section, so do not
+  "restore" it to `TAB_NAV` or drop it from `PRIMARY_NAV`.
 - Use App Router utilities only: `next/link`, `useRouter`/`router.push`/`router.back`,
   `usePathname` from `next/navigation`.
 - **MUST NOT** use `javascript:history.back()` or a bare `history.back()`, and **MUST NOT**
@@ -293,6 +319,15 @@ after any change in this area.
   (6 attempts × 2s) and falls back to a calm "processing" state — never a failure, never an
   infinite poll. Preserve this flow, its `?status=cancelled` branch, and its `/profile`
   Back fallback.
+- `BillingReturn`'s six states **MUST** all reach the screen through a post-mount
+  `setState`, including `cancelled` — it starts at `'checking'` and the effect commits
+  `'cancelled'`. Initialising straight to the final state in `useState` leaves this island
+  (which sits under the route's `<Suspense>`) with no re-render after hydration, so the
+  boundary never resolves and the visitor is stuck on the "Confirming your membership…"
+  fallback while the real markup sits in the DOM under `display:none`. Setting the same
+  value from the effect does NOT fix it — React bails out of an identical-value `setState`.
+  Verified in a production build; re-check the cancelled branch in the browser (not only
+  via `verify:web-billing`, which asserts the seam, not the render) after touching this file.
 - Use test keys with test Price IDs together (`sk_test_…` + test `price_…`). The E2E script
   refuses `sk_live`. Missing Stripe env must stay a clean runtime error (500/400), never a
   boot crash.

@@ -49,6 +49,14 @@ export const UserProfileSchema = z.object({
    * usable http(s) URL before ever setting it — never a data: URI or provider token.
    */
   avatarUrl: z.string().nullable().optional(),
+  /**
+   * The user's account email, READ-ONLY on this DTO (there is no endpoint that accepts
+   * an email patch — see `UpdateProfileSchema`). Surfaced so the profile UI can display
+   * it (e.g. a read-only field in an edit-profile view) without exposing a write path;
+   * changing the login email would break magic-link sign-in until a re-verification flow
+   * exists. OPTIONAL so existing callers that don't select it keep compiling.
+   */
+  email: z.string().optional(),
 });
 export type UserProfileDTO = z.infer<typeof UserProfileSchema>;
 

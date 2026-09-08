@@ -123,9 +123,9 @@ async function main(): Promise<void> {
       `membership=${String(body.membership)}`,
     );
     record(
-      'D2. no email surfaced on the profile DTO',
-      !('email' in body),
-      'UserProfileDTO must not carry email',
+      'D2. email is surfaced read-only on the profile DTO',
+      typeof body.email === 'string' && body.email.length > 0,
+      `email=${String(body.email)}`,
     );
   }
 

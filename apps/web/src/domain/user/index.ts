@@ -13,4 +13,4 @@ export type { UserRepository } from './user.repository';
 export { MockUserRepository } from './mock-user.repository';
 
 // Convenience re-export of the DTOs this domain's methods speak in.
-export type { UserProfileDTO, MembershipStatus } from '@tennis/contracts';
+export type { UserProfileDTO, MembershipStatus, UpdateProfileDTO } from '@tennis/contracts';

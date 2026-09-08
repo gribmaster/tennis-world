@@ -1,6 +1,6 @@
 'use server';
 
-import type { UserCollectionDTO } from '@tennis/contracts';
+import type { UpdateProfileDTO, UserCollectionDTO, UserProfileDTO } from '@tennis/contracts';
 import { getRepositoriesForRequest } from './repositories.server';
 
 // SERVER ACTIONS for the protected saved/collection MUTATIONS (Feature 76).
@@ -62,4 +62,10 @@ export async function renameUserCollectionAction(
 ): Promise<UserCollectionDTO> {
   const repositories = await getRepositoriesForRequest();
   return repositories.saved.renameUserCollection(collectionId, name);
+}
+
+/** PATCH /v1/me — update the current user's editable profile fields (Feature 81/82). */
+export async function updateProfileAction(patch: UpdateProfileDTO): Promise<UserProfileDTO> {
+  const repositories = await getRepositoriesForRequest();
+  return repositories.user.updateProfile(patch);
 }

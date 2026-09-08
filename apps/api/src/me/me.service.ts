@@ -15,9 +15,10 @@ import type { UpdateProfileRequestDTO } from './me.dto';
 //
 // Reuses the auth foundation's `toUserProfileDTO` mapper (Feature 52) so GET /v1/me
 // returns EXACTLY the same `UserProfileDTO` (`id, name, initials, membership`) the
-// verify response embeds — making the future web `HttpUserRepository.getCurrentUser()`
-// a drop-in for the mock. The mapper needs `{ id, name, email }`; `email` is used ONLY
-// to derive a fallback display name when `name` is null and is NEVER surfaced.
+// verify response embeds — making the web `HttpUserRepository.getCurrentUser()` a
+// drop-in for the mock. The mapper needs `{ id, name, email }`; `email` is used to
+// derive a fallback display name when `name` is null AND is surfaced read-only on the
+// DTO (Feature 81/82) — it is still never accepted on the PATCH body.
 //
 // AUTH CONTEXT: callers pass the `userId` the AuthGuard attached (`@CurrentUser()`).
 // The token was already verified by the guard — but the user row it points at may have
