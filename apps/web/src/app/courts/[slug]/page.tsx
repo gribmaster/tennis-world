@@ -324,6 +324,7 @@ function renderUnlocked({
                 approxLng={court.approxLng}
                 exactLocation={exactLocation}
                 locationLine={locationLine}
+                heroImageUrl={court.heroImageUrl}
               />
             </div>
           </section>
@@ -525,6 +526,7 @@ function renderLocked({
                 approxLat={court.approxLat}
                 approxLng={court.approxLng}
                 exactLocation={null}
+                heroImageUrl={court.heroImageUrl}
               />
             </div>
           </section>

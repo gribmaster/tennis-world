@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import { useRouter } from 'next/navigation';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
+import { MarkerClusterer, SuperClusterAlgorithm } from '@googlemaps/markerclusterer';
+import type { Cluster, ClusterStats, Renderer } from '@googlemaps/markerclusterer';
 import { getGoogleMapsConfig } from './map-config';
 import type { MapMarker, MapMarkerState } from './map-markers';
 
@@ -68,18 +70,54 @@ function loadGoogleMapsLibraries(apiKey: string): Promise<GoogleMapsLibraries> {
   return librariesPromise;
 }
 
+// Same file public/placeholders fallback CourtImage.tsx and gallery-context.tsx already use
+// when a court has no photo — duplicated here (not imported) the same way those two already
+// duplicate it rather than share one constant across features.
+const FALLBACK_HERO_IMAGE = '/placeholders/ben-hershey-K9HgyI3qmqA-unsplash.jpg';
+
+// Widths Next's `/_next/image` optimizer will actually serve. `apps/web/next.config.mjs`
+// does not override `images.imageSizes`, so this mirrors Next 15's own default bucket list
+// — the endpoint 400s on any `w` outside `images.imageSizes` ∪ `images.deviceSizes`, so a
+// pin's requested width must land on one of these rather than an arbitrary retina target.
+// Keep in sync with next.config.mjs if that default is ever overridden there.
+const NEXT_IMAGE_WIDTHS = [16, 32, 48, 64, 96, 128, 256, 384];
+
 /**
- * Build the custom marker content for a marker state — a small ringed dot matching the
- * app style, with an optional soft halo for featured/exact. Deliberately NOT Google's
- * default red pin (task 8: no ugly default markers) — the same intent as the old Leaflet
- * divIcon, ported almost verbatim: `AdvancedMarkerElement.content` takes a real
- * `HTMLElement`, so the existing `.tw-map-marker*` CSS applies unchanged.
+ * Build a `/_next/image?url=…&w=…&q=…` request for a marker photo — the same optimizer
+ * endpoint `next/image` calls under the hood, hit manually because this DOM node is built
+ * with `document.createElement` outside React (`next/image` itself needs a React tree).
+ * Requests roughly 2x `renderedPx` for retina screens, snapped up to the nearest width the
+ * optimizer will actually serve, so a full-size source photo isn't downloaded in full for a
+ * ~44px pin — multiplied by however many markers are on screen.
  */
-function markerContent(state: MapMarkerState, name: string, clickable: boolean): HTMLElement {
+function optimizedPinImageUrl(heroImageUrl: string, renderedPx: number): string {
+  const src = heroImageUrl || FALLBACK_HERO_IMAGE;
+  const target = renderedPx * 2;
+  const width =
+    NEXT_IMAGE_WIDTHS.find((w) => w >= target) ?? NEXT_IMAGE_WIDTHS[NEXT_IMAGE_WIDTHS.length - 1];
+  return `/_next/image?url=${encodeURIComponent(src)}&w=${width}&q=70`;
+}
+
+/**
+ * Build the custom marker content for a marker state — a photo pin (Task 20) ringed in the
+ * court's state color, with an optional soft halo for featured/exact behind it. Deliberately
+ * NOT Google's default red pin (task 8: no ugly default markers), and not a plain colored
+ * dot either (Task 20 replaced that with the court's own hero photo, keeping the state
+ * signal as the ring color instead of the fill): `AdvancedMarkerElement.content` takes a
+ * real `HTMLElement`, so the existing `.tw-map-marker*` CSS applies unchanged.
+ */
+function markerContent(
+  state: MapMarkerState,
+  name: string,
+  clickable: boolean,
+  heroImageUrl: string,
+): HTMLElement {
   const color = COLOR[state];
   const halo = state === 'featured' || state === 'exact';
-  const size = halo ? 20 : 16;
-  const dot = halo ? 12 : 11;
+  // Wrapper (== halo diameter when present) vs. the photo circle itself — the halo needs
+  // visible room around the photo, same relationship the old size/dot pair had.
+  const size = halo ? 56 : 44;
+  const pin = halo ? 44 : 40;
 
   const wrapper = document.createElement('span');
   wrapper.className = 'tw-map-marker-icon';
@@ -91,7 +129,9 @@ function markerContent(state: MapMarkerState, name: string, clickable: boolean):
   // Google's own wrapping `<gmp-advanced-marker>` (which auto-sizes to match `content`'s
   // rendered box) undersized too — verified on-screen: the dot rendered a few px above the
   // true point. `inline-block` is enough to make the box (and the percentage transform
-  // computed from it) honour the width/height set below.
+  // computed from it) honour the width/height set below. The photo pin (Task 20) reuses
+  // this exact pattern for its own new element for the same reason — see CLAUDE.md's note
+  // not to assume a new div/img is safe by default without checking its computed box.
   wrapper.style.display = 'inline-block';
   wrapper.style.width = `${size}px`;
   wrapper.style.height = `${size}px`;
@@ -114,13 +154,87 @@ function markerContent(state: MapMarkerState, name: string, clickable: boolean):
     marker.appendChild(haloEl);
   }
 
-  const dotEl = document.createElement('span');
-  dotEl.className = 'tw-map-marker__dot';
-  dotEl.style.width = `${dot}px`;
-  dotEl.style.height = `${dot}px`;
-  marker.appendChild(dotEl);
+  // The photo circle. Also `inline-block` + explicit width/height for the same reason as
+  // the wrapper above — it is the box `object-fit: cover` and the border-ring clip both
+  // depend on.
+  const photo = document.createElement('span');
+  photo.className = 'tw-map-marker__photo';
+  photo.style.display = 'inline-block';
+  photo.style.width = `${pin}px`;
+  photo.style.height = `${pin}px`;
+  marker.appendChild(photo);
+
+  const img = document.createElement('img');
+  img.src = optimizedPinImageUrl(heroImageUrl, pin);
+  // Decorative: `wrapper.title`/`aria-label` above already carry the court name as this
+  // marker's one accessible name — an alt here would double-announce it (the same "alt
+  // describes the photograph, not a masked surface" reasoning as CourtDetailGalleryStrip,
+  // just inverted: here the photo needs no alt at all because it isn't the accessible name).
+  img.alt = '';
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  // A court with no photo (heroImageUrl === '') already requested the fallback image above;
+  // this covers the rarer case of the REQUEST itself failing (a broken/expired URL) so the
+  // pin never shows a broken-image glyph.
+  let usedFallback = false;
+  img.onerror = () => {
+    if (usedFallback) return;
+    usedFallback = true;
+    img.src = optimizedPinImageUrl(FALLBACK_HERO_IMAGE, pin);
+  };
+  photo.appendChild(img);
 
   return wrapper;
+}
+
+/**
+ * Build the custom cluster badge content — a rounded pill showing the grouped-court count,
+ * the same "custom DOM content on an AdvancedMarkerElement" treatment as `markerContent()`
+ * above, never Google's default cluster pin. Distinct from the per-court dots on purpose
+ * (a cluster isn't any one court's state): solid ink/graphite fill, bone bold count text.
+ */
+function clusterContent(count: number): HTMLElement {
+  const label = count > 99 ? '99+' : String(count);
+
+  const wrapper = document.createElement('span');
+  wrapper.className = 'tw-map-cluster-icon';
+  // Same inline-block + translateY(50%) anchor fix as markerContent() — AdvancedMarkerElement
+  // anchors the bottom-center of `content`, so this re-centers the pill on its point.
+  wrapper.style.display = 'inline-block';
+  wrapper.style.transform = 'translateY(50%)';
+  wrapper.style.cursor = 'pointer';
+  wrapper.title = `${count} courts`;
+  wrapper.setAttribute('aria-label', `${count} courts`);
+
+  const badge = document.createElement('span');
+  badge.className = 'tw-map-cluster';
+
+  const countEl = document.createElement('span');
+  countEl.className = 'tw-map-cluster__count';
+  countEl.textContent = label;
+  badge.appendChild(countEl);
+
+  wrapper.appendChild(badge);
+  return wrapper;
+}
+
+/**
+ * The MarkerClusterer `Renderer` — turns a `Cluster` into the custom badge above. Built as
+ * an `AdvancedMarkerElement` (never the legacy `Marker`/default pin), matching variant B
+ * (Feature 88 §1) the same way the individual court markers do.
+ */
+function createClusterRenderer(
+  AdvancedMarkerElement: typeof google.maps.marker.AdvancedMarkerElement,
+): Renderer {
+  return {
+    render(cluster: Cluster, _stats: ClusterStats) {
+      return new AdvancedMarkerElement({
+        position: cluster.position,
+        content: clusterContent(cluster.count),
+        zIndex: 1000 + cluster.count,
+      });
+    },
+  };
 }
 
 /**
@@ -247,6 +361,7 @@ export function CourtMapInner({
     null,
   );
   const markerInstancesRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+  const clustererRef = useRef<MarkerClusterer | null>(null);
   const cameraAnimationRef = useRef<number | null>(null);
   const router = useRouter();
 
@@ -321,6 +436,22 @@ export function CourtMapInner({
       advancedMarkerCtorRef.current = AdvancedMarkerElement;
       mapRef.current = map;
 
+      // One clusterer per map, built once — mutating its marker set on redraw (rather than
+      // constructing a fresh instance every drawMarkers() call) avoids rebuilding its
+      // internal renderer state on every filter change. SuperClusterAlgorithm wraps the
+      // same `supercluster` engine Airbnb's own map clustering is built on; library
+      // defaults are used as-is (no radius/maxZoom tuning) per Task 19 §5.
+      clustererRef.current = new MarkerClusterer({
+        map,
+        algorithm: new SuperClusterAlgorithm({}),
+        renderer: createClusterRenderer(AdvancedMarkerElement),
+        // Default onClusterClick (map.fitBounds(cluster.bounds)) is left as-is — deliberately
+        // NOT wrapped in beginProgrammaticMove(); see Task 19 §3: a cluster click is a real,
+        // deliberate user gesture (the same precedent as a zoom-control click), so it should
+        // report through the existing center_changed/zoom_changed listeners like any other
+        // manual zoom and correctly stand down the automatic nearest-court recentre.
+      });
+
       // ── User-interaction detection ──────────────────────────────────────────
       // `dragstart` is unambiguous: it only fires for a real mouse/touch drag.
       // `center_changed`/`zoom_changed` also fire for our own moves (setCenter/setZoom/
@@ -364,6 +495,11 @@ export function CourtMapInner({
         cameraAnimationRef.current = null;
       }
       const map = mapRef.current;
+      // Tear down the clusterer before the map's own listeners are cleared, so its
+      // internal onRemove() (releasing its own `idle` listener, clearing its markers) runs
+      // cleanly rather than racing clearInstanceListeners below.
+      clustererRef.current?.setMap(null);
+      clustererRef.current = null;
       if (map) {
         // No `map.remove()` equivalent in the Maps JS API — release listeners, drop the
         // markers, and null the refs; the container itself is removed by React unmounting
@@ -384,27 +520,35 @@ export function CourtMapInner({
   const drawMarkers = useCallback(() => {
     const map = mapRef.current;
     const AdvancedMarkerElement = advancedMarkerCtorRef.current;
-    if (!map || !AdvancedMarkerElement) return;
+    const clusterer = clustererRef.current;
+    if (!map || !AdvancedMarkerElement || !clusterer) return;
 
-    for (const marker of markerInstancesRef.current) marker.map = null;
+    clusterer.clearMarkers();
     markerInstancesRef.current = [];
 
     const clickable = interactive || navigateOnClick;
     const points: google.maps.LatLngLiteral[] = [];
+    const advancedMarkers: google.maps.marker.AdvancedMarkerElement[] = [];
     for (const m of markers) {
       const position = { lat: m.lat, lng: m.lng };
       const advancedMarker = new AdvancedMarkerElement({
         position,
-        content: markerContent(m.state, m.name, clickable),
+        content: markerContent(m.state, m.name, clickable, m.heroImageUrl ?? ''),
         gmpClickable: clickable,
       });
       if (navigateOnClick) {
         advancedMarker.addListener('gmp-click', () => router.push(`/courts/${m.slug}`));
       }
-      advancedMarker.map = map;
+      advancedMarkers.push(advancedMarker);
       markerInstancesRef.current.push(advancedMarker);
       points.push(position);
     }
+    // Hand the built markers to the clusterer instead of setting `.map` directly — it
+    // decides per-marker visibility (a lone pin once zoomed in enough to stand alone,
+    // hidden behind a cluster badge otherwise). The `gmp-click` listener already attached
+    // above keeps working once a marker is shown on its own: the clusterer only ever
+    // toggles `.map`, it never touches listeners.
+    clusterer.addMarkers(advancedMarkers);
 
     // View: explicit center/zoom wins; else fit to markers; else world fallback.
     // This is OUR move, not the user's — suppress the interaction report it would trigger.

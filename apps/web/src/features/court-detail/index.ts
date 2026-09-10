@@ -15,6 +15,9 @@ export type {
   CourtDetailGalleryHeroProps,
 } from './CourtDetailGallery';
 
+export { CourtDetailGalleryLightbox } from './CourtDetailGalleryLightbox';
+export type { CourtDetailGalleryLightboxProps } from './CourtDetailGalleryLightbox';
+
 // NO LONGER RENDERED (Feature 79). CourtDetailFramedGallery, CourtDetailCtaPanel and
 // CourtDetailLocationPreview's `variant="rail"` were the PRE-v2 locked page's pieces.
 // Feature 78 moved the unlocked page off them and Feature 79 moved the locked page off

@@ -719,12 +719,13 @@ async function main(): Promise<void> {
     })(),
   );
   expectTrue(
-    'the marker content is a real HTMLElement carrying the SAME .tw-map-marker* classes ' +
-      'the CSS already styled (a near-1:1 port of the old divIcon markup, per Feature 88 §1)',
+    'the marker content is a real HTMLElement carrying the .tw-map-marker* classes the CSS ' +
+      'styles (a near-1:1 port of the old divIcon markup, per Feature 88 §1) — Task 20: the ' +
+      'plain `.tw-map-marker__dot` was replaced by the `.tw-map-marker__photo` pin',
     /wrapper\.className = 'tw-map-marker-icon';/.test(courtMapInner) &&
       /marker\.className = 'tw-map-marker';/.test(courtMapInner) &&
       /haloEl\.className = 'tw-map-marker__halo';/.test(courtMapInner) &&
-      /dotEl\.className = 'tw-map-marker__dot';/.test(courtMapInner),
+      /photo\.className = 'tw-map-marker__photo';/.test(courtMapInner),
   );
   expectTrue(
     'Task 17 §4: the marker wrapper is forced to `display: inline-block` BEFORE its ' +
@@ -737,6 +738,195 @@ async function main(): Promise<void> {
     /wrapper\.style\.display = 'inline-block';\s*\n\s*wrapper\.style\.width = /.test(
       courtMapInner,
     ),
+  );
+
+  // ── Task 19: Airbnb-style marker clustering ──────────────────────────────────────────
+  console.log('\nTask 19: marker clustering (@googlemaps/markerclusterer)');
+  expectTrue(
+    'the official SuperClusterAlgorithm (wrapping the same `supercluster` engine as ' +
+      'Airbnb\'s own clustering) is used, not the simpler grid-based default',
+    /import \{ MarkerClusterer, SuperClusterAlgorithm \} from '@googlemaps\/markerclusterer';/.test(
+      courtMapInner,
+    ) && /new SuperClusterAlgorithm\(/.test(courtMapInner),
+  );
+  expectTrue(
+    'ONE MarkerClusterer is built per map, alongside map construction — not re-created ' +
+      'inside drawMarkers() on every redraw (which would leak/rebuild renderer state on ' +
+      'every filter change)',
+    (() => {
+      const mapCreation = /void loadGoogleMapsLibraries[\s\S]*?clustererRef\.current = new MarkerClusterer\(/.exec(
+        courtMapInner,
+      )?.[0];
+      const drawMarkersBody = /const drawMarkers = useCallback\(\(\) => \{[\s\S]*?\n  \}, \[markers/.exec(
+        courtMapInner,
+      )?.[0];
+      return (
+        !!mapCreation &&
+        !!drawMarkersBody &&
+        !/new MarkerClusterer\(/.test(drawMarkersBody)
+      );
+    })(),
+  );
+  expectTrue(
+    'drawMarkers() hands the built markers to the clusterer (clearMarkers + addMarkers) ' +
+      'instead of setting `.map` directly — the clusterer decides per-marker visibility',
+    /clusterer\.clearMarkers\(\);/.test(courtMapInner) &&
+      /clusterer\.addMarkers\(advancedMarkers\);/.test(courtMapInner) &&
+      !/advancedMarker\.map = map;/.test(stripComments(courtMapInner)),
+  );
+  expectTrue(
+    'the cluster badge is a custom renderer building its own AdvancedMarkerElement content ' +
+      '(never the legacy Marker / default pin), matching the individual court markers',
+    /function createClusterRenderer\(/.test(courtMapInner) &&
+      /return new AdvancedMarkerElement\(\{\s*\n\s*position: cluster\.position,/.test(
+        courtMapInner,
+      ),
+  );
+  expectTrue(
+    'the cluster badge reuses the existing marker-content pattern (a plain DOM element) ' +
+      'and its own sibling CSS classes, distinct from the per-court state colors',
+    /function clusterContent\(/.test(courtMapInner) &&
+      /wrapper\.className = 'tw-map-cluster-icon';/.test(courtMapInner) &&
+      /badge\.className = 'tw-map-cluster';/.test(courtMapInner) &&
+      /countEl\.className = 'tw-map-cluster__count';/.test(courtMapInner) &&
+      /\.tw-map-cluster\s*\{/.test(readWebFile('src/app/globals.css')) &&
+      /\.tw-map-cluster__count\s*\{/.test(readWebFile('src/app/globals.css')),
+  );
+  expectTrue(
+    'Task 19 §3: the cluster-click path is NOT wrapped in beginProgrammaticMove() — no ' +
+      '`onClusterClick` override is passed, so MarkerClusterer\'s default handler ' +
+      '(map.fitBounds(cluster.bounds)) reports through the ordinary, unsuppressed ' +
+      'center_changed/zoom_changed listeners exactly like a manual zoom or a zoom-control ' +
+      'click, correctly standing down the automatic nearest-court recentre',
+    (() => {
+      const ctorCall = /clustererRef\.current = new MarkerClusterer\(\{[\s\S]*?\n\s*\}\);/.exec(
+        courtMapInner,
+      )?.[0];
+      return !!ctorCall && !/onClusterClick:/.test(stripComments(ctorCall));
+    })(),
+  );
+  expectTrue(
+    'the clusterer is torn down on unmount alongside the map (setMap(null), refs cleared)',
+    /clustererRef\.current\?\.setMap\(null\);\s*\n\s*clustererRef\.current = null;/.test(
+      courtMapInner,
+    ),
+  );
+  expectTrue(
+    'package.json added @googlemaps/markerclusterer as a real dependency (not dev)',
+    (() => {
+      const pkg = JSON.parse(readWebFile('package.json')) as {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      };
+      return (
+        !!pkg.dependencies?.['@googlemaps/markerclusterer'] &&
+        !pkg.devDependencies?.['@googlemaps/markerclusterer']
+      );
+    })(),
+  );
+
+  // ── Task 20: photo pins instead of the plain colored dot ─────────────────────────────
+  console.log('\nTask 20: photo pins on the map (heroImageUrl threaded to markerContent)');
+  const mapMarkers = readSrc('features/map/map-markers.ts');
+  expectTrue(
+    'MapMarker carries an optional heroImageUrl, and courtToMarker copies it across (the ' +
+      'single conversion every public map surface goes through)',
+    /readonly heroImageUrl\?: string;/.test(mapMarkers) &&
+      /heroImageUrl: court\.heroImageUrl,/.test(mapMarkers),
+  );
+  expectTrue(
+    'CourtDetailLocationPreview threads heroImageUrl into BOTH hand-built markers (the ' +
+      'entitled/exact one and the approximate/featured one) — the one marker-building call ' +
+      'site outside courtToMarker',
+    (() => {
+      const code = stripComments(courtDetailLocationPreview);
+      return (
+        /heroImageUrl: string;/.test(code) &&
+        /state: 'exact',\s*\n\s*heroImageUrl,/.test(code) &&
+        /state: 'featured',\s*\n\s*heroImageUrl,/.test(code)
+      );
+    })(),
+  );
+  expectTrue(
+    'page.tsx passes heroImageUrl at both CourtDetailLocationPreview call sites (locked and unlocked)',
+    (() => {
+      const code = stripComments(readSrc('app/courts/[slug]/page.tsx'));
+      const blocks = code.split('<CourtDetailLocationPreview').slice(1);
+      return (
+        blocks.length === 2 &&
+        blocks.every((block) => /heroImageUrl=\{court\.heroImageUrl\}/.test(block.split('/>')[0] ?? ''))
+      );
+    })(),
+  );
+  expectTrue(
+    'markerContent() takes heroImageUrl and the drawMarkers() call site passes it through ' +
+      '(falling back to \'\' for a marker with none, which itself falls back to the shared ' +
+      'placeholder image)',
+    /function markerContent\(\s*\n\s*state: MapMarkerState,\s*\n\s*name: string,\s*\n\s*clickable: boolean,\s*\n\s*heroImageUrl: string,/.test(
+      courtMapInner,
+    ) && /markerContent\(m\.state, m\.name, clickable, m\.heroImageUrl \?\? ''\)/.test(courtMapInner),
+  );
+  expectTrue(
+    'a missing/empty heroImageUrl falls back to the SAME shared placeholder file ' +
+      'CourtImage.tsx/gallery-context.tsx already use for a court with no photo (not a ' +
+      'second "no photo" visual language)',
+    /const FALLBACK_HERO_IMAGE = '\/placeholders\/ben-hershey-K9HgyI3qmqA-unsplash\.jpg';/.test(
+      courtMapInner,
+    ) && /const src = heroImageUrl \|\| FALLBACK_HERO_IMAGE;/.test(courtMapInner),
+  );
+  expectTrue(
+    'a failed image request (not just an empty URL) also falls back, exactly once — no ' +
+      'broken-image glyph and no infinite onerror loop',
+    /img\.onerror = \(\) => \{\s*\n\s*if \(usedFallback\) return;\s*\n\s*usedFallback = true;\s*\n\s*img\.src = optimizedPinImageUrl\(FALLBACK_HERO_IMAGE, pin\);/.test(
+      courtMapInner,
+    ),
+  );
+  expectTrue(
+    'the image request goes through Next\'s own /_next/image optimizer endpoint with a ' +
+      'small width (not the raw full-size source URL) — a deliberate bandwidth/cost choice, ' +
+      'not the raw-URL fallback the brief also allowed',
+    /`\/_next\/image\?url=\$\{encodeURIComponent\(src\)\}&w=\$\{width\}&q=70`/.test(courtMapInner),
+  );
+  expectTrue(
+    'the requested width accounts for retina (~2x the rendered pin size) and snaps to a ' +
+      'width Next\'s optimizer will actually serve (images.imageSizes — an arbitrary `w` 400s)',
+    /const target = renderedPx \* 2;/.test(courtMapInner) &&
+      /const NEXT_IMAGE_WIDTHS = \[16, 32, 48, 64, 96, 128, 256, 384\];/.test(courtMapInner),
+  );
+  expectTrue(
+    'the state signal survives the switch from a solid dot to a photo: the ring (border) ' +
+      'color still comes from COLOR[state] via the same --mk custom property, and the halo ' +
+      'pulse is untouched',
+    /const color = COLOR\[state\];/.test(courtMapInner) &&
+      /marker\.style\.setProperty\('--mk', color\);/.test(courtMapInner) &&
+      /border: 3px solid var\(--mk\);/.test(readWebFile('src/app/globals.css')),
+  );
+  expectTrue(
+    'the photo pin is sized larger than the old dot (a photo needs to read as a photo) and ' +
+      'still bigger for the featured/exact halo states, same halo > non-halo relationship ' +
+      'the old size/dot pair had',
+    /const size = halo \? 56 : 44;/.test(courtMapInner) && /const pin = halo \? 44 : 40;/.test(courtMapInner),
+  );
+  expectTrue(
+    'the pin photo element follows the SAME inline-block + explicit width/height anchor ' +
+      'pattern as the wrapper (Task 17\'s lesson applied to the new element, not just the ' +
+      'old one) — a plain span would otherwise collapse to its intrinsic size',
+    /photo\.style\.display = 'inline-block';\s*\n\s*photo\.style\.width = /.test(courtMapInner),
+  );
+  expectTrue(
+    'the marker photo is decorative (empty alt) — the wrapper\'s title/aria-label (the ' +
+      'court name) stays the ONE accessible name for the pin, unchanged from before',
+    /img\.alt = '';/.test(courtMapInner) &&
+      /wrapper\.title = name;/.test(courtMapInner) &&
+      /wrapper\.setAttribute\('aria-label', name\);/.test(courtMapInner),
+  );
+  expectTrue(
+    'Task 19\'s cluster badge is untouched by the photo-pin change — it still renders a ' +
+      'count via clusterContent(), never a photo, and stays on its own .tw-map-cluster* classes',
+    /function clusterContent\(count: number\): HTMLElement \{/.test(courtMapInner) &&
+      !/heroImageUrl/.test(
+        (/function clusterContent\([\s\S]*?\n\}/.exec(courtMapInner)?.[0]) ?? '',
+      ),
   );
 
   summarize();

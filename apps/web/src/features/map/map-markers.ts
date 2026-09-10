@@ -28,6 +28,12 @@ export interface MapMarker {
   readonly lng: number;
   /** Visual state → marker color/halo. */
   readonly state: MapMarkerState;
+  /**
+   * The court's public hero photo (Task 20) — drawn as the marker's photo pin instead of
+   * a plain colored dot. Optional so a caller built before this field existed (or a stale
+   * fixture) still renders: `markerContent()` falls back to the shared placeholder image.
+   */
+  readonly heroImageUrl?: string;
 }
 
 /**
@@ -59,6 +65,7 @@ export function courtToMarker(
     lat: court.approxLat,
     lng: court.approxLng,
     state: stateBySlug?.get(court.slug) ?? courtState(court),
+    heroImageUrl: court.heroImageUrl,
   };
 }
 

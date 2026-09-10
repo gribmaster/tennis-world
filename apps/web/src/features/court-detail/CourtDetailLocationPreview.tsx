@@ -127,6 +127,12 @@ export interface CourtDetailLocationPreviewProps {
   /** Always-public approximate longitude. */
   approxLng: number;
   /**
+   * The court's public hero photo (Task 20) — threaded into the single marker this
+   * component builds by hand so its pin matches every other map surface's photo-pin
+   * treatment. `page.tsx` already has `court.heroImageUrl` in scope at both call sites.
+   */
+  heroImageUrl: string;
+  /**
    * Protected exact-location payload for an ENTITLED viewer (Feature 63/64): exact
    * `lat`/`lng` (precise marker) + server-built `directionsUrl` (Get Directions).
    * `null` when locked, in mock mode, or for an unlocked court with no fetch — the
@@ -153,6 +159,7 @@ export function CourtDetailLocationPreview({
   exactLocation,
   variant = 'rail',
   locationLine,
+  heroImageUrl,
 }: CourtDetailLocationPreviewProps) {
   const entitled = !locked && exactLocation !== null;
 
@@ -169,6 +176,7 @@ export function CourtDetailLocationPreview({
           lat: exactLocation.lat,
           lng: exactLocation.lng,
           state: 'exact',
+          heroImageUrl,
         }
       : {
           id: 'approx',
@@ -177,6 +185,7 @@ export function CourtDetailLocationPreview({
           lat: approxLat,
           lng: approxLng,
           state: 'featured',
+          heroImageUrl,
         };
 
   // ── v2: the prototype's two-column Location block ───────────────────────────────────

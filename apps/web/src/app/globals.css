@@ -332,8 +332,9 @@
     width: 100%;
   }
 
-  /* Custom marker: a ringed dot in the court's state color (--mk), optional halo.
-     Replaces Leaflet's default blue teardrop entirely. */
+  /* Custom marker: a photo pin ringed in the court's state color (--mk), optional halo
+     behind it (Task 20 — replaces the plain colored dot; the ring now carries the
+     open/locked/featured/exact color signal the dot's fill used to carry alone). */
   .tw-map-marker {
     position: relative;
     display: flex;
@@ -342,12 +343,19 @@
     width: 100%;
     height: 100%;
   }
-  .tw-map-marker__dot {
+  .tw-map-marker__photo {
     display: block;
+    overflow: hidden;
     border-radius: theme('borderRadius.pill');
-    background: var(--mk);
-    border: 2px solid theme('colors.bone');
+    border: 3px solid var(--mk);
+    background: theme('colors.bone');
     box-shadow: 0 1px 3px rgba(15, 15, 15, 0.35);
+  }
+  .tw-map-marker__photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
   .tw-map-marker__halo {
     position: absolute;
@@ -357,7 +365,30 @@
     opacity: 0.28;
     animation: map-pin-pulse 2.4s ease-in-out infinite;
   }
-  .tw-map-marker-icon:hover .tw-map-marker__dot {
+  .tw-map-marker-icon:hover .tw-map-marker__photo {
+    transform: scale(1.12);
+    transition: transform 150ms ease;
+  }
+
+  /* Cluster badge: a solid ink/graphite pill with the grouped-court count, distinct from
+     the individual state-colored dots above (a cluster isn't any one court's state). */
+  .tw-map-cluster {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.5rem;
+    border-radius: theme('borderRadius.pill');
+    background: theme('colors.ink');
+    box-shadow: 0 1px 3px rgba(15, 15, 15, 0.35);
+  }
+  .tw-map-cluster__count {
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: theme('colors.bone');
+  }
+  .tw-map-cluster-icon:hover .tw-map-cluster {
     transform: scale(1.12);
     transition: transform 150ms ease;
   }
@@ -412,6 +443,20 @@
     .map-layout {
       --map-bottom-nav: 0px;
       flex-direction: row;
+      /* Every other screen caps its content at `.container-page`'s width and centers
+         it (see courts/[slug]/page.tsx's own comment on matching that gutter) — the
+         map was the one screen left full-bleed, so on a wide desktop monitor the
+         canvas stretched edge to edge while the list panel stayed a fixed 380px,
+         reading as disproportionate next to the rest of the app. Reusing the same
+         `container` token + gutter here both caps the canvas at a sane width AND
+         lines its edges up with MapFilterBar's own `max-w-container` row directly
+         above it (apps/web/src/features/map/MapFilterBar.tsx), which already caps
+         and centers itself the same way. Mobile is untouched — this block only
+         applies at md+. */
+      width: 100%;
+      max-width: theme('maxWidth.container');
+      margin-inline: auto;
+      padding-inline: clamp(20px, 4vw, 64px);
     }
     .map-canvas-wrap {
       flex: 1 1 auto;

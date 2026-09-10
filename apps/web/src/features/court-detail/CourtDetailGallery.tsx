@@ -1,16 +1,11 @@
 'use client';
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type KeyboardEvent,
-  type ReactNode,
-} from 'react';
+import { useCallback, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
 import Image from 'next/image';
 import type { CourtImageDTO } from '@tennis/contracts';
+import { CourtDetailGalleryLightbox } from './CourtDetailGalleryLightbox';
+import { FALLBACK_IMAGE, GalleryContext, useGallery, type GalleryContextValue, type Slide } from './gallery-context';
+import { useHorizontalSwipe } from './use-horizontal-swipe';
 
 // CourtDetailGallery — the Court Detail image gallery, rebuilt to the v2 prototype
 // (design_v2_stripped.html `CourtDetailScreen`, lines 1013–1049 for the hero band and
@@ -47,6 +42,12 @@ import type { CourtImageDTO } from '@tennis/contracts';
 //
 // PRESENTATIONAL & data-driven: props only. No repository, no @tennis/mock-data, no
 // fetching. It never receives or renders a coordinate.
+//
+// TASK 18: the hero band now also accepts a horizontal drag/swipe (Pointer Events) that
+// drives the same `goPrev`/`goNext` the dots already implement — see `useHorizontalSwipe`
+// below, shared with the new `CourtDetailGalleryLightbox`. The thumbnail strip no longer
+// writes to the shared `activeIndex` on click: it opens the lightbox (its OWN local state)
+// at the clicked photo instead, so the hero band is never affected by the strip.
 
 export interface CourtDetailGalleryProps {
   /** The court's gallery images (CourtDTO.images). May be empty. */
@@ -55,12 +56,6 @@ export interface CourtDetailGalleryProps {
   heroImageUrl: string;
   /** Court name, used for the lead image alt text. */
   courtName: string;
-}
-
-/** One resolved slide: a URL plus its (optional) authored alt text. */
-interface Slide {
-  url: string;
-  alt?: string;
 }
 
 /**
@@ -90,33 +85,6 @@ function resolveSlides(images: CourtImageDTO[], heroImageUrl: string): Slide[] {
   }
 
   return slides;
-}
-
-/** Same fallback file CourtImage uses, so an empty URL never renders a blank frame. */
-const FALLBACK_IMAGE = '/placeholders/ben-hershey-K9HgyI3qmqA-unsplash.jpg';
-
-interface GalleryContextValue {
-  slides: Slide[];
-  activeIndex: number;
-  setActiveIndex: (i: number) => void;
-  /** The REAL court name — image ALT TEXT only (a description of the photograph). */
-  courtName: string;
-  /**
-   * The court name AS DISPLAYED by the host page (Feature 79) — the real name unlocked,
-   * the masked placeholder locked. Used for the thumbnail buttons' ACCESSIBLE NAMES, so a
-   * masked title cannot leak through the accessibility tree. Falls back to `courtName`.
-   */
-  courtLabel: string;
-}
-
-const GalleryContext = createContext<GalleryContextValue | null>(null);
-
-function useGallery(): GalleryContextValue {
-  const ctx = useContext(GalleryContext);
-  if (!ctx) {
-    throw new Error('CourtDetailGallery pieces must render inside <CourtDetailGalleryProvider>.');
-  }
-  return ctx;
 }
 
 export interface CourtDetailGalleryProviderProps extends CourtDetailGalleryProps {
@@ -216,6 +184,9 @@ export function CourtDetailGalleryHero({ backControl, actions }: CourtDetailGall
     [hasMultiple, goPrev, goNext],
   );
 
+  // Drag left ⇒ next, drag right ⇒ prev — same wraparound as the dots/keyboard above.
+  const onPointerDown = useHorizontalSwipe(hasMultiple, goNext, goPrev);
+
   // Meaningful main-image alt: authored alt when present, else a positional label.
   const activeAlt = active.alt?.trim() || `${courtName} court image ${activeIndex + 1}`;
 
@@ -225,9 +196,13 @@ export function CourtDetailGalleryHero({ backControl, actions }: CourtDetailGall
       tabIndex={0}
       aria-label="Court image gallery"
       onKeyDown={onKeyDown}
+      onPointerDown={onPointerDown}
       // Prototype `height:320`; allowed to grow on wide screens so the band doesn't read
-      // as a letterbox strip on desktop, the same hedge HomeHero makes.
-      className="relative h-[320px] w-full overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-paper/70 md:h-[clamp(320px,42vw,480px)]"
+      // as a letterbox strip on desktop, the same hedge HomeHero makes. `touch-pan-y` lets
+      // the browser keep handling vertical scroll natively while the swipe hook above owns
+      // horizontal drag (only `preventDefault`s once a drag commits, so a plain tap on any
+      // overlaid control below is unaffected).
+      className="relative h-[320px] w-full touch-pan-y overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-paper/70 md:h-[clamp(320px,42vw,480px)]"
     >
       <Image
         // Keyed so a slide change remounts the element and re-runs the fade-in
@@ -309,14 +284,23 @@ export function CourtDetailGalleryHero({ backControl, actions }: CourtDetailGall
 
 /**
  * The "Gallery" thumbnail strip (prototype lines 1116–1125): 90×72 thumbs in a
- * horizontally scrolling row, the active one at full opacity with an ink border. Drives
- * the hero image through the shared context.
+ * horizontally scrolling row, the one matching the hero's current image at full opacity
+ * with an ink border.
+ *
+ * TASK 18: clicking a thumbnail no longer touches the shared `activeIndex` — it used to
+ * call the same `setActiveIndex` the hero's dots use, which silently re-pointed the hero
+ * band instead of opening anything. It now opens `CourtDetailGalleryLightbox` at the
+ * clicked photo via its OWN local state (`lightboxIndex`, below); the hero band is
+ * unaffected by opening, navigating within, or closing it. `isActive`/`aria-current` still
+ * read the shared `activeIndex` — purely a read, to keep showing which thumbnail matches
+ * the hero's current photo.
  */
 export function CourtDetailGalleryStrip() {
   // `courtLabel`, NOT `courtName`: these are CONTROLS, and their accessible names must
   // say what the page displays. The images' own alt text (the hero, above) keeps the real
   // name — an alt describes the photograph, it is not a masked surface.
-  const { slides, activeIndex, setActiveIndex, courtLabel } = useGallery();
+  const { slides, activeIndex, courtLabel } = useGallery();
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   if (slides.length < 2) return null;
 
   return (
@@ -329,7 +313,7 @@ export function CourtDetailGalleryStrip() {
             <li key={`${slide.url}-${i}`} className="shrink-0">
               <button
                 type="button"
-                onClick={() => setActiveIndex(i)}
+                onClick={() => setLightboxIndex(i)}
                 aria-label={`Show ${courtLabel} image ${i + 1}`}
                 aria-current={isActive ? 'true' : undefined}
                 className={[
@@ -351,6 +335,12 @@ export function CourtDetailGalleryStrip() {
           );
         })}
       </ul>
+
+      <CourtDetailGalleryLightbox
+        open={lightboxIndex !== null}
+        initialIndex={lightboxIndex ?? 0}
+        onClose={() => setLightboxIndex(null)}
+      />
     </div>
   );
 }
