@@ -308,28 +308,28 @@
     }
   }
 
-  /* ── Real map (Leaflet, Feature 74) ────────────────────────────────────── */
-  /* The env-driven Leaflet map surface that REPLACES the abstract StylizedMapCanvas
-     for real map surfaces (/map, Wishlist Map, Court Detail preview). Markers are
-     plotted from approxLat/approxLng ONLY — exact lat/lng never reach the map layer
-     (Architecture Plan §9 Risk #17). These styles keep Leaflet restrained + on-brand:
-     custom divIcon markers (no default blue pins), compact/quiet controls. */
+  /* ── Real map (Google Maps, Feature 88) ────────────────────────────────── */
+  /* The Google Maps surface that REPLACES the abstract StylizedMapCanvas for real map
+     surfaces (/map, Wishlist Map, unlocked Court Detail preview) — migrated off Leaflet
+     in Feature 88, see docs/MAP_PROVIDER_DECISION.md §0. Markers are plotted from
+     approxLat/approxLng ONLY (or, for the single entitled Court Detail marker, exact
+     lat/lng from the protected endpoint) — Architecture Plan §9 Risk #17. These styles
+     keep the custom AdvancedMarkerElement dots on-brand (no default red pins) and lightly
+     frame Google's own zoom control; Google's required attribution/logo is deliberately
+     left untouched (Maps Platform Terms forbid obscuring or restyling it) — see §0. */
 
   /* The frame owns sizing/border/rounding (set by the caller via className); it just
-     needs to be a positioned, clipping box for the absolutely-filled Leaflet canvas. */
+     needs to be a positioned, clipping box that Google's map fills. */
   .tw-map-frame {
     background:
       radial-gradient(130% 100% at 50% 0%, #eef0ea 0%, #e3e5dd 45%, #d9dcd2 100%);
   }
-  /* Leaflet needs an explicit-height container; fill the frame. */
-  .tw-map-surface,
-  .tw-map-surface .leaflet-container {
+  /* Google attaches its own `.gm-style` class directly to the container element we hand
+     it (unlike Leaflet, which nested a `.leaflet-container` child) — sizing this element
+     is enough to fill the frame. */
+  .tw-map-surface {
     height: 100%;
     width: 100%;
-  }
-  .tw-map-surface .leaflet-container {
-    background: transparent;
-    font-family: inherit;
   }
 
   /* Custom marker: a ringed dot in the court's state color (--mk), optional halo.
@@ -362,30 +362,23 @@
     transition: transform 150ms ease;
   }
 
-  /* Restrained controls: quiet the default Leaflet chrome to match the editorial look. */
-  .tw-map-surface .leaflet-control-zoom {
+  /* Restrained zoom control: lightly frame Google's own zoom chrome to match the
+     editorial look, using its DOM hook (`.gm-bundled-control` — undocumented but stable
+     across recent API versions). Only the container is framed (border/radius/shadow) —
+     Google's internal icon/button styling is not overridden, to stay clear of anything
+     that could read as altering Google's own UI beyond light framing. */
+  .tw-map-surface .gm-bundled-control {
     border: 1px solid theme('colors.hairline');
     border-radius: theme('borderRadius.md');
     overflow: hidden;
     box-shadow: 0 1px 4px rgba(15, 15, 15, 0.08);
   }
-  .tw-map-surface .leaflet-control-zoom a {
-    background: theme('colors.bone');
-    color: theme('colors.graphite');
-    border-color: theme('colors.hairline');
-  }
-  .tw-map-surface .leaflet-control-zoom a:hover {
-    background: #fff;
-    color: theme('colors.ink');
-  }
-  .tw-map-surface .leaflet-control-attribution {
-    background: rgba(245, 242, 236, 0.82);
-    color: theme('colors.stone');
-    font-size: 10px;
-  }
-  .tw-map-surface .leaflet-control-attribution a {
-    color: theme('colors.graphite');
-  }
+
+  /* Google's required attribution/logo is DELIBERATELY left unstyled — the Leaflet-era
+     `.leaflet-control-attribution` rules are dropped, not ported. Maps Platform Terms
+     require that attribution stay visible, legible, and unmodified; restyling it (even
+     just a background tint) risks reading as obscuring it. See
+     docs/MAP_PROVIDER_DECISION.md §0. */
 
   /* ── Map layout (map screen) ───────────────────────────────────────────── */
   /* Stacked on mobile (canvas over list), side-by-side on desktop. Ported from

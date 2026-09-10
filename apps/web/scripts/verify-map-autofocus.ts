@@ -8,7 +8,7 @@
 // It is a HYBRID harness, and deliberately so:
 //
 //   • BEHAVIOURAL (real assertions, real code): the nearest-court rule lives in a pure
-//     module (src/features/map/geo-distance.ts — no React, no DOM, no Leaflet), so this
+//     module (src/features/map/geo-distance.ts — no React, no DOM, no map library), so this
 //     script IMPORTS IT and runs it against fixtures. Nearest-court selection, invalid
 //     coordinate handling, tie-break stability, the empty case, and the proof that this is
 //     true great-circle geodesy rather than a numeric/bounding-box comparison are all
@@ -22,6 +22,30 @@
 //     convention: they assert the SOURCE-LEVEL GUARANTEE that makes the runtime behaviour
 //     true (the ref guard exists, the shared in-flight promise exists, the interaction
 //     handler is wired), which is the closest deterministic, CI-safe proxy available.
+//
+// FEATURE 88 (2026-09-10): the map engine migrated from Leaflet to Google Maps (Map ID +
+// AdvancedMarkerElement — see docs/MAP_PROVIDER_DECISION.md §0). LeafletMapInner.tsx /
+// LeafletMap.tsx were renamed to CourtMapInner.tsx / CourtMap.tsx. Every check below that
+// used to assert on Leaflet-specific source text (`map.flyTo`, `map.on('dragstart', ...)`,
+// `dragging: interactive`, …) has been RE-POINTED at the Google source it was ported to —
+// none were deleted; each still covers the exact requirement it did before. Checks whose
+// underlying MEANING changed (not just the literal it matches) are called out inline with
+// a "Feature 88:" note. A new "Feature 88: Google Maps engine" section at the end adds
+// checks with no Leaflet-era equivalent (Map ID / variant B, no Places/Geocoding/Directions
+// call, the loader's shared-promise dedupe, the locked Court Detail preview no longer
+// mounting a live map, the renamed-file/package hygiene). Baseline before this rewrite:
+// 78 checks, 78 pass, 0 fail (captured on a clean tree, 2026-09-09). The Feature 88 rewrite
+// added 3 module/rename checks ("Modules" section) + 9 Feature-88-specific checks ("Feature
+// 88: Google Maps engine" section) = 90 total, 78+12, verified by running BOTH the old
+// (Leaflet-era) and new scripts and diffing every check name position-by-position: all 78
+// original checks survive 1:1 in the same relative order (only wording changed on the ones
+// that talk about Leaflet-specific APIs) — none were merged or dropped.
+//
+// TASK 17 (2026-09-10): §1 added 2 checks for the programmatic-move suppression-window
+// hardening fix (the `idle`-clears-mid-animation defect); §4's manual verification found and
+// fixed a real marker-anchor defect (the wrapper `<span>` defaulted to `display: inline`,
+// which silently ignored its explicit width/height and broke the translateY(50%) anchor
+// compensation), covered by 1 more check → 93 checks total.
 //
 // Covers the thirteen required verifications from the brief; each is labelled below.
 //
@@ -41,6 +65,7 @@ import {
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SRC = join(HERE, '..', 'src');
+const WEB_ROOT = join(HERE, '..');
 
 // ── Tiny assertion harness (matches the sibling verify-*.ts scripts) ────────────────
 interface CheckResult {
@@ -62,6 +87,11 @@ function expectTrue(name: string, ok: boolean, detail?: string): void {
 
 function readSrc(rel: string): string {
   const p = join(SRC, rel);
+  return existsSync(p) ? readFileSync(p, 'utf8') : '';
+}
+
+function readWebFile(rel: string): string {
+  const p = join(WEB_ROOT, rel);
   return existsSync(p) ? readFileSync(p, 'utf8') : '';
 }
 
@@ -94,17 +124,29 @@ async function main(): Promise<void> {
   console.log('Map audit — nearest-court auto-focus on /map\n');
 
   const mapExplorer = readSrc('features/map/MapExplorer.tsx');
-  const leafletInner = readSrc('features/map/LeafletMapInner.tsx');
-  const leafletWrapper = readSrc('features/map/LeafletMap.tsx');
+  // Feature 88: renamed from LeafletMapInner.tsx / LeafletMap.tsx.
+  const courtMapInner = readSrc('features/map/CourtMapInner.tsx');
+  const courtMapWrapper = readSrc('features/map/CourtMap.tsx');
   const locateControl = readSrc('features/map/MapLocateControl.tsx');
   const useGeolocation = readSrc('features/map/useGeolocation.ts');
   const geoDistance = readSrc('features/map/geo-distance.ts');
   const mapPage = readSrc('app/map/page.tsx');
+  const savedWishlistMap = readSrc('features/saved/SavedWishlistMap.tsx');
+  const courtDetailLocationPreview = readSrc(
+    'features/court-detail/CourtDetailLocationPreview.tsx',
+  );
 
   console.log('Modules');
   expectTrue('geo-distance helper exists', geoDistance.length > 0);
   expectTrue('useGeolocation hook exists', useGeolocation.length > 0);
   expectTrue('MapLocateControl exists', locateControl.length > 0);
+  expectTrue('CourtMapInner exists (Feature 88: renamed from LeafletMapInner)', courtMapInner.length > 0);
+  expectTrue('CourtMap exists (Feature 88: renamed from LeafletMap)', courtMapWrapper.length > 0);
+  expectTrue(
+    'the old Leaflet-named files are gone, not just superseded',
+    !existsSync(join(SRC, 'features/map/LeafletMapInner.tsx')) &&
+      !existsSync(join(SRC, 'features/map/LeafletMap.tsx')),
+  );
 
   // ── Requirement 2 & 5: granted geolocation finds the nearest court, and that court is
   //    one of the markers actually on the map (so its marker is necessarily visible). ────
@@ -283,7 +325,7 @@ async function main(): Promise<void> {
     (() => {
       const inHook = (stripComments(useGeolocation).match(/navigator\.geolocation/g) ?? []).length;
       // The hook touches it twice: the support probe and the request itself.
-      const elsewhere = [mapExplorer, locateControl, leafletInner, leafletWrapper, mapPage]
+      const elsewhere = [mapExplorer, locateControl, courtMapInner, courtMapWrapper, mapPage]
         .map((s) => (stripComments(s).match(/navigator\.geolocation|getCurrentPosition/g) ?? []).length)
         .reduce((a, b) => a + b, 0);
       return inHook > 0 && elsewhere === 0;
@@ -307,19 +349,32 @@ async function main(): Promise<void> {
   );
   expectTrue('the target zoom is 17', /const NEAREST_COURT_ZOOM = 17;/.test(mapExplorer));
   expectTrue(
-    'the zoom is clamped to the map\'s real supported range (nearest valid zoom if 17 is out of range)',
-    /Math\.min\(Math\.max\(focus\.zoom, map\.getMinZoom\(\)\), map\.getMaxZoom\(\)\)/.test(
-      leafletInner,
-    ),
+    'the zoom is clamped to the map\'s real supported range (nearest valid zoom if 17 is ' +
+      'out of range) — Feature 88: the Maps JS API has no getMinZoom/getMaxZoom query ' +
+      '(unlike Leaflet), so the clamp uses the same MIN_ZOOM/MAX_ZOOM constants the map ' +
+      'was constructed with, on the same Math.min(Math.max(...)) shape',
+    /const targetZoom = Math\.min\(Math\.max\(focus\.zoom, MIN_ZOOM\), MAX_ZOOM\);/.test(
+      courtMapInner,
+    ) &&
+      /minZoom: MIN_ZOOM,/.test(courtMapInner) &&
+      /maxZoom: MAX_ZOOM,/.test(courtMapInner),
   );
   expectTrue(
-    'the move uses the current map library\'s own API (Leaflet flyTo) with a quick duration',
-    /map\.flyTo\(\[focus\.lat, focus\.lng\], targetZoom, \{ duration: 0\.9 \}\)/.test(leafletInner),
+    'the move uses a composed pan+zoom camera animation at the same duration the old ' +
+      'Leaflet flyTo used (Feature 88 §4: Google\'s panTo animates pan only, so ' +
+      'CourtMapInner runs its own requestAnimationFrame loop calling map.moveCamera — ' +
+      'the documented Google pattern for a combined animated camera move)',
+    /const CAMERA_ANIMATION_MS = 900;/.test(courtMapInner) &&
+      /requestAnimationFrame\(step\)/.test(courtMapInner) &&
+      /map\.moveCamera\(\{/.test(courtMapInner) &&
+      /animateCamera\(map, cameraAnimationRef, \{ lat: focus\.lat, lng: focus\.lng \}, targetZoom, CAMERA_ANIMATION_MS\)/.test(
+        courtMapInner,
+      ),
   );
   expectTrue(
     'the focus is applied at most ONCE per token (no repeated refocusing after the initial move)',
     /if \(appliedFocusTokenRef\.current === focus\.token\) return;\s*\n\s*appliedFocusTokenRef\.current = focus\.token;/.test(
-      leafletInner,
+      courtMapInner,
     ),
   );
   expectTrue(
@@ -331,10 +386,13 @@ async function main(): Promise<void> {
       if (/useRouter|router\.(push|replace)/.test(stripComments(mapExplorer))) return false;
       // Isolate the focus effect in the map layer and assert it only moves the view.
       const focusEffect = /\/\/ ── Apply a one-shot focus request[\s\S]*?\n  \}, \[focus, beginProgrammaticMove\]\);/.exec(
-        leafletInner,
+        courtMapInner,
       )?.[0];
       if (!focusEffect) return false;
-      return !/router\.|push\(|href/.test(stripComments(focusEffect)) && /map\.flyTo/.test(focusEffect);
+      return (
+        !/router\.|push\(|href/.test(stripComments(focusEffect)) &&
+        /animateCamera\(/.test(focusEffect)
+      );
     })(),
   );
 
@@ -398,29 +456,51 @@ async function main(): Promise<void> {
     /focusNearestCourt\(\{ automatic: false \}\)/.test(mapExplorer),
   );
   expectTrue(
-    'LeafletMapInner reports genuine user gestures (drag/zoom) upward',
-    /map\.on\('dragstart', reportUserInteraction\)/.test(leafletInner) &&
-      /map\.on\('zoomstart', reportIfNotProgrammatic\)/.test(leafletInner) &&
+    'CourtMapInner reports genuine user gestures (drag/zoom) upward — Feature 88: Google\'s ' +
+      'zoom_changed replaces Leaflet\'s zoomstart as the (suppressible) zoom-gesture signal',
+    /map\.addListener\('dragstart', reportUserInteraction\)/.test(courtMapInner) &&
+      /map\.addListener\('zoom_changed', reportIfNotProgrammatic\)/.test(courtMapInner) &&
       /onUserInteraction=\{handleUserInteraction\}/.test(mapExplorer),
   );
   expectTrue(
-    'the map\'s OWN moves (fitBounds/flyTo) are suppressed so they are not misread as the user',
-    /beginProgrammaticMove\(\);\s*\n\s*const only = latlngs\[0\]/.test(leafletInner) &&
-      /beginProgrammaticMove\(\);\s*\n(?:\s*\/\/.*\n)*\s*map\.flyTo/.test(leafletInner),
+    'the map\'s OWN moves (fitBounds/the camera animation) are suppressed so they are not ' +
+      'misread as the user',
+    /beginProgrammaticMove\(\);\s*\n\s*const only = points\[0\]/.test(courtMapInner) &&
+      /beginProgrammaticMove\(\);\s*\n(?:\s*\/\/.*\n)*\s*animateCamera\(/.test(courtMapInner),
   );
   expectTrue(
-    'the suppression window self-heals on a timer AND clears on moveend (a no-op setView ' +
-      'that never fires moveend cannot deafen the map to real interaction forever)',
-    /PROGRAMMATIC_MOVE_GRACE_MS/.test(leafletInner) &&
-      /map\.on\('moveend', clearSuppression\)/.test(leafletInner),
+    'the suppression window self-heals on a timer AND clears on idle (Feature 88: Google\'s ' +
+      'moveend-equivalent) — a no-op move that never fires idle cannot deafen the map to ' +
+      'real interaction forever',
+    /PROGRAMMATIC_MOVE_GRACE_MS/.test(courtMapInner) &&
+      /map\.addListener\('idle', clearSuppression\)/.test(courtMapInner),
   );
   expectTrue(
-    'every Leaflet listener added for this feature is removed on unmount (no leak)',
+    'Task 17 §1: `idle` clearing the suppression window is GUARDED while a camera ' +
+      'animation is in flight — otherwise an `idle` firing between animation frames (the ' +
+      'focus flyTo-replacement) would zero the window mid-move and every remaining frame ' +
+      'would be reported as a genuine user gesture',
+    /if \(cameraAnimationRef\.current !== null\) return;\s*\n\s*suppressUntilRef\.current = 0;/.test(
+      courtMapInner,
+    ),
+  );
+  expectTrue(
+    'Task 17 §1: the fitBounds zoom clamp RE-ARMS the suppression window immediately ' +
+      'before its own setZoom — the general `idle` listener (registered first, so it runs ' +
+      'first) has already cleared the window by the time the clamp\'s one-shot `idle` ' +
+      'listener fires, so without re-arming here the clamp\'s own zoom_changed would be ' +
+      'reported as a user gesture',
+    /beginProgrammaticMove\(\);\s*\n\s*map\.setZoom\(FIT_BOUNDS_MAX_ZOOM\);/.test(courtMapInner),
+  );
+  expectTrue(
+    'every lifecycle listener added for this feature is released on unmount — Feature 88: ' +
+      'the Maps JS API has no per-listener map.off(); the 4 map.addListener calls ' +
+      '(dragstart/center_changed/zoom_changed/idle) are released as a group by the one ' +
+      'documented clearInstanceListeners(map) call in the same cleanup',
     (() => {
-      const code = stripComments(leafletInner);
-      const on = (code.match(/map\.on\(/g) ?? []).length;
-      const off = (code.match(/map\.off\(/g) ?? []).length;
-      return on > 0 && on === off;
+      const code = stripComments(courtMapInner);
+      const addCount = (code.match(/map\.addListener\(/g) ?? []).length;
+      return addCount === 4 && /google\.maps\.event\.clearInstanceListeners\(map\)/.test(code);
     })(),
   );
 
@@ -429,7 +509,7 @@ async function main(): Promise<void> {
   for (const [label, src] of [
     ['MapLocateControl', locateControl],
     ['MapExplorer', mapExplorer],
-    ['LeafletMapInner', leafletInner],
+    ['CourtMapInner', courtMapInner],
     ['useGeolocation', useGeolocation],
   ] as const) {
     expectTrue(
@@ -457,9 +537,9 @@ async function main(): Promise<void> {
     /className="h-full w-full"/.test(mapExplorer) && /map-canvas-wrap/.test(mapExplorer),
   );
   expectTrue(
-    'the LeafletMap chunk loader is unchanged (still the quiet in-frame placeholder)',
-    /loading: \(\) => <MapLoading \/>/.test(leafletWrapper) &&
-      !/fixed\s+inset-0/.test(stripComments(leafletWrapper)),
+    'the CourtMap chunk loader is unchanged (still the quiet in-frame placeholder)',
+    /loading: \(\) => <MapLoading \/>/.test(courtMapWrapper) &&
+      !/fixed\s+inset-0/.test(stripComments(courtMapWrapper)),
   );
 
   // ── Requirement 13: unrelated map controls stay usable ──────────────────────────────
@@ -482,12 +562,17 @@ async function main(): Promise<void> {
     /pointer-events-none absolute/.test(locateControl) && /pointer-events-auto/.test(locateControl),
   );
   expectTrue(
-    'the map is still created fully interactive (dragging/zoom/scroll wheel untouched)',
-    /dragging: interactive/.test(leafletInner) && /scrollWheelZoom: interactive/.test(leafletInner),
+    'the map is still created fully interactive — Feature 88: gestureHandling is the ' +
+      'primary Google gate (auto vs none), with draggable/scrollwheel set from the same ' +
+      '`interactive` flag alongside it',
+    /gestureHandling: interactive \? 'auto' : 'none',/.test(courtMapInner) &&
+      /draggable: interactive,/.test(courtMapInner) &&
+      /scrollwheel: interactive,/.test(courtMapInner),
   );
   expectTrue(
-    'Leaflet\'s zoom control is still rendered (nothing was removed for the overlay)',
-    /zoomControl: interactive/.test(leafletInner),
+    'Google\'s zoom control is still rendered (nothing was removed for the overlay) — ' +
+      'same `zoomControl: interactive` field name Leaflet used',
+    /zoomControl: interactive,/.test(courtMapInner),
   );
   expectTrue(
     'the filter chips / search / list panel are untouched by the focus logic',
@@ -501,7 +586,7 @@ async function main(): Promise<void> {
     ['MapExplorer', mapExplorer],
     ['MapLocateControl', locateControl],
     ['geo-distance', geoDistance],
-    ['LeafletMapInner', leafletInner],
+    ['CourtMapInner', courtMapInner],
   ] as const) {
     const code = stripComments(src);
     expectTrue(`${label} never persists coordinates (no localStorage/sessionStorage/cookie)`,
@@ -521,9 +606,11 @@ async function main(): Promise<void> {
       (stripComments(mapPage).match(/repositories\.\w+\./g) ?? []).length === 2,
   );
   expectTrue(
-    'geo-distance stays a pure module (no React/DOM/Leaflet import and no client directive — ' +
-      'it is unit-testable, as this script itself demonstrates)',
-    !/from 'react'|from 'leaflet'|'use client'/.test(stripComments(geoDistance)),
+    'geo-distance stays a pure module (no React/DOM/map-library import and no client ' +
+      'directive — it is unit-testable, as this script itself demonstrates)',
+    !/from 'react'|from 'leaflet'|from '@googlemaps|from 'google|'use client'/.test(
+      stripComments(geoDistance),
+    ),
   );
 
   // ── Coordinate-safety invariant (pre-existing, must not regress) ─────────────────────
@@ -536,6 +623,120 @@ async function main(): Promise<void> {
   expectTrue(
     'the nearest-court search runs over those same markers (no exact-coordinate source)',
     /findNearestPoint\(markersRef\.current, coords\)/.test(mapExplorer),
+  );
+
+  // ── Feature 88: Google Maps engine (no Leaflet-era equivalent) ───────────────────────
+  console.log('\nFeature 88: Google Maps engine (Map ID + AdvancedMarkerElement, variant B)');
+  expectTrue(
+    'no leftover Leaflet import or stylesheet anywhere in the map feature',
+    (() => {
+      const files = [mapExplorer, courtMapInner, courtMapWrapper, savedWishlistMap, courtDetailLocationPreview];
+      return files.every((f) => !/from 'leaflet'|leaflet\/dist\/leaflet\.css/.test(stripComments(f)));
+    })(),
+  );
+  expectTrue(
+    'variant B is what shipped: the map is constructed with a Map ID and AdvancedMarkerElement, ' +
+      'never a JSON `styles` array (mapId makes styles inert — the two are mutually exclusive, ' +
+      'decided Feature 88 §1)',
+    /mapId: config\.mapId,/.test(courtMapInner) &&
+      /new AdvancedMarkerElement\(/.test(courtMapInner) &&
+      !/\bstyles:\s*\[/.test(stripComments(courtMapInner)),
+  );
+  expectTrue(
+    'the Maps JS API is loaded through @googlemaps/js-api-loader\'s modern ' +
+      'setOptions/importLibrary pair (v2\'s documented API — the old Loader class is a ' +
+      'deprecated no-op stub in this version), and the resulting library promise is ' +
+      'cached at module scope so every mount (the /map explorer, the Saved Wishlist map, ' +
+      'unlocked Court Detail) shares ONE script load',
+    /import \{ setOptions, importLibrary \} from '@googlemaps\/js-api-loader';/.test(courtMapInner) &&
+      /let librariesPromise: Promise<GoogleMapsLibraries> \| null = null;/.test(courtMapInner) &&
+      /if \(!librariesPromise\) \{/.test(courtMapInner),
+  );
+  expectTrue(
+    'no Places, Geocoding, or Directions API call was added anywhere in the map feature — ' +
+      'Feature 88 §2: the map layer only ever plots the coordinate its caller handed it',
+    (() => {
+      const files = [
+        mapExplorer,
+        courtMapInner,
+        courtMapWrapper,
+        savedWishlistMap,
+        courtDetailLocationPreview,
+        readSrc('features/map/map-markers.ts'),
+      ].map(stripComments);
+      const forbidden = /google\.maps\.places|google\.maps\.Geocoder|google\.maps\.DirectionsService|PlacesService|DirectionsService|Geocoder\(/;
+      return files.every((f) => !forbidden.test(f));
+    })(),
+  );
+  expectTrue(
+    'directionsUrl is still rendered verbatim from the server — the web app does not ' +
+      'assemble a maps URL from coordinates now that it is on Google either',
+    /href=\{exactLocation\.directionsUrl\}/.test(courtDetailLocationPreview) &&
+      !/directionsUrl.*\$\{.*(lat|lng)/i.test(stripComments(courtDetailLocationPreview)),
+  );
+  expectTrue(
+    'the LOCKED Court Detail preview no longer mounts a live map at all (Feature 88 §6.1 — ' +
+      'a real Google map behind a blur would be a billable load for zero markers, and ' +
+      'blurring it would obscure Google\'s required attribution/logo). Exactly the two ' +
+      'UNLOCKED branches (v2 + rail) still mount <CourtMap>; both LOCKED branches (v2 + ' +
+      'rail) render the non-Google LockedMapPlaceholder instead',
+    (() => {
+      const code = stripComments(courtDetailLocationPreview);
+      const courtMapMounts = (code.match(/<CourtMap\b/g) ?? []).length;
+      const placeholderMounts = (code.match(/<LockedMapPlaceholder \/>/g) ?? []).length;
+      return (
+        courtMapMounts === 2 &&
+        placeholderMounts === 2 &&
+        /function LockedMapPlaceholder\(\)/.test(code)
+      );
+    })(),
+  );
+  expectTrue(
+    'the env surface matches the new config: apps/web/.env.example documents ' +
+      'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY + NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID and no longer ' +
+      'mentions the retired Leaflet tile vars',
+    (() => {
+      const env = readWebFile('.env.example');
+      return (
+        /NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=/.test(env) &&
+        /NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=/.test(env) &&
+        !/NEXT_PUBLIC_MAP_TILE_URL/.test(env) &&
+        !/NEXT_PUBLIC_MAP_PROVIDER/.test(env)
+      );
+    })(),
+  );
+  expectTrue(
+    'package.json dropped leaflet/@types/leaflet and added @googlemaps/js-api-loader + ' +
+      '@types/google.maps',
+    (() => {
+      const pkg = readWebFile('package.json');
+      return (
+        !/"leaflet"\s*:/.test(pkg) &&
+        !/"@types\/leaflet"\s*:/.test(pkg) &&
+        /"@googlemaps\/js-api-loader"\s*:/.test(pkg) &&
+        /"@types\/google\.maps"\s*:/.test(pkg)
+      );
+    })(),
+  );
+  expectTrue(
+    'the marker content is a real HTMLElement carrying the SAME .tw-map-marker* classes ' +
+      'the CSS already styled (a near-1:1 port of the old divIcon markup, per Feature 88 §1)',
+    /wrapper\.className = 'tw-map-marker-icon';/.test(courtMapInner) &&
+      /marker\.className = 'tw-map-marker';/.test(courtMapInner) &&
+      /haloEl\.className = 'tw-map-marker__halo';/.test(courtMapInner) &&
+      /dotEl\.className = 'tw-map-marker__dot';/.test(courtMapInner),
+  );
+  expectTrue(
+    'Task 17 §4: the marker wrapper is forced to `display: inline-block` BEFORE its ' +
+      'width/height/translateY(50%) anchor compensation are set — verified on-screen: a ' +
+      'bare `<span>` defaults to `display: inline`, which makes the browser ignore an ' +
+      'explicit width/height entirely, so the box collapses to its content\'s intrinsic ' +
+      'size and the percentage-based `translateY(50%)` (computed from that WRONG size) ' +
+      'resolves to zero — the dot then renders visibly off the true point instead of ' +
+      'centered on it',
+    /wrapper\.style\.display = 'inline-block';\s*\n\s*wrapper\.style\.width = /.test(
+      courtMapInner,
+    ),
   );
 
   summarize();

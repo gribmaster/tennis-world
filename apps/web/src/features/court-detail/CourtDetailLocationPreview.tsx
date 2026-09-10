@@ -1,20 +1,27 @@
 import type { ExactLocationDTO } from '@tennis/contracts';
-import { LeafletMap, type MapMarker } from '@/features/map';
+import { CourtMap, type MapMarker } from '@/features/map';
 import { PaywallTrigger } from '@/features/paywall';
 
-// CourtDetailLocationPreview — the location block on Court Detail (Feature 11 §2), a REAL
-// Leaflet map (Feature 74), restyled for the v2 redesign (Feature 78).
+// CourtDetailLocationPreview — the location block on Court Detail (Feature 11 §2),
+// restyled for the v2 redesign (Feature 78). Its map engine moved off Leaflet to Google
+// Maps in Feature 88 (`docs/MAP_PROVIDER_DECISION.md` §0) — see that change's §6.1 for
+// why the LOCKED state below no longer mounts a live map at all.
 //
 // COORDINATE SAFETY (Architecture Plan §9 Risk #17) — two strictly separate paths, both
-// UNCHANGED by the redesign:
-//   • LOCKED / free viewer: the map is centered on the ALWAYS-PUBLIC approximate geo
-//     (`approxLat`/`approxLng`), rendered BLURRED and non-interactive behind the lock
-//     glyph + Unlock CTA. No exact coordinate is ever sent to this state.
+// UNCHANGED by the redesign or the map-engine migration:
+//   • LOCKED / free viewer: NO live map is mounted at all (Feature 88 §6.1 — a real
+//     Google map here would be a billable load for a screen with zero markers that
+//     nobody can read, and blurring it would obscure Google's required attribution/logo,
+//     a Maps Platform Terms violation). A non-Google decorative placeholder (a static
+//     tonal gradient, no coordinates, no third-party request) sits behind the lock glyph
+//     + Unlock CTA instead — visually the same soft blurred backdrop as before. No
+//     coordinate, exact or approximate, reaches this state's DOM or any network request.
 //   • ENTITLED viewer: `exactLocation` (from the PROTECTED
 //     `GET /v1/me/courts/:slug/exact-location` endpoint — an authenticated, premium
 //     read, never a public one) supplies the exact `lat`/`lng` for a single precise
 //     marker, plus the server-built `directionsUrl` for the real directions link. The
-//     component NEVER assembles a maps URL from coordinates itself.
+//     component NEVER assembles a maps URL from coordinates itself, and never passes an
+//     exact coordinate to any Google API call other than this single marker's position.
 //
 // `locked` and `exactLocation` are computed once at the page level (Feature 64); the
 // component never derives its own lock state.
@@ -92,6 +99,24 @@ function PinGlyph({ size = 12 }: { size?: number }) {
   );
 }
 
+/**
+ * The LOCKED state's map-shaped backdrop (Feature 88 §6.1) — a static tonal gradient, the
+ * same restrained panel `CourtMap`'s own loading state uses. NOT a map: no tiles, no
+ * markers, no coordinate, no third-party request. Mounting a live Google map here just to
+ * blur it would be a billable load for a screen with zero markers that conveys nothing
+ * (nobody can read a blurred map), and blurring it would obscure Google's required
+ * attribution/logo — a Maps Platform Terms violation. This keeps the same soft blurred
+ * backdrop look the lock glyph + CTA sit on top of, without mounting anything Google.
+ */
+function LockedMapPlaceholder() {
+  return (
+    <div
+      aria-hidden
+      className="h-full w-full bg-gradient-to-b from-[#eef0ea] to-[#d9dcd2]"
+    />
+  );
+}
+
 export interface CourtDetailLocationPreviewProps {
   /** Whether the exact location is locked. Computed at the page level — see Feature 64. */
   locked: boolean;
@@ -165,15 +190,10 @@ export function CourtDetailLocationPreview({
           <div className="h-[100px] overflow-hidden rounded-[10px] border border-hairline md:h-[clamp(100px,14vw,180px)]">
             {locked ? (
               <div className="relative h-full w-full">
-                {/* Blurred APPROXIMATE map — no exact coord is present in this state. */}
+                {/* No live map — see LockedMapPlaceholder above (Feature 88 §6.1). No
+                    coordinate, exact or approximate, is present in this state. */}
                 <div aria-hidden className="absolute inset-0 scale-105 blur-[6px]">
-                  <LeafletMap
-                    markers={[]}
-                    center={[approxLat, approxLng]}
-                    zoom={6}
-                    interactive={false}
-                    className="h-full w-full"
-                  />
+                  <LockedMapPlaceholder />
                 </div>
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-bone/60 text-stone backdrop-blur-[2px]">
                   <LockGlyph />
@@ -182,7 +202,7 @@ export function CourtDetailLocationPreview({
               </div>
             ) : (
               // Unlocked: entitled → exact marker; otherwise → approximate marker.
-              <LeafletMap
+              <CourtMap
                 markers={marker ? [marker] : []}
                 center={[marker!.lat, marker!.lng]}
                 zoom={entitled ? 17 : 6}
@@ -265,16 +285,10 @@ export function CourtDetailLocationPreview({
       <div className="relative aspect-[16/9] overflow-hidden rounded-md border border-hairline">
         {locked ? (
           <>
-            {/* Blurred APPROXIMATE map — real tiles, non-interactive, obscured. No exact
-                coord is present in this state; the viewer sees only the rough area. */}
+            {/* No live map — see LockedMapPlaceholder above (Feature 88 §6.1). No
+                coordinate, exact or approximate, is present in this state. */}
             <div aria-hidden className="absolute inset-0 scale-105 blur-[6px]">
-              <LeafletMap
-                markers={[]}
-                center={[approxLat, approxLng]}
-                zoom={6}
-                interactive={false}
-                className="h-full w-full"
-              />
+              <LockedMapPlaceholder />
             </div>
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-bone/50 px-6 text-center text-graphite backdrop-blur-[2px]">
               <LockGlyph />
@@ -290,7 +304,7 @@ export function CourtDetailLocationPreview({
           </>
         ) : (
           // Unlocked: entitled → exact marker; otherwise → approximate marker.
-          <LeafletMap
+          <CourtMap
             markers={marker ? [marker] : []}
             center={[marker!.lat, marker!.lng]}
             zoom={entitled ? 17 : 6}

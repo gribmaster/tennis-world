@@ -13,11 +13,11 @@ import {
 } from '@/components/filters';
 import { MapFilterBar } from './MapFilterBar';
 import { MapCourtList } from './MapCourtList';
-import { LeafletMap } from './LeafletMap';
+import { CourtMap } from './CourtMap';
 import { MapLocateControl } from './MapLocateControl';
 import { useGeolocation } from './useGeolocation';
 import { findNearestPoint } from './geo-distance';
-import type { MapFocusRequest } from './LeafletMapInner';
+import type { MapFocusRequest } from './CourtMapInner';
 import { courtToMarker, pinStateToMarkerState, type MapMarkerState } from './map-markers';
 
 // MapExplorer — the ONE `'use client'` boundary on the Map screen.
@@ -34,8 +34,9 @@ import { courtToMarker, pinStateToMarkerState, type MapMarkerState } from './map
 // (app/map/page.tsx) is the single data boundary and passes the full, unfiltered
 // `courts` + `pins` arrays in as props.
 //
-// REAL MAP (Feature 74): the abstract StylizedMapCanvas is gone. The visible courts
-// are plotted on a real Leaflet map (LeafletMap) at their APPROXIMATE geo — markers
+// REAL MAP (Feature 74; engine migrated to Google Maps in Feature 88 — see
+// docs/MAP_PROVIDER_DECISION.md §0): the abstract StylizedMapCanvas is gone. The visible
+// courts are plotted on a real map (CourtMap) at their APPROXIMATE geo — markers
 // are positioned from `court.approxLat`/`approxLng` only (via `courtToMarker`). The
 // `pins` prop is still used, but ONLY for its authoritative open/locked/featured
 // `state` (joined by slug); pins carry no geo we plot. Filtered courts and filtered
@@ -225,7 +226,7 @@ export function MapExplorer({ courts, pins, initialQuery = '' }: MapExplorerProp
         {/* `.map-canvas-wrap` is already `position: relative`, so the locate control can
             overlay the map without changing the canvas dimensions in any way. */}
         <div className="map-canvas-wrap">
-          <LeafletMap
+          <CourtMap
             markers={visibleMarkers}
             navigateOnClick
             className="h-full w-full"

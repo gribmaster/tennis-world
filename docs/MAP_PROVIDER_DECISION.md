@@ -1,8 +1,124 @@
 # Map Provider Decision (Feature 74)
 
 **Date:** 2026-07-06
-**Status:** Implemented
+**Status:** Superseded by Feature 88 (2026-09-10) — see §0. Sections 1–8 below are kept as
+the historical record of the Feature 74 decision; §2 and §5 carry inline notes pointing at
+what replaced them. §6 (the exact/approximate coordinate invariant) is unchanged and still
+governs the current, Google-backed implementation verbatim.
 **Scope:** the map surface used by `/map`, the Saved → Wishlist Map tab, and the Court Detail location preview.
+
+---
+
+## 0. SUPERSEDED BY FEATURE 88 (2026-09-10) — Leaflet → Google Maps
+
+**Date:** 2026-09-10
+**Status:** Implemented
+**Reverses:** §2's "No Google Maps" call and §5's Leaflet tile-env matrix, below. Nothing
+else in this document changed — §6 in particular is explicitly unchanged.
+
+Feature 88 replaces the Leaflet + OSM/MapTiler engine (§1–§5 below) with the **Google
+Maps JavaScript API**. The reasons Leaflet was originally chosen (§2) — no key, no
+account, self-contained — are real costs this reversal accepts knowingly: Google Maps is
+now key-gated and billable per load, in exchange for a maps product with a familiar,
+trusted look, address/POI context Leaflet's raster tiles didn't carry, and Google's own
+maintained basemap instead of an OSM/MapTiler dependency this app had to operate.
+
+### Variant decision — Map ID + `AdvancedMarkerElement` (not JSON styles + legacy `Marker`)
+
+Google forces a fork between two mutually exclusive setups (setting `mapId` makes a JSON
+`styles` array inert — you cannot use both):
+
+| | JSON styles + legacy `Marker` | **Map ID + `AdvancedMarkerElement` (chosen)** |
+|---|---|---|
+| Styling | version-controlled JSON in the repo | Cloud-console style, referenced by `mapId` — **not** in git |
+| Markers | SVG data-URI icon | `AdvancedMarkerElement.content` = a real `HTMLElement` |
+| Marker API status | deprecated since Feb 2024 (still functional) | current |
+
+**Chosen: Map ID + `AdvancedMarkerElement`.** The existing markers were already DOM (a
+`divIcon` HTML string for Leaflet — `.tw-map-marker`, halo span, dot span, `--mk` custom
+property), and `AdvancedMarkerElement.content` takes a real `HTMLElement`, so this was a
+near-1:1 port that kept the existing `.tw-map-marker*` CSS unchanged. The JSON-styles path
+would have meant re-expressing those markers as SVG data URIs and losing the CSS hover rule.
+
+**The cost, accepted knowingly:** the map's visual style now lives in the Google Cloud
+Console project backing `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID`, not in this repository. It is
+not version-controlled, not reviewable in a diff, and not restored by `git checkout`.
+
+- **Map ID:** provisioned per environment via `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` — see
+  `apps/web/.env.example`. No value is committed anywhere in this repo (§3/§4 of the main
+  CLAUDE.md — secrets/public keys are never committed even when, as here, the key itself
+  is public-by-construction).
+- **Style description:** *(operator TODO — record here once a Cloud Console style is
+  actually authored and attached to the Map ID: what it looks like, who owns the Cloud
+  Console project, and the date it was last changed. As of this change, no custom style
+  has been authored — the Map ID resolves to Cloud Console's default styling until one
+  is.)*
+
+### The coordinate invariant — unchanged (§6 below, verbatim)
+
+Nothing about §6 changed. Public map surfaces still plot `approxLat`/`approxLng` only via
+`courtToMarker` (`apps/web/src/features/map/map-markers.ts`, untouched by this migration);
+exact `lat`/`lng` still reach the client only from the protected exact-location endpoint,
+for a single marker, for an entitled viewer only; `directionsUrl` is still built
+server-side and the web app still never assembles a maps URL from coordinates. The Maps JS
+API is Google's network, so viewport centres/zoom levels now go to Google — but the map
+layer still only ever receives what its caller hands it, and this migration added no
+Places, Geocoding, or Directions call anywhere.
+
+### The locked Court Detail preview no longer mounts a live map (new in Feature 88)
+
+Under Leaflet, `CourtDetailLocationPreview`'s locked branch rendered a real, blurred,
+non-interactive map centered on the approximate geo, with zero markers. Two things about
+that stopped being fine once the engine is Google's:
+
+- **Cost.** Court Detail is the most-visited page; every mount of a locked court's preview
+  would be a billable Dynamic Maps load (roughly 10,000 free/month, then roughly $7/1,000
+  as of the 2025 pricing restructure — check current pricing before relying on these
+  numbers) for a map that is deliberately blurred and shows nothing.
+- **Terms.** Google Maps Platform Terms of Service require attribution/branding/logo
+  notices to stay visible, legible, and never obscured or modified. Blurring the *entire*
+  map surface — the whole point of the locked treatment — necessarily blurs Google's
+  required attribution and logo along with it, for both Dynamic and Static Maps content.
+
+Given both, the locked preview now renders a **non-Google decorative placeholder** — a
+static tonal gradient (`LockedMapPlaceholder` in `CourtDetailLocationPreview.tsx`), in the
+same spirit as the pre-Feature-74 `StylizedMapCanvas` treatment, still blurred behind the
+same lock glyph + "Unlock to reveal" CTA. No map, no coordinate, no third-party request,
+no cost, and nothing to obscure. This decision was proposed and confirmed with the project
+owner before implementation, per Feature 88's brief.
+
+### What changed, file-by-file
+
+- `apps/web/src/features/map/LeafletMapInner.tsx` → `CourtMapInner.tsx` (the engine: Maps
+  JS API + `AdvancedMarkerElement`, loaded via `@googlemaps/js-api-loader`).
+- `apps/web/src/features/map/LeafletMap.tsx` → `CourtMap.tsx` (the same SSR-safe
+  `next/dynamic({ ssr: false })` wrapper, renamed to match).
+- `apps/web/src/features/map/map-config.ts` — now resolves
+  `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` / `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` instead of the old
+  `NEXT_PUBLIC_MAP_PROVIDER` / `_TILE_URL` / `_ATTRIBUTION` trio (§5 below, superseded).
+- `apps/web/src/features/map/map-markers.ts`, `geo-distance.ts`, `useGeolocation.ts`,
+  `MapLocateControl.tsx`, `MapFilterBar.tsx`, `MapCourtList.tsx`, `MapCourtRow.tsx` —
+  **untouched**. None of them were Leaflet-specific.
+- `apps/web/src/features/court-detail/CourtDetailLocationPreview.tsx` — unlocked branches
+  now render `CourtMap`; locked branches render `LockedMapPlaceholder` (above), not a map.
+- `apps/web/src/app/globals.css` — `.leaflet-container` / `.leaflet-control-zoom` /
+  `.leaflet-control-attribution` rules replaced with Google's own DOM hooks
+  (`.gm-style` implicitly, `.gm-bundled-control`); the attribution rule was dropped
+  deliberately, not ported (see the Terms point above).
+- `apps/web/package.json` — `leaflet` + `@types/leaflet` removed; `@googlemaps/js-api-loader`
+  + `@types/google.maps` added.
+- `apps/web/scripts/verify-map-autofocus.ts` — re-pointed at the renamed files and
+  re-expressed against the Google API; the behavioural half (`geo-distance.ts` and its
+  fixtures) is untouched.
+
+### `flyTo` → composed camera animation
+
+Leaflet's `flyTo` animated pan *and* zoom together over 0.9s; Google's `panTo` animates
+pan only, and there is no built-in combined animated camera move. `CourtMapInner`
+implements one: a `requestAnimationFrame` loop calling `map.moveCamera({ center, zoom })`
+each frame over the same 900ms, eased (`easeOutCubic`) — the documented pattern for a
+composed Google Maps camera move. This preserves the "the map moved you here" feel rather
+than silently downgrading to an instant jump.
 
 ---
 
@@ -38,8 +154,17 @@ Feature 74 replaces it with a **real tile map** that plots courts at their real
 
 ### Explicitly NOT chosen (per Feature 74 hard rules)
 
-- **No Google Maps** — heavyweight, key-gated, and its look/licensing is wrong for an
-  editorial product.
+> **⚠ SUPERSEDED (Feature 88, 2026-09-10) — see §0.** The "No Google Maps" call below was
+> the Feature 74 project owner's decision at the time and was reversed by a later, explicit
+> decision (also the project owner's) recorded in §0. It is kept here verbatim as the
+> historical record of why Leaflet was chosen originally; it is no longer the operative
+> rule. The Mapbox and geolocation/PostGIS calls immediately below were NOT reversed and
+> still hold — this app uses no Mapbox and no PostGIS, and Feature 74's own later geo
+> additions (nearest-court auto-focus) use only in-memory `navigator.geolocation`, never a
+> spatial database.
+
+- ~~**No Google Maps** — heavyweight, key-gated, and its look/licensing is wrong for an
+  editorial product.~~ **Reversed by Feature 88 — see §0.**
 - **No Mapbox (for now)** — capable, but token-gated and heavier than we need today. Leaflet
   keeps the door open (a Mapbox raster style is just another tile URL) without committing us.
 - **No geolocation, no PostGIS** — the app never asks for the user's location, and court
@@ -69,6 +194,16 @@ template URL, correct attribution, and — for keyed providers — the key baked
 URL via env. **Never commit a real production key.**
 
 ## 5. How the tile env vars work
+
+> **⚠ SUPERSEDED (Feature 88, 2026-09-10) — see §0.** `NEXT_PUBLIC_MAP_PROVIDER`,
+> `NEXT_PUBLIC_MAP_TILE_URL`, and `NEXT_PUBLIC_MAP_ATTRIBUTION` below no longer exist —
+> `map-config.ts` no longer reads them, and they were removed from
+> `apps/web/.env.example`/`.env.local`. Google has no tile URL and draws its own
+> attribution, so there is nothing left for these three to configure. The current env
+> surface is two vars: `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` and
+> `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` — see §0 and `apps/web/.env.example`. The table and
+> examples immediately below are kept as the historical record of how tile provider
+> selection worked under Leaflet; they describe no live code path.
 
 The tile source is resolved entirely from `NEXT_PUBLIC_MAP_*` env by
 `apps/web/src/features/map/map-config.ts` (`getMapTileConfig()`), read at render time by the

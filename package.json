@@ -16,7 +16,7 @@
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "verify:api-parity": "pnpm --filter @tennis/web verify:api-parity",
-    "verify:api-auth": "pnpm --filter @tennis/web verify:user-saved-http && pnpm --filter @tennis/web verify:persisted-saved-flow",
+    "verify:api-auth": "pnpm --filter @tennis/web verify:user-saved-http && pnpm --filter @tennis/web verify:persisted-saved-flow && pnpm --filter @tennis/web verify:web-profile",
     "verify:stripe-e2e": "pnpm --filter @tennis/api verify:stripe-e2e"
   },
   "devDependencies": {

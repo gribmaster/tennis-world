@@ -15,12 +15,14 @@ export type { MapExplorerProps } from './MapExplorer';
 export { MapFilterBar, MAP_QUICK_FILTERS } from './MapFilterBar';
 export type { MapFilterBarProps } from './MapFilterBar';
 
-// Real Leaflet map (Feature 74) — the SSR-safe wrapper + its marker model. This is
-// the map surface used by /map, the Saved Wishlist Map, and Court Detail. It plots
-// approxLat/approxLng only (never exact lat/lng — see map-markers / LeafletMapInner).
-export { LeafletMap } from './LeafletMap';
-export type { LeafletMapProps } from './LeafletMap';
-export type { MapFocusRequest } from './LeafletMapInner';
+// Real Google Maps engine (Feature 88; migrated off Leaflet — see
+// docs/MAP_PROVIDER_DECISION.md §0) — the SSR-safe wrapper + its marker model. This is
+// the map surface used by /map, the Saved Wishlist Map, and the unlocked Court Detail
+// preview. It plots approxLat/approxLng only (never exact lat/lng — see map-markers /
+// CourtMapInner).
+export { CourtMap } from './CourtMap';
+export type { CourtMapProps } from './CourtMap';
+export type { MapFocusRequest } from './CourtMapInner';
 
 // Nearest-court auto-focus (map screen only): the pure distance helpers, the single
 // geolocation hook both entry points share, and the small overlaid locate control.
@@ -33,8 +35,8 @@ export { MapLocateControl } from './MapLocateControl';
 export type { MapLocateControlProps } from './MapLocateControl';
 export { courtToMarker } from './map-markers';
 export type { MapMarker, MapMarkerState } from './map-markers';
-export { getMapTileConfig } from './map-config';
-export type { MapTileConfig } from './map-config';
+export { getGoogleMapsConfig } from './map-config';
+export type { GoogleMapsConfig } from './map-config';
 
 export { MapCourtList } from './MapCourtList';
 export type { MapCourtListProps } from './MapCourtList';

@@ -74,12 +74,14 @@ Root aggregates:
 ```bash
 pnpm verify:api-parity     # web mock↔api parity harness
 pnpm verify:api-auth       # verify:user-saved-http + verify:persisted-saved-flow
+                           #   + verify:web-profile   (all three read AUTH_BEARER_TOKEN)
 pnpm verify:stripe-e2e     # optional, real Stripe test mode (opt-in)
 ```
 
 `pnpm --filter @tennis/web …`: `verify:api-parity`, `verify:user-saved-http`,
 `verify:persisted-saved-flow`, `verify:saved-court-toggle`, `verify:web-exact-location`,
-`verify:web-billing`, `verify:ux-pending-states`, `verify:map-autofocus`.
+`verify:web-billing`, `verify:web-profile`, `verify:ux-pending-states`,
+`verify:map-autofocus`.
 
 `pnpm --filter @tennis/api …`: `verify:effective-entitlement`, `verify:exact-location`,
 `verify:billing-checkout`, `verify:billing-rate-limit`, `verify:stripe-webhook`,
@@ -87,15 +89,19 @@ pnpm verify:stripe-e2e     # optional, real Stripe test mode (opt-in)
 
 Most harnesses need a running API (and some a seeded DB); each script's header comment
 states its own prerequisites. Touching UI pending/back-navigation ⇒ run
-`verify:ux-pending-states`. Touching billing UI ⇒ `verify:web-billing`.
+`verify:ux-pending-states`. Touching billing UI ⇒ `verify:web-billing`. Touching the
+profile-edit path (`PATCH /v1/me`, the `UserProfileDTO` shape, or the name-validation
+rules in `me.dto.ts`/`me.service.ts`) ⇒ `verify:web-profile` (31 checks) — it is the only
+coverage of that mutation, and the only assertion that email stays immutable.
 
 **Do not accept a skip as a pass.** Several harnesses skip silently when an env var is
 absent, and only one of those skips (real-Stripe) is genuinely opt-in:
 
 - Token-gated: `verify:web-exact-location` and `verify:web-billing` read
   `FREE_BEARER_TOKEN` / `ENTITLED_BEARER_TOKEN`; `verify:saved-court-toggle`,
-  `verify:user-saved-http` and `verify:persisted-saved-flow` read `AUTH_BEARER_TOKEN`
-  (a different name — supplying only the first two silently skips the authed half).
+  `verify:user-saved-http`, `verify:persisted-saved-flow` and `verify:web-profile` read
+  `AUTH_BEARER_TOKEN` (a different name — supplying only the first two silently skips the
+  authed half).
   Mint tokens through the real `POST /v1/auth/verify` path the way
   `apps/api/scripts/ci-issue-token.ts` and `verify-exact-location.ts` do; seed an active
   `Entitlement` row for the entitled one.

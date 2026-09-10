@@ -16,9 +16,10 @@ import { isSignedIn } from '@/lib/session.server';
 //   • repositories.courts.list()       → CourtSummaryDTO[] (list panel + filter source)
 //   • repositories.courts.getMapPins() → MapPinDTO[]       (canvas pin positions/state)
 //
-// Feature 74: markers are plotted on a REAL Leaflet map (env-configured tiles) from
-// each court's APPROXIMATE geo (`approxLat`/`approxLng`) — exact `lat`/`lng` are not
-// part of these DTOs and never reach the client (Architecture Plan §9 Risk #17). No
+// Feature 74 (engine migrated to Google Maps in Feature 88): markers are plotted on a
+// REAL map from each court's APPROXIMATE geo (`approxLat`/`approxLng`) — exact `lat`/
+// `lng` are not part of these DTOs and never reach the client (Architecture Plan §9
+// Risk #17). No
 // payments here; the `pins` read supplies only pin state.
 //
 // NEAREST-COURT AUTO-FOCUS: MapExplorer asks the BROWSER for the visitor's position on

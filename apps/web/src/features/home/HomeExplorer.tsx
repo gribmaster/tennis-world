@@ -175,15 +175,16 @@ export function HomeExplorer({
           image with four decorative gold pins, over an ivory info bar linking to /map.
 
           It is NOT built, and NOTHING stands in for it — no placeholder image, no second
-          Leaflet instance, no coloured box, no "coming soon" panel. The sections above and
+          live map instance, no coloured box, no "coming soon" panel. The sections above and
           below simply sit next to each other.
 
           WHY: the band's background is one of the prototype's two inline base64 PNGs, and
-          choosing the real asset depends on a decision that has not been made yet — the
-          map is migrating off Leaflet/OSM to Google Maps with Snazzy Maps styling, which is
-          its own future feature (see docs/MAP_PROVIDER_DECISION.md). Shipping a stand-in
-          now would mean drawing a world map in a style the app is about to stop using.
-          This band is that migration's work, not this feature's.
+          choosing the real asset still depends on a decision that has not been made yet.
+          The map itself HAS since migrated off Leaflet/OSM to Google Maps (Map ID +
+          AdvancedMarkerElement, Feature 88 — see docs/MAP_PROVIDER_DECISION.md), but that
+          was the map SCREEN's engine, not this preview band, which was never built and
+          remains its own open decision. Shipping a stand-in now would still mean drawing a
+          world map in a style nothing else on this screen uses.
           ─────────────────────────────────────────────────────────────────────────────── */}
 
       <HomeFeaturedCourts

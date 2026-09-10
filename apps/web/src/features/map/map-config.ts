@@ -1,52 +1,40 @@
-// Map tile provider configuration (Feature 74).
+// Google Maps configuration (Feature 88; see docs/MAP_PROVIDER_DECISION.md §0).
 //
-// The real Leaflet map surface (LeafletMap) reads its tile source ENTIRELY from
-// environment, so the provider can be swapped per-environment WITHOUT a code change:
-//   • local / dev  → OpenStreetMap tiles (free, no key) — the default below.
-//   • production   → a proper provider with a custom style + key (e.g. MapTiler),
-//                    set via env so no production key is ever committed.
+// The real map surface (CourtMap) reads its Google Maps JS API key and Map ID ENTIRELY
+// from environment, so each deployment target (local/staging/production) can use its own
+// restricted key and Map ID with no code change.
 //
-// Env vars (all `NEXT_PUBLIC_` so they inline into the browser bundle — tile URLs
-// and attribution are inherently public, and Leaflet fetches tiles client-side):
-//   NEXT_PUBLIC_MAP_PROVIDER      — free-form label for the active provider (e.g.
-//                                   `osm`, `maptiler`). Informational; used for the
-//                                   docs/debug + to pick a sane default attribution.
-//   NEXT_PUBLIC_MAP_TILE_URL      — Leaflet XYZ tile template. `{s}` subdomains,
-//                                   `{z}/{x}/{y}` tile coords. A provider key, if any,
-//                                   is baked into THIS url (…?key=YOUR_KEY) — never
-//                                   hardcoded here.
-//   NEXT_PUBLIC_MAP_ATTRIBUTION   — attribution HTML shown in the map corner.
+// Env vars (both NEXT_PUBLIC_ — a Maps JS API key is public by construction; it ships in
+// the browser bundle and is protected by restricting it in Google Cloud Console by HTTP
+// referrer + API, not by secrecy. See apps/web/.env.example):
+//   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY — the Maps JavaScript API key.
+//   NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID  — the Map ID created in Cloud Console with a style
+//                                     attached. REQUIRED under variant B (decided,
+//                                     Feature 88 §1): `AdvancedMarkerElement` does not
+//                                     render without one, and setting `mapId` makes a
+//                                     JSON `styles` option inert — the two are mutually
+//                                     exclusive, so this repo carries no `styles` array.
+//                                     The style itself lives in Cloud Console, not here.
 //
-// See docs/MAP_PROVIDER_DECISION.md and apps/web/.env.example for the full matrix
-// (OSM dev default + the optional MapTiler production block).
-//
-// COORDINATE SAFETY: this module carries NO court data and NO coordinate — it only
-// describes where TILE IMAGES come from. Court markers are positioned by the caller
-// from the always-public `approxLat`/`approxLng`; exact `lat`/`lng` never touch the
-// map layer (they stay behind the protected exact-location endpoint).
+// COORDINATE SAFETY: this module carries NO court data and NO coordinate — it only names
+// which Google Maps project/style to load. Court markers are positioned by the caller from
+// the always-public approxLat/approxLng; exact lat/lng never touch this module (they stay
+// behind the protected exact-location endpoint).
 
-/** OpenStreetMap defaults — free, keyless, correct for local/dev only (see docs). */
-const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const OSM_ATTRIBUTION = '© OpenStreetMap contributors';
-
-export interface MapTileConfig {
-  /** Active provider label (informational): `osm`, `maptiler`, … */
-  readonly provider: string;
-  /** Leaflet XYZ tile template URL (may embed a provider key from env). */
-  readonly tileUrl: string;
-  /** Attribution HTML for the map corner. */
-  readonly attribution: string;
+export interface GoogleMapsConfig {
+  /** Maps JavaScript API key. Empty when unset — callers must not attempt to load. */
+  readonly apiKey: string;
+  /** Map ID (variant B — required for AdvancedMarkerElement). Empty when unset. */
+  readonly mapId: string;
 }
 
 /**
- * Resolve the tile configuration from `NEXT_PUBLIC_MAP_*` env, falling back to the
- * keyless OpenStreetMap dev defaults. Called at render time by LeafletMap; safe to
- * call on server or client (it only reads env + returns a plain object).
+ * Resolve the Google Maps configuration from `NEXT_PUBLIC_GOOGLE_MAPS_*` env. Safe to call
+ * on server or client (it only reads env + returns a plain object); the actual Maps JS API
+ * is loaded only by the client-only CourtMapInner.
  */
-export function getMapTileConfig(): MapTileConfig {
-  const provider = process.env.NEXT_PUBLIC_MAP_PROVIDER?.trim() || 'osm';
-  const tileUrl = process.env.NEXT_PUBLIC_MAP_TILE_URL?.trim() || OSM_TILE_URL;
-  const attribution =
-    process.env.NEXT_PUBLIC_MAP_ATTRIBUTION?.trim() || OSM_ATTRIBUTION;
-  return { provider, tileUrl, attribution };
+export function getGoogleMapsConfig(): GoogleMapsConfig {
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() ?? '';
+  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID?.trim() ?? '';
+  return { apiKey, mapId };
 }

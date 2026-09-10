@@ -1,5 +1,5 @@
 import type { CourtSummaryDTO } from '@tennis/contracts';
-import { LeafletMap, courtToMarker } from '@/features/map';
+import { CourtMap, courtToMarker } from '@/features/map';
 import { ConsultationTrigger } from '@/features/consultation';
 import { SavedEmptyState } from './SavedEmptyState';
 
@@ -8,13 +8,15 @@ import { SavedEmptyState } from './SavedEmptyState';
 // ── FEATURE 77 TOUCHED ONLY THIS TAB'S CHROME ───────────────────────────────────────────
 // The v2 redesign restyled the frame this panel sits in (its rounding matches the v2 cards,
 // its CTA takes the compact `.btn` sizing the redesign uses) and nothing else. The MAP
-// SURFACE and every behaviour below are deliberately untouched: the map is blocked on the
-// Leaflet → Google Maps migration (`docs/MAP_PROVIDER_DECISION.md`), which is its own
-// feature. The tab itself stays — the prototype models only Courts and Collections, but a
-// shipped feature is not deleted as a redesign side effect (intake §8 Q2, decided).
+// SURFACE and every behaviour below are deliberately untouched by that redesign. The map
+// engine itself later moved off Leaflet to Google Maps (Feature 88 —
+// `docs/MAP_PROVIDER_DECISION.md` §0); that was its own feature too. The tab itself stays
+// — the prototype models only Courts and Collections, but a shipped feature is not deleted
+// as a redesign side effect (intake §8 Q2, decided).
 //
-// REAL MAP (Feature 74): the abstract StylizedMapCanvas is gone. Saved courts are
-// plotted on a real Leaflet map (env-configured tiles) at their APPROXIMATE geo.
+// REAL MAP (Feature 74; engine migrated to Google Maps in Feature 88): the abstract
+// StylizedMapCanvas is gone. Saved courts are plotted on a real map at their
+// APPROXIMATE geo.
 //
 // COORDINATE SAFETY — the single most important constraint here (Architecture Plan
 // §9 Risk #17, FEATURE_19 §3.3 / Risk #6):
@@ -47,7 +49,7 @@ export function SavedWishlistMap({ courts }: SavedWishlistMapProps) {
 
   return (
     <div>
-      <LeafletMap
+      <CourtMap
         markers={markers}
         navigateOnClick
         className="h-[60vh] max-h-[500px] w-full overflow-hidden rounded-[14px] border border-mist/30"
