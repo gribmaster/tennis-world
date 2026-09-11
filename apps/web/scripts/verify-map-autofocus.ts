@@ -769,10 +769,23 @@ async function main(): Promise<void> {
   );
   expectTrue(
     'drawMarkers() hands the built markers to the clusterer (clearMarkers + addMarkers) ' +
-      'instead of setting `.map` directly — the clusterer decides per-marker visibility',
-    /clusterer\.clearMarkers\(\);/.test(courtMapInner) &&
-      /clusterer\.addMarkers\(advancedMarkers\);/.test(courtMapInner) &&
-      !/advancedMarker\.map = map;/.test(stripComments(courtMapInner)),
+      'instead of setting `.map` directly — the clusterer decides per-marker visibility. ' +
+      'Both hand-off assertions run against stripComments() (a commented-out hand-off must ' +
+      'not pass), and the negative check is shape-generic (any `<ident>.map = map;` inside ' +
+      'drawMarkers(), not just the literal `advancedMarker` name) so renaming the loop ' +
+      'variable cannot smuggle a direct attach past it',
+    (() => {
+      const code = stripComments(courtMapInner);
+      const drawMarkersBody =
+        /const drawMarkers = useCallback\(\(\) => \{[\s\S]*?\n  \}, \[markers/.exec(code)?.[0] ??
+        '';
+      return (
+        !!drawMarkersBody &&
+        /clusterer\.clearMarkers\(\);/.test(code) &&
+        /clusterer\.addMarkers\(advancedMarkers\);/.test(code) &&
+        !/\w+\.map = map;/.test(drawMarkersBody)
+      );
+    })(),
   );
   expectTrue(
     'the cluster badge is a custom renderer building its own AdvancedMarkerElement content ' +
@@ -806,6 +819,24 @@ async function main(): Promise<void> {
     })(),
   );
   expectTrue(
+    'Task 19 §4 / Task 21 §3: the MarkerClusterer constructor call actually PASSES ' +
+      '`renderer: createClusterRenderer(AdvancedMarkerElement)` and `map` as options — ' +
+      'deleting (or swapping) either would silently fall back to the library\'s own default ' +
+      'renderer (a legacy google.maps.Marker with an SVG data-URI icon: variant A, decided ' +
+      'against in Feature 88 §1) while every other clustering check in this file stays green',
+    (() => {
+      const ctorCall = /clustererRef\.current = new MarkerClusterer\(\{[\s\S]*?\n\s*\}\);/.exec(
+        courtMapInner,
+      )?.[0];
+      if (!ctorCall) return false;
+      const code = stripComments(ctorCall);
+      return (
+        /renderer: createClusterRenderer\(AdvancedMarkerElement\),/.test(code) &&
+        /\n\s*map(?:: map)?,/.test(code)
+      );
+    })(),
+  );
+  expectTrue(
     'the clusterer is torn down on unmount alongside the map (setMap(null), refs cleared)',
     /clustererRef\.current\?\.setMap\(null\);\s*\n\s*clustererRef\.current = null;/.test(
       courtMapInner,
@@ -821,6 +852,26 @@ async function main(): Promise<void> {
       return (
         !!pkg.dependencies?.['@googlemaps/markerclusterer'] &&
         !pkg.devDependencies?.['@googlemaps/markerclusterer']
+      );
+    })(),
+  );
+
+  expectTrue(
+    'clusterContent()\'s wrapper gets its OWN inline-block + translateY(50%) anchor check, ' +
+      'not just markerContent()\'s (Task 17\'s check is hard-coded to markerContent\'s ' +
+      '`${size}px` wrapper) — this exact class of bug (a bare <span> defaulting to ' +
+      '`display: inline`, which silently breaks the percentage-based translateY math) has ' +
+      'had to be fixed or re-applied three times across this codebase\'s history, and the ' +
+      'cluster badge\'s wrapper currently gets away without explicit width/height only ' +
+      'because its child .tw-map-cluster happens to be display: flex today',
+    (() => {
+      const clusterContentBody =
+        /function clusterContent\([\s\S]*?\n\}/.exec(stripComments(courtMapInner))?.[0] ?? '';
+      return (
+        !!clusterContentBody &&
+        /wrapper\.style\.display = 'inline-block';\s*\n\s*wrapper\.style\.transform = 'translateY\(50%\)';/.test(
+          clusterContentBody,
+        )
       );
     })(),
   );
@@ -894,6 +945,14 @@ async function main(): Promise<void> {
       /const NEXT_IMAGE_WIDTHS = \[16, 32, 48, 64, 96, 128, 256, 384\];/.test(courtMapInner),
   );
   expectTrue(
+    'the source comment\'s "keep NEXT_IMAGE_WIDTHS in sync with next.config.mjs" claim is ' +
+      'enforced, not just documented: next.config.mjs does not override `images.imageSizes` ' +
+      '(so Next\'s own default bucket list — which NEXT_IMAGE_WIDTHS mirrors — is still the ' +
+      'one actually in effect); if it ever legitimately needs to, this check must be updated ' +
+      'to compare the two arrays instead of merely asserting the override is absent',
+    !/imageSizes/.test(readWebFile('next.config.mjs')),
+  );
+  expectTrue(
     'the state signal survives the switch from a solid dot to a photo: the ring (border) ' +
       'color still comes from COLOR[state] via the same --mk custom property, and the halo ' +
       'pulse is untouched',
@@ -927,6 +986,35 @@ async function main(): Promise<void> {
       !/heroImageUrl/.test(
         (/function clusterContent\([\s\S]*?\n\}/.exec(courtMapInner)?.[0]) ?? '',
       ),
+  );
+
+  // ── Task 23: fitBounds max-zoom clamp no longer stomps a focus that lands first ───────
+  console.log(
+    '\nTask 23: the fitBounds clamp bails when a focus has landed since it was armed',
+  );
+  expectTrue(
+    'the clamp snapshots the currently-applied focus token AT ARM TIME, before the ' +
+      'one-shot `idle` listener is even registered',
+    /const armedFocusToken = appliedFocusTokenRef\.current;\s*\n\s*google\.maps\.event\.addListenerOnce\(map, 'idle', \(\) => \{/.test(
+      courtMapInner,
+    ),
+  );
+  expectTrue(
+    'the bail check is the FIRST statement inside the clamp\'s `idle` callback — a stale ' +
+      'clamp returns before it ever reads map.getZoom(), so it can never observe (let alone ' +
+      'overwrite) a zoom a newer focus animation already landed',
+    /addListenerOnce\(map, 'idle', \(\) => \{\s*\n\s*if \(appliedFocusTokenRef\.current !== armedFocusToken\) return;\s*\n\s*const currentZoom = map\.getZoom\(\);/.test(
+      courtMapInner,
+    ),
+  );
+  expectTrue(
+    'a focus applied BEFORE the clamp was armed does not trip the guard — the token is ' +
+      'unchanged, so a filter change with no NEW focus involved still clamps to ' +
+      'FIT_BOUNDS_MAX_ZOOM exactly as before (applyFocus only reassigns ' +
+      'appliedFocusTokenRef.current for a genuinely new, distinct token)',
+    /if \(appliedFocusTokenRef\.current === focus\.token\) return;\s*\n\s*appliedFocusTokenRef\.current = focus\.token;/.test(
+      courtMapInner,
+    ),
   );
 
   summarize();

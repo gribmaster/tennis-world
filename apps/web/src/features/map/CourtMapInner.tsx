@@ -565,7 +565,18 @@ export function CourtMapInner({
       for (const point of points) bounds.extend(point);
       map.fitBounds(bounds, FIT_BOUNDS_PADDING_PX);
       // fitBounds has no built-in maxZoom — clamp once the resulting move settles.
+      //
+      // Race guarded against: `applyFocus()` (nearest-court auto-focus / manual locate) can
+      // start its own animated camera move before the map reaches its first post-fitBounds
+      // `idle` — the map only goes idle once THAT animation stops requesting frames, so this
+      // one-shot callback can fire AFTER a focus has already landed the view at its own
+      // (intentionally larger) zoom. Snapshot the focus token at arm time and bail if a newer
+      // one has landed since: a focus that lands after this clamp was armed wins outright,
+      // while a filter change with no focus involved still clamps exactly as before (the
+      // token is unchanged, so the check passes through).
+      const armedFocusToken = appliedFocusTokenRef.current;
       google.maps.event.addListenerOnce(map, 'idle', () => {
+        if (appliedFocusTokenRef.current !== armedFocusToken) return;
         const currentZoom = map.getZoom();
         if (currentZoom !== undefined && currentZoom > FIT_BOUNDS_MAX_ZOOM) {
           // The general `idle` listener (registered on mount, so it runs before this
