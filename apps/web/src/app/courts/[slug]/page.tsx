@@ -67,7 +67,7 @@ import { getRepositoriesForRequest } from '@/lib/repositories.server';
 // `country`, `region` and `blurb` to every caller, entitled or not, deliberately (these
 // pages are indexable), and it will continue to. Nothing is stripped server-side, no field
 // was added, and `apps/api` is untouched. What changes is only what this page DISPLAYS —
-// the same teaser treatment `features/home/court-display.ts` already applies to locked
+// the same teaser treatment `components/court/court-display.ts` already applies to locked
 // cards. (Note that `courtDisplay` masks off the PUBLIC `isLocked` content flag and is
 // deliberately NOT reused here: this page's mask is driven by `locked`, the real
 // entitlement result, so the two rules must not be collapsed into one helper.)

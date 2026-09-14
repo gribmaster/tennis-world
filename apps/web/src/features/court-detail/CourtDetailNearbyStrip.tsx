@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import type { CourtSummaryDTO } from '@tennis/contracts';
 import { PendingCardLink } from '@/components/navigation';
-import { courtDisplay } from '@/features/home/court-display';
+import { courtDisplay } from '@/components/court/court-display';
 
 // CourtDetailNearbyStrip — the "Nearby courts" horizontal card row
 // (design_v2_stripped.html:1127–1152): 120px-wide cards, a 90px-tall image with an 8px

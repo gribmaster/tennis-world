@@ -1,4 +1,5 @@
 import type { CourtSummaryDTO, MapPinDTO } from '@tennis/contracts';
+import { courtDisplay } from '@/components/court/court-display';
 
 // Marker model for the real Leaflet map (Feature 74).
 //
@@ -20,7 +21,11 @@ export interface MapMarker {
   readonly id: string;
   /** Slug — used for navigate-on-click links to `/courts/{slug}`. */
   readonly slug: string;
-  /** Court name — the marker's accessible title/tooltip. */
+  /**
+   * The marker's accessible title/tooltip. This is the MASKED display name for a
+   * locked court (`courtDisplay(court).name`, e.g. "Premium Court") — not necessarily
+   * the court's real name.
+   */
   readonly name: string;
   /** Latitude — ALWAYS the approximate value (`approxLat`) for public maps. */
   readonly lat: number;
@@ -61,7 +66,7 @@ export function courtToMarker(
   return {
     id: court.id,
     slug: court.slug,
-    name: court.name,
+    name: courtDisplay(court).name,
     lat: court.approxLat,
     lng: court.approxLng,
     state: stateBySlug?.get(court.slug) ?? courtState(court),

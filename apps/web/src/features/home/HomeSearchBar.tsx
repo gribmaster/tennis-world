@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import type { CourtSummaryDTO } from '@tennis/contracts';
 import { PendingCardLink } from '@/components/navigation';
-import { courtDisplay } from './court-display';
+import { courtDisplay } from '@/components/court/court-display';
 
 // HomeSearchBar — the v2 pill search field plus its inline result panel (Feature 74),
 // from the prototype's HomeScreen (design_v2_stripped.html:436–467).

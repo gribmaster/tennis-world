@@ -37,6 +37,3 @@ export type { HomeEditorsCutProps } from './HomeEditorsCut';
 
 export { HomePaywallBand } from './HomePaywallBand';
 export type { HomePaywallBandProps } from './HomePaywallBand';
-
-export { courtDisplay, courtLocation } from './court-display';
-export type { CourtDisplay } from './court-display';

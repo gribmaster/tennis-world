@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import type { CourtSummaryDTO } from '@tennis/contracts';
 import { PendingCardLink } from '@/components/navigation';
-import { courtDisplay } from './court-display';
+import { courtDisplay } from '@/components/court/court-display';
 
 // HomeEditorsCut — the editorial "Editor's Cut" section, RESTYLED to the v2 language
 // (Feature 74).

@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import type { CourtSummaryDTO } from '@tennis/contracts';
 import { PendingCardLink, PendingLink } from '@/components/navigation';
-import { courtDisplay } from './court-display';
+import { courtDisplay } from '@/components/court/court-display';
 import { HomeCourtSaveHeart } from './HomeCourtSaveHeart';
 
 // HomeFeaturedCourts — the v2 portrait courts strip (Feature 74), rebuilt from the

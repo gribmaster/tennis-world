@@ -79,7 +79,7 @@ import { SavedDreamListCta } from './SavedDreamListCta';
 // SavedTabs, then ordered by SavedTabs' sort control). This island imports no
 // @tennis/mock-data and hardcodes no court data.
 
-import { courtDisplay } from '@/features/home/court-display';
+import { courtDisplay } from '@/components/court/court-display';
 
 /** Small X glyph for the unsave control — inline to avoid an icon dependency (hard rule). */
 function CloseGlyph() {

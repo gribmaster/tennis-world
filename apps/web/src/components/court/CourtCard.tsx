@@ -5,6 +5,7 @@ import type { CourtSummaryDTO } from '@tennis/contracts';
 import { Badge } from '@/components/ui';
 import { PendingCardLink } from '@/components/navigation';
 import { CourtImage } from './CourtImage';
+import { courtDisplay } from './court-display';
 
 // CourtCard — the reusable court tile used in every list/grid/carousel (Home's
 // featured destinations, Map's list panel, Saved's grid, Court Detail's related
@@ -102,6 +103,7 @@ export function CourtCard({
   className,
 }: CourtCardProps) {
   const aspect = variant === 'large' ? 'aspect-[3/2]' : 'aspect-[4/5]';
+  const display = courtDisplay(court);
 
   const card = (
     <article
@@ -111,7 +113,7 @@ export function CourtCard({
     >
       <CourtImage
         src={court.heroImageUrl}
-        alt={court.name}
+        alt=""
         aspectClassName={aspect}
         priority={priority}
       >
@@ -153,11 +155,9 @@ export function CourtCard({
 
         {/* Title block, bottom-left over the gradient. */}
         <div className="absolute inset-x-4 bottom-4 text-paper">
-          <p className="eyebrow text-paper/80">
-            {[court.country, court.region].filter(Boolean).join(' · ')}
-          </p>
+          <p className="eyebrow text-paper/80">{display.location}</p>
           <h3 className="serif mt-1 text-[clamp(18px,1.6vw,24px)] font-medium leading-tight">
-            {court.name}
+            {display.name}
           </h3>
         </div>
       </CourtImage>
@@ -170,7 +170,7 @@ export function CourtCard({
   // without resizing it or affecting any other card in the same grid/carousel.
   if (href) {
     return (
-      <PendingCardLink href={href} className="block" ariaLabel={court.name}>
+      <PendingCardLink href={href} className="block" ariaLabel={display.name}>
         {card}
       </PendingCardLink>
     );

@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import type { CourtSummaryDTO } from '@tennis/contracts';
 import { PendingCardLink } from '@/components/navigation';
+import { courtDisplay } from '@/components/court/court-display';
 
 // MapCourtRow — the desktop list-panel row, ported from the `.map-rows` markup in
 // files/map.html: a small left thumbnail + stacked eyebrow (country · region) /
@@ -35,26 +36,22 @@ export interface MapCourtRowProps {
 }
 
 export function MapCourtRow({ court }: MapCourtRowProps) {
+  const display = courtDisplay(court);
+
   return (
     <PendingCardLink
       href={`/courts/${court.slug}`}
-      ariaLabel={court.name}
+      ariaLabel={display.name}
       className="flex items-start gap-3.5 border-b border-hairline px-5 py-4 transition-colors hover:bg-ivory"
     >
       <div className="relative h-[60px] w-20 shrink-0 overflow-hidden">
-        <Image
-          src={court.heroImageUrl}
-          alt={court.name}
-          fill
-          sizes="80px"
-          className="object-cover"
-        />
+        <Image src={court.heroImageUrl} alt="" fill sizes="80px" className="object-cover" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="eyebrow text-stone">
-          {[court.country, court.region].filter(Boolean).join(' · ')}
+        <p className="eyebrow text-stone">{display.location}</p>
+        <p className="serif mt-0.5 truncate text-[17px] font-medium leading-tight">
+          {display.name}
         </p>
-        <p className="serif mt-0.5 truncate text-[17px] font-medium leading-tight">{court.name}</p>
         <p className="body-s mt-1 text-stone">
           {[court.surface, court.setting].filter(Boolean).join(' · ')}
         </p>
