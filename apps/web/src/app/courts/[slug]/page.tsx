@@ -337,14 +337,18 @@ function renderUnlocked({
           </section>
 
           {/* Nearby courts. From `getRelated()` — shared country + surface, not proximity.
-              No distance is rendered; see CourtDetailNearbyStrip's header for why. */}
+              No distance is rendered; see CourtDetailNearbyStrip's header for why.
+              Task 26: `viewerIsEntitled={true}` is explicit here — this branch only runs
+              when `locked === false`, i.e. this viewer's real exact-location unlock
+              already proved they are entitled, so the strip's own locked-court masks
+              unmask for them too, not just this court's own name/location above. */}
           {related.length > 0 ? (
             <section className="mt-5 md:px-[clamp(20px,4vw,64px)]">
               <div className={column}>
                 <div className="mb-3 flex items-baseline justify-between px-5 md:px-0">
                   <h2 className="text-[16px] font-semibold text-ink">Nearby courts</h2>
                 </div>
-                <CourtDetailNearbyStrip courts={related} />
+                <CourtDetailNearbyStrip courts={related} viewerIsEntitled={true} />
               </div>
             </section>
           ) : null}
@@ -549,14 +553,17 @@ function renderLocked({
 
           {/* Nearby courts — the same strip as unlocked. Its cards apply their OWN masking
               rule (`courtDisplay`, off the public `isLocked` flag), which is independent of
-              this page's entitlement result. */}
+              this page's entitlement result for THIS court. Task 26: `viewerIsEntitled=
+              {false}` is explicit here — this branch only runs when `locked === true`, i.e.
+              this viewer's exact-location call did NOT prove entitlement, so a locked
+              nearby court stays masked for them too. */}
           {related.length > 0 ? (
             <section className="mt-5 md:px-[clamp(20px,4vw,64px)]">
               <div className={column}>
                 <div className="mb-3 flex items-baseline justify-between px-5 md:px-0">
                   <h2 className="text-[16px] font-semibold text-ink">Nearby courts</h2>
                 </div>
-                <CourtDetailNearbyStrip courts={related} />
+                <CourtDetailNearbyStrip courts={related} viewerIsEntitled={false} />
               </div>
             </section>
           ) : null}

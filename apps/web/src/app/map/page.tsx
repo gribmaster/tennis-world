@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { AppShell } from '@/components/layout';
 import { MapExplorer } from '@/features/map';
 import { repositories } from '@/lib/repositories';
-import { isSignedIn } from '@/lib/session.server';
+import { getViewerAuthState } from '@/lib/session.server';
 
 // Map page (`/map`) — a required Phase-1 screen (Feature 13/14). Resolves the three
 // live CTAs that point here ("Explore the Map", "Unlock Map", "View all courts").
@@ -47,11 +47,13 @@ export default async function MapPage({
   // single owner of the live filter state.
   searchParams: Promise<{ q?: string }>;
 }) {
-  const [courts, pins, signedIn, params] = await Promise.all([
+  const [courts, pins, { signedIn, viewerIsEntitled }, params] = await Promise.all([
     repositories.courts.list(),
     repositories.courts.getMapPins(),
-    // Header user icon: /profile vs /signin (true in a real session or staging demo mode).
-    isSignedIn(),
+    // Header user icon (/profile vs /signin) AND per-viewer entitlement (Task 26) — the
+    // same protected `/v1/me` read `isSignedIn()` already made, now also read for
+    // `membership` so locked-court masking on this screen respects the real viewer.
+    getViewerAuthState(),
     searchParams,
   ]);
 
@@ -61,7 +63,12 @@ export default async function MapPage({
 
   return (
     <AppShell unlocked={false} signedIn={signedIn}>
-      <MapExplorer courts={courts} pins={pins} initialQuery={initialQuery} />
+      <MapExplorer
+        courts={courts}
+        pins={pins}
+        initialQuery={initialQuery}
+        viewerIsEntitled={viewerIsEntitled}
+      />
     </AppShell>
   );
 }

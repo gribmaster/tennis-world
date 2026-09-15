@@ -30,9 +30,17 @@ export interface MapCourtListProps {
   activeCount: number;
   /** Clears every chip AND the search text. */
   onReset: () => void;
+  /** Whether this viewer carries an active membership (Task 26) — unmasks a locked court. */
+  viewerIsEntitled?: boolean;
 }
 
-export function MapCourtList({ courts, filters, activeCount, onReset }: MapCourtListProps) {
+export function MapCourtList({
+  courts,
+  filters,
+  activeCount,
+  onReset,
+  viewerIsEntitled = false,
+}: MapCourtListProps) {
   const count = courts.length;
   const isEmpty = count === 0;
   const hasQuery = filters.q.trim().length > 0;
@@ -84,7 +92,11 @@ export function MapCourtList({ courts, filters, activeCount, onReset }: MapCourt
             <div className="no-scrollbar flex flex-1 items-start gap-3 overflow-x-auto overflow-y-hidden px-5 py-4 md:hidden">
               {courts.map((court) => (
                 <div key={court.id} className="w-[180px] shrink-0">
-                  <CourtCard court={court} href={`/courts/${court.slug}`} />
+                  <CourtCard
+                    court={court}
+                    href={`/courts/${court.slug}`}
+                    viewerIsEntitled={viewerIsEntitled}
+                  />
                 </div>
               ))}
             </div>
@@ -92,7 +104,7 @@ export function MapCourtList({ courts, filters, activeCount, onReset }: MapCourt
             {/* Desktop: vertical rows with their own scroll. Shown only at md+. */}
             <div className="hidden flex-1 overflow-y-auto md:block">
               {courts.map((court) => (
-                <MapCourtRow key={court.id} court={court} />
+                <MapCourtRow key={court.id} court={court} viewerIsEntitled={viewerIsEntitled} />
               ))}
             </div>
           </>

@@ -31,9 +31,11 @@ import { SavedEmptyState } from './SavedEmptyState';
 
 export interface SavedWishlistMapProps {
   courts: CourtSummaryDTO[];
+  /** Whether this viewer carries an active membership (Task 26) — unmasks a locked court. */
+  viewerIsEntitled?: boolean;
 }
 
-export function SavedWishlistMap({ courts }: SavedWishlistMapProps) {
+export function SavedWishlistMap({ courts, viewerIsEntitled = false }: SavedWishlistMapProps) {
   if (courts.length === 0) {
     return (
       <SavedEmptyState
@@ -45,7 +47,7 @@ export function SavedWishlistMap({ courts }: SavedWishlistMapProps) {
   }
 
   // Approximate-geo markers only — one per saved court, navigable to its detail page.
-  const markers = courts.map((court) => courtToMarker(court));
+  const markers = courts.map((court) => courtToMarker(court, undefined, viewerIsEntitled));
 
   return (
     <div>

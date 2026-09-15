@@ -115,9 +115,19 @@ const SUBTITLE = 'All your favourite tennis destinations in one place.';
 export interface SavedTabsProps {
   savedCourts: CourtSummaryDTO[];
   savedCollections: UserCollectionDTO[];
+  /**
+   * Whether this viewer carries an active (non-free) membership (Task 26). Resolved
+   * server-side, once, in `app/saved/page.tsx` — unmasks locked-court names/locations on
+   * the Courts tab grid and the Wishlist Map markers for an entitled viewer.
+   */
+  viewerIsEntitled?: boolean;
 }
 
-export function SavedTabs({ savedCourts, savedCollections }: SavedTabsProps) {
+export function SavedTabs({
+  savedCourts,
+  savedCollections,
+  viewerIsEntitled = false,
+}: SavedTabsProps) {
   const [activeTab, setActiveTab] = useState<TabId>('courts');
   const [sortKey, setSortKey] = useState<SavedSortKey>('recent');
 
@@ -220,6 +230,7 @@ export function SavedTabs({ savedCourts, savedCollections }: SavedTabsProps) {
             courts={orderedCourts}
             unsavedIds={unsavedIds}
             onUnsavedChange={handleUnsavedChange}
+            viewerIsEntitled={viewerIsEntitled}
           />
         ) : null}
         {activeTab === 'collections' ? (
@@ -230,7 +241,9 @@ export function SavedTabs({ savedCourts, savedCollections }: SavedTabsProps) {
             }
           />
         ) : null}
-        {activeTab === 'wishlist' ? <SavedWishlistMap courts={courts} /> : null}
+        {activeTab === 'wishlist' ? (
+          <SavedWishlistMap courts={courts} viewerIsEntitled={viewerIsEntitled} />
+        ) : null}
       </div>
     </div>
   );

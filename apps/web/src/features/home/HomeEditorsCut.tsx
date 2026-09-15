@@ -37,11 +37,17 @@ export interface HomeEditorsCutProps {
   /** The courts to feature. Expected to be a small set (2–3). */
   courts: CourtSummaryDTO[];
   title?: string;
+  /** Whether this viewer carries an active membership (Task 26) — unmasks a locked court. */
+  viewerIsEntitled?: boolean;
 }
 
 const DEFAULT_TITLE = "Editor's cut";
 
-export function HomeEditorsCut({ courts, title = DEFAULT_TITLE }: HomeEditorsCutProps) {
+export function HomeEditorsCut({
+  courts,
+  title = DEFAULT_TITLE,
+  viewerIsEntitled = false,
+}: HomeEditorsCutProps) {
   if (courts.length === 0) return null;
 
   return (
@@ -51,7 +57,7 @@ export function HomeEditorsCut({ courts, title = DEFAULT_TITLE }: HomeEditorsCut
 
         <ul className="flex flex-col gap-3">
           {courts.map((court) => {
-            const display = courtDisplay(court);
+            const display = courtDisplay(court, viewerIsEntitled);
             return (
               <li key={court.id}>
                 <PendingCardLink

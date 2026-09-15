@@ -22,9 +22,10 @@ export interface MapMarker {
   /** Slug — used for navigate-on-click links to `/courts/{slug}`. */
   readonly slug: string;
   /**
-   * The marker's accessible title/tooltip. This is the MASKED display name for a
-   * locked court (`courtDisplay(court).name`, e.g. "Premium Court") — not necessarily
-   * the court's real name.
+   * The marker's accessible title/tooltip. This is `courtDisplay(court,
+   * viewerIsEntitled).name` — the MASKED display name (e.g. "Premium Court") for a
+   * locked court when the viewer is not entitled, or the real name when they are
+   * (Task 26). Not necessarily the court's real name.
    */
   readonly name: string;
   /** Latitude — ALWAYS the approximate value (`approxLat`) for public maps. */
@@ -58,15 +59,20 @@ function courtState(court: Pick<CourtSummaryDTO, 'isLocked' | 'isFeatured'>): Ma
  * — so "markers come from approxLat/approxLng, never exact lat/lng" is enforced in one
  * place. An optional `stateBySlug` (from the map-pins read) lets the /map explorer
  * reuse the API's authoritative pin state; otherwise it's derived from the court flags.
+ *
+ * `viewerIsEntitled` (Task 26, default `false`) is forwarded to `courtDisplay` so the
+ * marker's name is unmasked for a viewer this page has determined carries an active
+ * membership — the same entitlement-aware presentation every other court surface applies.
  */
 export function courtToMarker(
   court: CourtSummaryDTO,
   stateBySlug?: Map<string, MapMarkerState>,
+  viewerIsEntitled = false,
 ): MapMarker {
   return {
     id: court.id,
     slug: court.slug,
-    name: courtDisplay(court).name,
+    name: courtDisplay(court, viewerIsEntitled).name,
     lat: court.approxLat,
     lng: court.approxLng,
     state: stateBySlug?.get(court.slug) ?? courtState(court),

@@ -54,15 +54,25 @@ function LockGlyph() {
 export interface CourtDetailNearbyStripProps {
   /** Related courts from `getRelated()`. Empty ⇒ the section is not rendered by the page. */
   courts: CourtSummaryDTO[];
+  /**
+   * Whether THIS viewer carries an active membership (Task 26). Court Detail already
+   * computes real, per-viewer entitlement for the court being viewed (`locked`, derived
+   * from the protected exact-location call) — the page passes that straight through
+   * rather than resolving membership separately. See `app/courts/[slug]/page.tsx`.
+   */
+  viewerIsEntitled?: boolean;
 }
 
-export function CourtDetailNearbyStrip({ courts }: CourtDetailNearbyStripProps) {
+export function CourtDetailNearbyStrip({
+  courts,
+  viewerIsEntitled = false,
+}: CourtDetailNearbyStripProps) {
   if (courts.length === 0) return null;
 
   return (
     <ul className="no-scrollbar flex gap-3 overflow-x-auto px-5 pb-[2px] md:px-0">
       {courts.map((court) => {
-        const display = courtDisplay(court);
+        const display = courtDisplay(court, viewerIsEntitled);
         return (
           <li key={court.id} className="w-[120px] shrink-0">
             <PendingCardLink

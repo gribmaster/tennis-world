@@ -78,6 +78,8 @@ export interface HomeFeaturedCourtsProps {
   isFiltered: boolean;
   /** Clear every chip and the query — the empty state's escape hatch. */
   onClearFilters: () => void;
+  /** Whether this viewer carries an active membership (Task 26) — unmasks a locked court. */
+  viewerIsEntitled?: boolean;
 }
 
 export function HomeFeaturedCourts({
@@ -87,6 +89,7 @@ export function HomeFeaturedCourts({
   signedIn,
   isFiltered,
   onClearFilters,
+  viewerIsEntitled = false,
 }: HomeFeaturedCourtsProps) {
   return (
     <section className="pt-7">
@@ -131,7 +134,7 @@ export function HomeFeaturedCourts({
         <div className="container-page">
           <ul className="no-scrollbar -mr-[clamp(20px,4vw,64px)] flex gap-3.5 overflow-x-auto pb-1">
             {courts.map((court, index) => {
-              const display = courtDisplay(court);
+              const display = courtDisplay(court, viewerIsEntitled);
               return (
                 // `relative` so the save heart can position against this box while
                 // remaining a SIBLING of the card link, never a descendant of the anchor.

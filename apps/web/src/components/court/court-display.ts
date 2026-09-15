@@ -16,6 +16,17 @@
 // A court's real name still reaches the browser in the payload (it always did) and the
 // court's own public page still shows it. Nothing is being hidden that was not already
 // public.
+//
+// VIEWER ENTITLEMENT (Task 26): `isLocked` alone is CONTENT classification, not a
+// per-viewer signal — every caller of `GET /v1/courts` gets the same value regardless of
+// who's asking. Task 25 masked purely off `isLocked`, which meant even a paying member
+// saw "Premium Court" everywhere except a court's own detail page (the one surface that
+// checks REAL per-viewer entitlement via the exact-location endpoint). `viewerIsEntitled`
+// fixes that: pass the caller's real, per-page-resolved membership signal (see
+// `getViewerAuthState` in `lib/session.server.ts`) and an entitled viewer sees the real
+// name/location on every surface, not just Court Detail. Defaults to `false` — the safe,
+// masked default — so a call site that forgets to pass it degrades to Task 25's behavior
+// rather than leaking content.
 
 import type { CourtSummaryDTO } from '@tennis/contracts';
 
@@ -27,7 +38,14 @@ export interface CourtDisplay {
   readonly location: string;
   /** First experience tag (the single chip the prototype shows), or the locked label. */
   readonly chip: string;
-  /** Whether the premium badge/teaser treatment applies. */
+  /**
+   * Whether this is premium CONTENT (`court.isLocked`) — drives the "Premium"
+   * badge/ribbon callers render over the photo. Deliberately UNAFFECTED by
+   * `viewerIsEntitled`: it keeps meaning "this is one of our premium courts," which an
+   * entitled viewer may still reasonably want to see (an acknowledgment of what their
+   * membership unlocks), not "this is masked for you." Only `name`/`location`/`chip`
+   * above are gated by viewer entitlement.
+   */
   readonly locked: boolean;
 }
 
@@ -42,20 +60,19 @@ export function courtLocation(court: CourtSummaryDTO): string {
  * The chip falls back to the court's `setting` when it carries no tags, so a card never
  * renders an empty chip (the prototype's `c.labels[0]` assumes every court has at least
  * one label; the real `tags` array is allowed to be empty).
+ *
+ * `viewerIsEntitled` (Task 26) determines whether the mask actually applies: a locked
+ * court still masks for a non-entitled viewer (the default), but shows real strings to a
+ * viewer this page has determined carries an active membership. `locked` in the returned
+ * `CourtDisplay` stays the CONTENT flag (`court.isLocked`) regardless — see the file
+ * header and `CourtDisplay.locked`'s own doc comment.
  */
-export function courtDisplay(court: CourtSummaryDTO): CourtDisplay {
-  if (court.isLocked) {
-    return {
-      name: 'Premium Court',
-      location: 'Unlock to reveal location',
-      chip: 'Premium',
-      locked: true,
-    };
-  }
+export function courtDisplay(court: CourtSummaryDTO, viewerIsEntitled = false): CourtDisplay {
+  const mask = court.isLocked && !viewerIsEntitled;
   return {
-    name: court.name,
-    location: courtLocation(court),
-    chip: court.tags[0] ?? court.setting,
-    locked: false,
+    name: mask ? 'Premium Court' : court.name,
+    location: mask ? 'Unlock to reveal location' : courtLocation(court),
+    chip: mask ? 'Premium' : (court.tags[0] ?? court.setting),
+    locked: court.isLocked,
   };
 }

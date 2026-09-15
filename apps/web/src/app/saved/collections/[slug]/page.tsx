@@ -69,21 +69,28 @@ export default async function UserCollectionDetailPage({
 
   const repositories = await getRepositoriesForRequest();
   // Logged-out (api mode) → redirect to /signin (preserving this URL). Authenticated but
-  // unknown slug → `null` → notFound().
-  const collection = await loadOrSignIn(
-    () => repositories.saved.getUserCollectionBySlug(slug),
+  // unknown slug → `null` → notFound(). Task 26: also resolve this viewer's real
+  // membership alongside the folder read so locked-court content in the grid can unmask
+  // for a paying visitor.
+  const [collection, user] = await loadOrSignIn(
+    () =>
+      Promise.all([
+        repositories.saved.getUserCollectionBySlug(slug),
+        repositories.user.getCurrentUser(),
+      ]),
     `/saved/collections/${slug}`,
   );
   if (!collection) {
     // Renders the framework 404 — no custom not-found page needed.
     notFound();
   }
+  const viewerIsEntitled = user.membership !== 'free';
 
   return (
     // Private folder — if it rendered, the visitor is signed in.
     <AppShell unlocked={false} signedIn>
       <UserCollectionHero collection={collection} courtCount={collection.courts.length} />
-      <UserCollectionCourtsGrid courts={collection.courts} />
+      <UserCollectionCourtsGrid courts={collection.courts} viewerIsEntitled={viewerIsEntitled} />
     </AppShell>
   );
 }

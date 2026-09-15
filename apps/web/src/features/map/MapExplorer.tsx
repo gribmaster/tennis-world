@@ -82,9 +82,20 @@ export interface MapExplorerProps {
    * everything".
    */
   initialQuery?: string;
+  /**
+   * Whether this viewer carries an active (non-free) membership (Task 26). Resolved
+   * server-side, once, in `app/map/page.tsx` — unmasks locked-court names/locations on
+   * markers and the "Courts in view" list for an entitled viewer. Defaults to `false`.
+   */
+  viewerIsEntitled?: boolean;
 }
 
-export function MapExplorer({ courts, pins, initialQuery = '' }: MapExplorerProps) {
+export function MapExplorer({
+  courts,
+  pins,
+  initialQuery = '',
+  viewerIsEntitled = false,
+}: MapExplorerProps) {
   // ONE state object for every dimension the user can narrow by (chips + free text),
   // shaped one-to-one against the API's query params. The sheet's open/closed flag is
   // separate: it is view state, not filter state.
@@ -113,8 +124,8 @@ export function MapExplorer({ courts, pins, initialQuery = '' }: MapExplorerProp
 
   // Markers come from the SAME filtered set as the list — plotted at approximate geo.
   const visibleMarkers = useMemo(
-    () => visibleCourts.map((court) => courtToMarker(court, stateBySlug)),
-    [visibleCourts, stateBySlug],
+    () => visibleCourts.map((court) => courtToMarker(court, stateBySlug, viewerIsEntitled)),
+    [visibleCourts, stateBySlug, viewerIsEntitled],
   );
 
   // ── Nearest-court auto-focus ───────────────────────────────────────────────────────
@@ -245,6 +256,7 @@ export function MapExplorer({ courts, pins, initialQuery = '' }: MapExplorerProp
           filters={filters}
           activeCount={activeCount}
           onReset={handleReset}
+          viewerIsEntitled={viewerIsEntitled}
         />
       </div>
     </div>

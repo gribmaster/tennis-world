@@ -68,6 +68,12 @@ export interface HomeExplorerProps {
   savedCourtIds: string[];
   /** False for a logged-out visitor in `api` mode → save hearts route to /signin. */
   signedIn: boolean;
+  /**
+   * Whether this viewer carries an active (non-free) membership (Task 26). Resolved
+   * server-side, once, in `app/page.tsx` — unmasks locked-court names/locations across
+   * the featured strip, inline search and Editor's Cut for an entitled viewer.
+   */
+  viewerIsEntitled?: boolean;
 }
 
 export function HomeExplorer({
@@ -76,6 +82,7 @@ export function HomeExplorer({
   articles,
   savedCourtIds,
   signedIn,
+  viewerIsEntitled = false,
 }: HomeExplorerProps) {
   // ONE state object for every dimension the visitor can narrow by (chips + free text).
   // The sheet's open flag is separate: it is view state, not filter state.
@@ -155,6 +162,7 @@ export function HomeExplorer({
         activeCount={activeCount}
         onQueryChange={handleQueryChange}
         onOpenSheet={handleOpenSheet}
+        viewerIsEntitled={viewerIsEntitled}
       />
 
       <HomeShortcutsRow state={filters} onToggle={handleToggleShortcut} />
@@ -194,9 +202,10 @@ export function HomeExplorer({
         signedIn={signedIn}
         isFiltered={isFiltered}
         onClearFilters={handleClearFilters}
+        viewerIsEntitled={viewerIsEntitled}
       />
 
-      <HomeEditorsCut courts={editorsCutCourts} />
+      <HomeEditorsCut courts={editorsCutCourts} viewerIsEntitled={viewerIsEntitled} />
 
       <HomeCollectionsTeaser collections={collections} />
 

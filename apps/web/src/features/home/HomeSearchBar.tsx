@@ -105,6 +105,8 @@ export interface HomeSearchBarProps {
   activeCount: number;
   onQueryChange: (query: string) => void;
   onOpenSheet: () => void;
+  /** Whether this viewer carries an active membership (Task 26) — unmasks a locked court. */
+  viewerIsEntitled?: boolean;
 }
 
 export function HomeSearchBar({
@@ -113,6 +115,7 @@ export function HomeSearchBar({
   activeCount,
   onQueryChange,
   onOpenSheet,
+  viewerIsEntitled = false,
 }: HomeSearchBarProps) {
   const showResults = query.trim().length > 0;
 
@@ -180,7 +183,7 @@ export function HomeSearchBar({
             ) : (
               <ul>
                 {results.map((court) => {
-                  const display = courtDisplay(court);
+                  const display = courtDisplay(court, viewerIsEntitled);
                   return (
                     <li key={court.id} className="border-b border-mist/20 last:border-b-0">
                       {/* Whole row navigates ⇒ PendingCardLink (§4 rule 1). */}

@@ -17,12 +17,15 @@ export interface CollectionCourtsGridProps {
   eyebrow?: string;
   /** Title above the grid. */
   title?: string;
+  /** Whether this viewer carries an active membership (Task 26) — unmasks a locked court. */
+  viewerIsEntitled?: boolean;
 }
 
 export function CollectionCourtsGrid({
   courts,
   eyebrow = 'In this collection',
   title = 'The courts',
+  viewerIsEntitled = false,
 }: CollectionCourtsGridProps) {
   return (
     <section className="bg-bone py-section-lg md:py-section-xl">
@@ -37,7 +40,12 @@ export function CollectionCourtsGrid({
           <ul className="mt-section grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {courts.map((court, i) => (
               <li key={court.id}>
-                <CourtCard court={court} href={`/courts/${court.slug}`} priority={i === 0} />
+                <CourtCard
+                  court={court}
+                  href={`/courts/${court.slug}`}
+                  priority={i === 0}
+                  viewerIsEntitled={viewerIsEntitled}
+                />
               </li>
             ))}
           </ul>

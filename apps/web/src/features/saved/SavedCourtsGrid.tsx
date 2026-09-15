@@ -134,9 +134,16 @@ export interface SavedCourtsGridProps {
   unsavedIds: ReadonlySet<string>;
   /** Apply an optimistic remove (true) or roll one back (false) in the parent's state. */
   onUnsavedChange: (courtId: string, unsaved: boolean) => void;
+  /** Whether this viewer carries an active membership (Task 26) — unmasks a locked court. */
+  viewerIsEntitled?: boolean;
 }
 
-export function SavedCourtsGrid({ courts, unsavedIds, onUnsavedChange }: SavedCourtsGridProps) {
+export function SavedCourtsGrid({
+  courts,
+  unsavedIds,
+  onUnsavedChange,
+  viewerIsEntitled = false,
+}: SavedCourtsGridProps) {
   const router = useRouter();
   // Mutation repo: browser-cookie path, OR server-action-backed in staging demo mode.
   const savedRepo = useMemo(() => getMutationSavedRepository(), []);
@@ -199,7 +206,7 @@ export function SavedCourtsGrid({ courts, unsavedIds, onUnsavedChange }: SavedCo
     <div className="flex flex-col gap-3">
       <ul className="flex flex-col gap-3">
         {visible.map((court, index) => {
-          const display = courtDisplay(court);
+          const display = courtDisplay(court, viewerIsEntitled);
           const isPending = pending.has(court.id);
           const tags = court.tags.slice(0, MAX_TAG_CHIPS);
 

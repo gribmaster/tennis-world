@@ -39,19 +39,21 @@ import { getRepositoriesForRequest } from '@/lib/repositories.server';
 // in `components/filters/court-filter-state.ts` maps the exact same filter state onto the
 // wire query, so the swap is a data-source change, not a UI rewrite.
 //
-// ── SAVED STATE ─────────────────────────────────────────────────────────────────────────
+// ── SAVED STATE + VIEWER ENTITLEMENT (Task 26) ──────────────────────────────────────────
 // The featured cards carry a working save heart, so the page seeds each one with the
 // visitor's real saved set. That is a PROTECTED read (/v1/me/saved-courts), so it goes
 // through `getRepositoriesForRequest()` (request-scoped, carries the session cookie) —
-// unlike the four public reads above it, which need no identity. ONE call returns every
+// unlike the three public reads above it, which need no identity. ONE call returns every
 // saved court, so seeding N hearts costs one read, not N.
 //
 // Home is a PUBLIC page: a logged-out visitor in `api` mode gets `AuthRequiredError` here,
-// which DEGRADES to an empty saved set + `signedIn:false` (never a redirect, never a
-// crash) — exactly what Court Detail does with the same read. The hearts then route to
-// /signin instead of mutating. This read also replaces the separate `isSignedIn()` call
-// v1 made purely for the header icon: it answers the same question as a side effect, so
-// the page makes one protected read rather than two.
+// which DEGRADES to an empty saved set + `signedIn:false` + `viewerIsEntitled:false`
+// (never a redirect, never a crash) — exactly what Court Detail does with the same read.
+// The hearts then route to /signin instead of mutating. This block also replaces the
+// separate `isSignedIn()` call v1 made purely for the header icon, and now ALSO reads
+// `/v1/me` for `membership` (Task 26) so locked-court content across Home unmasks for a
+// paying visitor — both protected reads run together and degrade together on the same
+// `AuthRequiredError` catch, so this stays two reads total, not three.
 //
 // `overHero` puts the full-bleed hero behind the transparent app header (which supplies
 // the wordmark and avatar the prototype drew inside its own hero — see HomeHero).
@@ -69,15 +71,23 @@ export default async function Home() {
     repositories.journal.list({ featured: true, limit: 3 }),
   ]);
 
-  // Protected read — degrades cleanly for a logged-out visitor on this public page.
+  // Protected reads — degrade together for a logged-out visitor on this public page. The
+  // second read (Task 26) resolves this viewer's real membership so locked-court content
+  // across Home can unmask for a paying visitor, not just on the court's own detail page.
   let savedCourtIds: string[] = [];
   let signedIn = true;
+  let viewerIsEntitled = false;
   try {
-    const saved = await protectedRepos.saved.getSavedCourts();
+    const [saved, user] = await Promise.all([
+      protectedRepos.saved.getSavedCourts(),
+      protectedRepos.user.getCurrentUser(),
+    ]);
     savedCourtIds = saved.map((court) => court.id);
+    viewerIsEntitled = user.membership !== 'free';
   } catch (err) {
     if (err instanceof AuthRequiredError) {
       signedIn = false;
+      viewerIsEntitled = false;
     } else {
       // A real fault (5xx, network) must surface rather than masquerade as "logged out".
       throw err;
@@ -94,6 +104,7 @@ export default async function Home() {
         articles={articles}
         savedCourtIds={savedCourtIds}
         signedIn={signedIn}
+        viewerIsEntitled={viewerIsEntitled}
       />
     </AppShell>
   );

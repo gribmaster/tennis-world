@@ -33,10 +33,12 @@ function LockGlyph() {
 
 export interface MapCourtRowProps {
   court: CourtSummaryDTO;
+  /** Whether this viewer carries an active membership (Task 26) — unmasks a locked court. */
+  viewerIsEntitled?: boolean;
 }
 
-export function MapCourtRow({ court }: MapCourtRowProps) {
-  const display = courtDisplay(court);
+export function MapCourtRow({ court, viewerIsEntitled = false }: MapCourtRowProps) {
+  const display = courtDisplay(court, viewerIsEntitled);
 
   return (
     <PendingCardLink

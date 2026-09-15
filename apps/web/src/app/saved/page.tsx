@@ -36,20 +36,30 @@ export const metadata: Metadata = {
 export default async function SavedPage() {
   const repositories = await getRepositoriesForRequest();
 
-  const [savedCourts, savedCollections] = await loadOrSignIn(
+  // Task 26: alongside the two existing saved reads, also resolve this viewer's real
+  // membership so locked-court content on the Courts tab / Wishlist Map can unmask for a
+  // paying visitor. The page is already guaranteed-signed-in past `loadOrSignIn`, so a
+  // failure here is a real fault, not a "logged out" case to degrade.
+  const [savedCourts, savedCollections, user] = await loadOrSignIn(
     () =>
       Promise.all([
         repositories.saved.getSavedCourts(),
         repositories.saved.getSavedCollections(),
+        repositories.user.getCurrentUser(),
       ]),
     '/saved',
   );
+  const viewerIsEntitled = user.membership !== 'free';
 
   return (
     // Saved is private — if it rendered, the visitor is signed in. Point the header icon
     // at /profile.
     <AppShell unlocked={false} signedIn>
-      <SavedTabs savedCourts={savedCourts} savedCollections={savedCollections} />
+      <SavedTabs
+        savedCourts={savedCourts}
+        savedCollections={savedCollections}
+        viewerIsEntitled={viewerIsEntitled}
+      />
     </AppShell>
   );
 }

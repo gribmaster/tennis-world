@@ -16,9 +16,14 @@ import { UserCollectionEmptyState } from './UserCollectionEmptyState';
 
 export interface UserCollectionCourtsGridProps {
   courts: CourtSummaryDTO[];
+  /** Whether this viewer carries an active membership (Task 26) — unmasks a locked court. */
+  viewerIsEntitled?: boolean;
 }
 
-export function UserCollectionCourtsGrid({ courts }: UserCollectionCourtsGridProps) {
+export function UserCollectionCourtsGrid({
+  courts,
+  viewerIsEntitled = false,
+}: UserCollectionCourtsGridProps) {
   return (
     <section className="bg-bone pb-section-lg pt-section md:pb-section-xl">
       <PageContainer>
@@ -28,7 +33,12 @@ export function UserCollectionCourtsGrid({ courts }: UserCollectionCourtsGridPro
           <ul className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {courts.map((court, i) => (
               <li key={court.id}>
-                <CourtCard court={court} href={`/courts/${court.slug}`} priority={i === 0} />
+                <CourtCard
+                  court={court}
+                  href={`/courts/${court.slug}`}
+                  priority={i === 0}
+                  viewerIsEntitled={viewerIsEntitled}
+                />
               </li>
             ))}
           </ul>

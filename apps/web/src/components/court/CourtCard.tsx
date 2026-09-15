@@ -91,6 +91,12 @@ export interface CourtCardProps {
   /** Prioritize image loading (use for above-the-fold cards only). */
   priority?: boolean;
   className?: string;
+  /**
+   * Whether THIS viewer carries an active (non-free) membership (Task 26). Unmasks a
+   * locked court's name/location for them. Defaults to `false` — the safe/masked default
+   * for a caller that hasn't resolved viewer entitlement.
+   */
+  viewerIsEntitled?: boolean;
 }
 
 export function CourtCard({
@@ -101,9 +107,10 @@ export function CourtCard({
   showSaved = false,
   priority = false,
   className,
+  viewerIsEntitled = false,
 }: CourtCardProps) {
   const aspect = variant === 'large' ? 'aspect-[3/2]' : 'aspect-[4/5]';
-  const display = courtDisplay(court);
+  const display = courtDisplay(court, viewerIsEntitled);
 
   const card = (
     <article
