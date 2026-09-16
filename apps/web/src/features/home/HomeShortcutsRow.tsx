@@ -88,7 +88,7 @@ const GLYPHS: Record<string, ReactNode> = {
   ),
 };
 
-function ShortcutGlyph({ id }: { id: string }) {
+function ShortcutGlyph({ id, className }: { id: string, className: string }) {
   return (
     <svg
       width="22"
@@ -100,6 +100,7 @@ function ShortcutGlyph({ id }: { id: string }) {
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden
+      className={className}
     >
       {GLYPHS[id]}
     </svg>
@@ -115,10 +116,10 @@ export interface HomeShortcutsRowProps {
 
 export function HomeShortcutsRow({ state, onToggle }: HomeShortcutsRowProps) {
   return (
-    <div className="pt-5">
+    <section className="pt-5 home-categories" id="home-categories">
       <div className="container-page">
         <div
-          className="no-scrollbar flex gap-1 overflow-x-auto pb-0.5"
+          className="no-scrollbar flex gap-1 md:gap-3 overflow-x-auto pb-0.5"
           role="group"
           aria-label="Filter courts by experience"
         >
@@ -134,18 +135,18 @@ export function HomeShortcutsRow({ state, onToggle }: HomeShortcutsRowProps) {
               >
                 <span
                   className={[
-                    'flex h-[52px] w-[52px] items-center justify-center rounded-pill border transition-colors',
+                    'flex h-[52px] md:h-[70px] w-[52px] md:w-[70px] items-center justify-center rounded-pill border transition-colors',
                     active
                       ? 'border-ink bg-ink text-bone'
                       : 'border-ink/10 bg-paper text-stone',
                   ].join(' ')}
                   style={active ? undefined : { boxShadow: '0 1px 4px rgba(15,15,15,0.08)' }}
                 >
-                  <ShortcutGlyph id={shortcut.id} />
+                  <ShortcutGlyph id={shortcut.id} className={"md:w-[30px] md:h-[30px]"} />
                 </span>
                 <span
                   className={[
-                    'text-center text-[11px] leading-tight',
+                    'text-center text-[11px] md:text-[14px] leading-tight',
                     active ? 'font-medium text-ink' : 'text-stone',
                   ].join(' ')}
                 >
@@ -156,6 +157,6 @@ export function HomeShortcutsRow({ state, onToggle }: HomeShortcutsRowProps) {
           })}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

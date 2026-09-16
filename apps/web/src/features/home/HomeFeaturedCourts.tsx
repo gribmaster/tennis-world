@@ -92,10 +92,10 @@ export function HomeFeaturedCourts({
   viewerIsEntitled = false,
 }: HomeFeaturedCourtsProps) {
   return (
-    <section className="pt-7">
+    <section className="pt-7 md:pt-12 featured-courts" id="featured-courts">
       <div className="container-page">
         <div className="mb-4 flex items-baseline justify-between gap-4">
-          <h2 className="serif text-[20px] font-normal leading-tight text-ink">{title}</h2>
+          <h2 className="serif text-[20px] md:text-[36px] font-normal leading-tight text-ink">{title}</h2>
           <PendingLink
             href="/map"
             className="body-s shrink-0 text-stone transition-colors hover:text-ink"

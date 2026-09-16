@@ -120,12 +120,12 @@ export function HomeSearchBar({
   const showResults = query.trim().length > 0;
 
   return (
-    <div className="relative z-10 pt-4">
+    <section className="relative z-10 pt-4 md:pt-12 home-search" id="home-search">
       <div className="container-page">
         {/* The pill field. `.pill` + `bg-paper` are the existing primitives; the deeper
             shadow is the prototype's Home-specific override (line 438). */}
         <div
-          className="pill flex h-12 items-center gap-2.5 bg-paper px-4"
+          className="pill flex h-12 md:h-16 items-center gap-2.5 bg-paper px-4"
           style={{ boxShadow: '0 4px 24px rgba(15,15,15,0.14)' }}
         >
           <span aria-hidden className="shrink-0 text-stone">
@@ -138,7 +138,7 @@ export function HomeSearchBar({
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search courts, cities, countries…"
             aria-label="Search courts"
-            className="body-m w-full min-w-0 border-none bg-transparent text-ink outline-none placeholder:text-stone [&::-webkit-search-cancel-button]:hidden"
+            className="md:text-[18px] body-m w-full min-w-0 border-none bg-transparent text-ink outline-none placeholder:text-stone [&::-webkit-search-cancel-button]:hidden"
           />
 
           {/* Clear — only while the field has content, per the prototype (line 441). */}
@@ -221,6 +221,6 @@ export function HomeSearchBar({
           </div>
         ) : null}
       </div>
-    </div>
+    </section>
   );
 }

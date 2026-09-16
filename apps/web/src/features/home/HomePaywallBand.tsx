@@ -75,7 +75,7 @@ export function HomePaywallBand({ copy = PAYWALL_BAND_COPY }: HomePaywallBandPro
     copy;
 
   return (
-    <section className="pt-7">
+    <section className="pt-7 md:pt-12 paywall-banner" id="paywall-banner">
       <div className="container-page">
         <div className="relative overflow-hidden rounded-[14px] bg-ink px-6 py-9 text-center">
           <Image

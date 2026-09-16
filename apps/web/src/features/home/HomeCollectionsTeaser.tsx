@@ -41,10 +41,10 @@ export function HomeCollectionsTeaser({
   if (collections.length === 0) return null;
 
   return (
-    <section className="pt-7">
+    <section className="pt-7 md:pt-12 collections-list" id="collections-list">
       <div className="container-page">
         <div className="mb-4 flex items-baseline justify-between gap-4">
-          <h2 className="serif text-[20px] font-normal leading-tight text-ink">{title}</h2>
+          <h2 className="serif text-[20px] md:text-[36px] font-normal leading-tight text-ink">{title}</h2>
           <PendingLink
             href={cta.href}
             className="body-s shrink-0 text-stone transition-colors hover:text-ink"

@@ -49,10 +49,10 @@ export function HomeJournalTeaser({
   if (articles.length === 0) return null;
 
   return (
-    <section className="pb-10 pt-7">
+    <section className="pb-12 pt-7 md:pt-12 home-blog" id="home-blog">
       <PageContainer>
         <div className="mb-4 flex items-baseline justify-between gap-4">
-          <h2 className="serif text-[20px] font-normal leading-tight text-ink">{title}</h2>
+          <h2 className="serif text-[20px] md:text-[36px] font-normal leading-tight text-ink">{title}</h2>
           <PendingLink
             href={cta.href}
             className="body-s shrink-0 text-stone transition-colors hover:text-ink"

@@ -51,19 +51,19 @@ export function HomeEditorsCut({
   if (courts.length === 0) return null;
 
   return (
-    <section className="pt-7">
+    <section className="pt-7 md:pt-12 editors-list" id="editors-list">
       <div className="container-page">
-        <h2 className="serif mb-4 text-[20px] font-normal leading-tight text-ink">{title}</h2>
+        <h2 className="serif mb-4 text-[20px] md:text-[36px] font-normal leading-tight text-ink">{title}</h2>
 
-        <ul className="flex flex-col gap-3">
+        <ul className="flex flex-col md:flex-row gap-3">
           {courts.map((court) => {
             const display = courtDisplay(court, viewerIsEntitled);
             return (
-              <li key={court.id}>
+              <li key={court.id} className="md:w-[75vw] min-w-[240px] md:max-w-[292px] shrink-0">
                 <PendingCardLink
                   href={`/courts/${court.slug}`}
                   ariaLabel={display.name}
-                  className="block aspect-[16/10] overflow-hidden rounded-[14px]"
+                  className="block aspect-[2/3] overflow-hidden rounded-[14px]"
                 >
                   <Image
                     src={court.heroImageUrl}

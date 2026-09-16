@@ -57,9 +57,9 @@ export function CuratedCollectionsList({
     <section className="container-page pt-7">
       <h2 className="mb-3 text-[16px] font-semibold leading-tight text-ink">{title}</h2>
 
-      <ul className="flex flex-col gap-2.5">
+      <ul className="flex flex-col md:flex-row flex-wrap gap-2.5">
         {collections.map((collection) => (
-          <li key={collection.id}>
+          <li key={collection.id} className="md:w-[32%]">
             <PendingCardLink
               href={`/collections/${collection.slug}`}
               ariaLabel={collection.name}

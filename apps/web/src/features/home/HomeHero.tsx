@@ -91,7 +91,7 @@ export function HomeHero({ content = HOME_HERO_CONTENT }: HomeHeroProps) {
   const { headline, subtitle, primaryCta, imageUrl, imageAlt } = content;
 
   return (
-    <section className="relative h-[340px] w-full overflow-hidden md:h-[clamp(340px,46vw,520px)]">
+    <section className="relative h-[340px] w-full overflow-hidden md:h-[clamp(340px,46vw,570px)] home-banner" id="home-banner">
       <Image
         src={imageUrl}
         alt={imageAlt ?? ''}
@@ -113,8 +113,8 @@ export function HomeHero({ content = HOME_HERO_CONTENT }: HomeHeroProps) {
 
       {/* Copy block, bottom-left at the prototype's 20px gutter (widening on desktop so
           it tracks `.container-page`'s own gutter rather than hugging the edge). */}
-      <div className="absolute inset-x-0 bottom-5 px-5 md:px-[clamp(20px,4vw,64px)]">
-        <div className="mx-auto w-full max-w-container">
+      <div className="absolute inset-x-0 bottom-4 md:bottom-12 px-5 md:px-[clamp(20px,4vw,64px)]">
+        <div className="container-page">
           <h1 className="display-xl mb-1 whitespace-pre-line text-paper">{headline}</h1>
           <p className="body-s mb-4 text-paper/75">{subtitle}</p>
           <PendingLink
