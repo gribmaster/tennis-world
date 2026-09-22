@@ -458,7 +458,7 @@ function renderLocked({
           // takes no pending primitive and no spinner.
           <PaywallTrigger
             source="court-detail-locked-footer"
-            className="btn btn-primary flex-1 justify-center gap-2"
+            className="btn btn-primary flex-1 md:flex-none  justify-center gap-2"
           >
             Unlock to get directions
           </PaywallTrigger>

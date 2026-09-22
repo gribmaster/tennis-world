@@ -193,7 +193,7 @@ export function CourtDetailLocationPreview({
     return (
       <div>
         <h2 className="mb-3 text-[16px] font-semibold text-ink">Location</h2>
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid md:flex md:flex-col grid-cols-2 gap-2.5">
           {/* Left: the map box. Prototype `height:100`, `borderRadius:10` (line 1096) —
               allowed to grow on desktop where the two columns get much wider. */}
           <div className="h-[100px] overflow-hidden rounded-[10px] border border-hairline md:h-[clamp(100px,14vw,180px)]">

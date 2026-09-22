@@ -319,7 +319,7 @@ export function CourtDetailGalleryStrip() {
                 className={[
                   // Fixed 90×72 box (prototype `.gallery-thumb`) — the border is always
                   // 2px, only its colour changes, so selecting never reflows the row.
-                  'relative block h-[72px] w-[90px] overflow-hidden rounded-md border-2 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/50',
+                  'relative block h-[72px] md:h-[150px] w-[90px] md:w-[150px] overflow-hidden rounded-md border-2 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/50',
                   isActive ? 'border-ink opacity-100' : 'border-transparent opacity-75 hover:opacity-100',
                 ].join(' ')}
               >
