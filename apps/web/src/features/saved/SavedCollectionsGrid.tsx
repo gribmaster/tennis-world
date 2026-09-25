@@ -11,10 +11,14 @@ import { SavedEmptyState } from './SavedEmptyState';
 // These are `UserCollectionDTO`s from `SavedRepository.getSavedCollections()` — the
 // wishlist folders the visitor CREATES and fills with courts. They are NOT bookmarked
 // editorial collections. The prototype draws saved editorial podborki in this slot, and
-// this feature deliberately carries over its CARD TREATMENT but not its MEANING:
-// bookmarking an editorial `CollectionDTO` has no model, no join table, no endpoint and no
-// repository method in this product, and is not being built (decided). The two are
-// different objects that happen to look alike on screen.
+// this feature deliberately carries over its CARD TREATMENT but not its MEANING: the two
+// are different objects that happen to look alike on screen.
+//
+// Bookmarking an editorial `CollectionDTO` IS now a real, database-backed feature (Task
+// 42 — `SavedCollection` model, `POST/DELETE /v1/me/saved-collections`), but it lives in
+// its OWN sibling section: `SavedEditorialCollectionsGrid.tsx`, rendered by `SavedTabs`
+// above this grid on the same Collections tab. This grid is unchanged and still renders
+// `UserCollectionDTO` only.
 //
 // RESTYLED, not replaced: the same folders, the same create flow, the same per-folder link
 // target (`/saved/collections/{slug}`) — a 2-col grid of image cards instead of a row list.

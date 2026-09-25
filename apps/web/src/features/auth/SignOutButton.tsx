@@ -23,9 +23,16 @@ import { InlineSpinner } from '@/components/ui';
 // inert "Demo mode" row instead of a real sign-out (the prompt's "logout shown as Demo mode /
 // no-op"). See docs/STAGING_DEMO_AUTH.md.
 //
-// Styling mirrors the clay "Sign Out" ProfileMenuRow it replaces (danger tone, no chevron).
+// This is now a row WITHIN SettingsMenuCard's card (TASK_45), styled via the same
+// `className` prop SettingsAccountRow already takes — danger tone, no chevron. No chevron
+// is deliberate: every other row in the card navigates/opens something, but Sign Out is a
+// terminal action, not a "there's more" affordance — do not add one.
 
-export function SignOutButton() {
+export interface SignOutButtonProps {
+  className: string;
+}
+
+export function SignOutButton({ className }: SignOutButtonProps) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
@@ -33,7 +40,7 @@ export function SignOutButton() {
   if (isDemoMode()) {
     return (
       <div
-        className="flex h-14 w-full items-center justify-between border-b border-hairline px-1 text-left text-stone"
+        className={[className, 'text-stone'].join(' ')}
         title="Staging demo mode — sign-out is disabled for the shared demo session."
       >
         <span className="body-l">Demo mode</span>
@@ -56,14 +63,13 @@ export function SignOutButton() {
   }
 
   return (
-    // Styling matches a danger-tone ProfileMenuRow (h-14, border-b, clay, no chevron).
     <button
       type="button"
       onClick={handleSignOut}
       disabled={busy}
       aria-busy={busy}
       aria-disabled={busy || undefined}
-      className="flex h-14 w-full items-center justify-between border-b border-hairline px-1 text-left text-clay transition-opacity hover:opacity-70 disabled:opacity-50"
+      className={[className, 'text-clay transition-opacity hover:opacity-70 disabled:opacity-50'].join(' ')}
     >
       <span className="body-l inline-flex items-center gap-2">
         {busy ? <InlineSpinner label="Signing out…" /> : null}

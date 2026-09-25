@@ -38,6 +38,18 @@ export async function unsaveCourtAction(courtId: string): Promise<void> {
   await repositories.saved.unsaveCourt(courtId);
 }
 
+/** POST /v1/me/saved-collections — save an editorial collection (idempotent). */
+export async function saveCollectionAction(collectionId: string): Promise<void> {
+  const repositories = await getRepositoriesForRequest();
+  await repositories.saved.saveCollection(collectionId);
+}
+
+/** DELETE /v1/me/saved-collections/:collectionId — unsave (idempotent). */
+export async function unsaveCollectionAction(collectionId: string): Promise<void> {
+  const repositories = await getRepositoriesForRequest();
+  await repositories.saved.unsaveCollection(collectionId);
+}
+
 /** Toggle a court in/out of a folder (read-before-write bridge lives in the repo). */
 export async function toggleCourtInCollectionAction(
   collectionId: string,

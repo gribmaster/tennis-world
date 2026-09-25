@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { AppShell, PageContainer } from '@/components/layout';
 import { BackButton, PendingLink } from '@/components/navigation';
 import { SettingsMenuCard } from '@/features/profile';
-import { SignOutButton } from '@/features/auth';
 import { getRepositoriesForRequest } from '@/lib/repositories.server';
 import { loadOrSignIn } from '@/lib/auth-redirect';
 
@@ -30,10 +29,10 @@ import { loadOrSignIn } from '@/lib/auth-redirect';
 //     with nothing real to wire to is omitted, not rendered inert again on this screen.
 //   • Privacy / Terms (real /privacy, /terms routes) → kept below the card as
 //     PendingLinks, same destinations.
-//   • Sign In / Sign Out                          → SIGN-OUT SURVIVES here, below the
-//     card + Privacy/Terms links (this screen only ever renders for a signed-in
-//     visitor, so it always renders <SignOutButton>, never the signed-out "Sign In"
-//     branch the old list also carried).
+//   • Sign In / Sign Out                          → SIGN-OUT SURVIVES as the LAST row
+//     inside SettingsMenuCard (TASK_45), above the Privacy/Terms links (this screen
+//     only ever renders for a signed-in visitor, so it always renders <SignOutButton>,
+//     never the signed-out "Sign In" branch the old list also carried).
 // "Account settings" (new, prototype-only) → SettingsAccountRow, opening the SAME
 // EditProfileModal the Profile screen's "Edit profile" pill opens (TASK_14 decision 3 —
 // not a second settings surface).
@@ -54,7 +53,7 @@ export default async function ProfileSettingsPage() {
       signedIn
       headerUser={{ name: user.name, initials: user.initials, avatarUrl: user.avatarUrl }}
     >
-      <PageContainer className="py-section-lg md:py-section-xl">
+      <PageContainer className="py-section-lg md:py-section-xl min-h-[70vh]">
         <div className="mx-auto max-w-[680px]">
           <div className="mb-8 flex items-center gap-3.5">
             <BackButton fallbackHref="/profile" />
@@ -70,10 +69,6 @@ export default async function ProfileSettingsPage() {
             <PendingLink href="/terms" className="body-s text-stone underline underline-offset-2 hover:text-ink">
               Terms of Service
             </PendingLink>
-          </div>
-
-          <div className="mt-8">
-            <SignOutButton />
           </div>
         </div>
       </PageContainer>

@@ -19,6 +19,7 @@ import { HomeEditorsCut } from './HomeEditorsCut';
 import { HomeCollectionsTeaser } from './HomeCollectionsTeaser';
 import { HomeJournalTeaser } from './HomeJournalTeaser';
 import { HomePaywallBand } from './HomePaywallBand';
+import { HomeMapPreviewBand } from './HomeMapPreviewBand';
 import { HOME_SHORTCUTS, type HomeShortcut } from './home-shortcuts';
 
 // HomeExplorer — the ONE `'use client'` boundary on the Home screen (Feature 74).
@@ -66,6 +67,8 @@ export interface HomeExplorerProps {
   articles: ArticleDTO[];
   /** Ids of the courts this visitor has already saved (seeds the card hearts). */
   savedCourtIds: string[];
+  /** Ids of the editorial collections this visitor has already saved (Task 42). */
+  savedCollectionIds: string[];
   /** False for a logged-out visitor in `api` mode → save hearts route to /signin. */
   signedIn: boolean;
   /**
@@ -81,6 +84,7 @@ export function HomeExplorer({
   collections,
   articles,
   savedCourtIds,
+  savedCollectionIds,
   signedIn,
   viewerIsEntitled = false,
 }: HomeExplorerProps) {
@@ -90,6 +94,10 @@ export function HomeExplorer({
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const savedSet = useMemo(() => new Set(savedCourtIds), [savedCourtIds]);
+  const savedCollectionSet = useMemo(
+    () => new Set(savedCollectionIds),
+    [savedCollectionIds],
+  );
   const activeCount = useMemo(() => countActiveFilters(filters), [filters]);
   const isFiltered = useMemo(() => hasAnyFilter(filters), [filters]);
 
@@ -177,23 +185,10 @@ export function HomeExplorer({
         onClose={handleCloseSheet}
       />
 
-      {/* ── MAP PREVIEW BAND — DELIBERATELY OMITTED (Feature 74) ──────────────────────
-          The v2 prototype places a clickable map-preview band here, between the shortcuts
-          row and the featured courts strip (design_v2_stripped.html:483–516): a 190px
-          image with four decorative gold pins, over an ivory info bar linking to /map.
-
-          It is NOT built, and NOTHING stands in for it — no placeholder image, no second
-          live map instance, no coloured box, no "coming soon" panel. The sections above and
-          below simply sit next to each other.
-
-          WHY: the band's background is one of the prototype's two inline base64 PNGs, and
-          choosing the real asset still depends on a decision that has not been made yet.
-          The map itself HAS since migrated off Leaflet/OSM to Google Maps (Map ID +
-          AdvancedMarkerElement, Feature 88 — see docs/MAP_PROVIDER_DECISION.md), but that
-          was the map SCREEN's engine, not this preview band, which was never built and
-          remains its own open decision. Shipping a stand-in now would still mean drawing a
-          world map in a style nothing else on this screen uses.
-          ─────────────────────────────────────────────────────────────────────────────── */}
+      {/* Map preview band (Task 30) — both blockers behind Feature 74's deferral are now
+          cleared: the map engine migrated to Google Maps (Tasks 16–24), and the user
+          supplied a real asset for the background (see HomeMapPreviewBand's own header). */}
+      <HomeMapPreviewBand />
 
       <HomeFeaturedCourts
         courts={stripCourts}
@@ -207,7 +202,11 @@ export function HomeExplorer({
 
       <HomeEditorsCut courts={editorsCutCourts} viewerIsEntitled={viewerIsEntitled} />
 
-      <HomeCollectionsTeaser collections={collections} />
+      <HomeCollectionsTeaser
+        collections={collections}
+        savedCollectionIds={savedCollectionSet}
+        signedIn={signedIn}
+      />
 
       <HomePaywallBand />
 

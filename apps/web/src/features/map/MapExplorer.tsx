@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { CourtSummaryDTO, MapPinDTO } from '@tennis/contracts';
 import {
   FilterSheet,
@@ -13,12 +14,18 @@ import {
 } from '@/components/filters';
 import { MapFilterBar } from './MapFilterBar';
 import { MapCourtList } from './MapCourtList';
+import { MapCourtPreview } from './MapCourtPreview';
 import { CourtMap } from './CourtMap';
 import { MapLocateControl } from './MapLocateControl';
 import { useGeolocation } from './useGeolocation';
 import { findNearestPoint } from './geo-distance';
 import type { MapFocusRequest } from './CourtMapInner';
-import { courtToMarker, pinStateToMarkerState, type MapMarkerState } from './map-markers';
+import {
+  courtToMarker,
+  pinStateToMarkerState,
+  type MapMarker,
+  type MapMarkerState,
+} from './map-markers';
 
 // MapExplorer — the ONE `'use client'` boundary on the Map screen.
 //
@@ -54,7 +61,7 @@ import { courtToMarker, pinStateToMarkerState, type MapMarkerState } from './map
 // The user's coordinates stay in memory for this session only (see useGeolocation).
 
 /** Target zoom for the nearest-court focus — clamped to the map's real range downstream. */
-const NEAREST_COURT_ZOOM = 17;
+const NEAREST_COURT_ZOOM = 12;
 
 // FILTERING (Feature 73): the old single-select `FILTER_PREDICATE` / `matchesQuery`
 // pair is gone. Narrowing now runs through `narrowCourts`, which is derived from the
@@ -96,6 +103,8 @@ export function MapExplorer({
   initialQuery = '',
   viewerIsEntitled = false,
 }: MapExplorerProps) {
+  const router = useRouter();
+
   // ONE state object for every dimension the user can narrow by (chips + free text),
   // shaped one-to-one against the API's query params. The sheet's open/closed flag is
   // separate: it is view state, not filter state.
@@ -106,6 +115,11 @@ export function MapExplorer({
     initialQuery ? { ...EMPTY_COURT_FILTER_STATE, q: initialQuery } : EMPTY_COURT_FILTER_STATE,
   );
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  // Mobile pin-tap preview (Task 27/Feature 86). Holds the court whose compact preview
+  // card is docked over the map canvas — null when nothing is selected. Desktop never
+  // sets this (see handleMarkerClick below), so MapCourtPreview never mounts there.
+  const [selectedCourt, setSelectedCourt] = useState<CourtSummaryDTO | null>(null);
 
   const activeCount = useMemo(() => countActiveFilters(filters), [filters]);
 
@@ -127,6 +141,34 @@ export function MapExplorer({
     () => visibleCourts.map((court) => courtToMarker(court, stateBySlug, viewerIsEntitled)),
     [visibleCourts, stateBySlug, viewerIsEntitled],
   );
+
+  // ── Pin-tap preview (Task 27/Feature 86) ───────────────────────────────────────────
+  // Routes a marker click by breakpoint AT CLICK TIME rather than via a persistent
+  // media-query hook: desktop keeps its existing straight-to-navigation behaviour
+  // byte-for-byte, mobile opens the compact preview sheet instead. `md` matches
+  // `.map-layout`'s own breakpoint (tailwind.config.ts `screens.md` = 768px).
+  const handleMarkerClick = useCallback(
+    (marker: MapMarker) => {
+      const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+      if (isDesktop) {
+        router.push(`/courts/${marker.slug}`);
+        return;
+      }
+      const court = visibleCourts.find((c) => c.slug === marker.slug) ?? null;
+      setSelectedCourt(court);
+    },
+    [router, visibleCourts],
+  );
+
+  const handleClosePreview = useCallback(() => setSelectedCourt(null), []);
+
+  // A filter change (or the underlying court set changing) can drop the previewed court
+  // out of `visibleCourts` — close the preview rather than showing a now-invisible court.
+  useEffect(() => {
+    setSelectedCourt((prev) =>
+      prev && !visibleCourts.some((c) => c.slug === prev.slug) ? null : prev,
+    );
+  }, [visibleCourts]);
 
   // ── Nearest-court auto-focus ───────────────────────────────────────────────────────
   // ONE geolocation implementation, mounted once here and shared by the automatic initial
@@ -239,7 +281,7 @@ export function MapExplorer({
         <div className="map-canvas-wrap">
           <CourtMap
             markers={visibleMarkers}
-            navigateOnClick
+            onMarkerClick={handleMarkerClick}
             className="h-full w-full"
             focus={focus}
             onUserInteraction={handleUserInteraction}
@@ -249,6 +291,21 @@ export function MapExplorer({
             error={locateError}
             onLocate={handleLocateClick}
           />
+          {selectedCourt ? (
+            <MapCourtPreview
+              // Keys the compact/expanded card (and its blurb-fetch cache) by court —
+              // switching pins (or picking a "More courts nearby" card, Task 28) fully
+              // remounts it, resetting `expanded` back to compact. See MapCourtPreview's
+              // own file header for why this is the reset mechanism rather than a manual
+              // useEffect.
+              key={selectedCourt.slug}
+              court={selectedCourt}
+              visibleCourts={visibleCourts}
+              viewerIsEntitled={viewerIsEntitled}
+              onClose={handleClosePreview}
+              onSelectCourt={setSelectedCourt}
+            />
+          ) : null}
         </div>
 
         <MapCourtList

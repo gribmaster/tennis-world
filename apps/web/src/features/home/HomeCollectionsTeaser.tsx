@@ -1,6 +1,7 @@
-import Image from 'next/image';
 import type { CollectionDTO } from '@tennis/contracts';
-import { PendingLink, PendingCardLink } from '@/components/navigation';
+import { PendingLink } from '@/components/navigation';
+import { HScrollArrows } from '@/components/ui';
+import { CollectionCard, CollectionSaveHeart } from '@/features/collections';
 
 // HomeCollectionsTeaser — the v2 collections strip (Feature 74), rebuilt from the
 // prototype's HomeScreen (design_v2_stripped.html:577–600).
@@ -10,24 +11,31 @@ import { PendingLink, PendingCardLink } from '@/components/navigation';
 //     title, 13px stone "View all" (lines 579–582).
 //   • strip: `.h-scroll` at `gap:12`, `padding:'0 0 4px 20px'`, closed by a 20px spacer
 //     (lines 584, 596).
-//   • card: `width:calc(45vw)`, `maxWidth:190`, `minWidth:150`, `aspectRatio:'3/4'`,
-//     `borderRadius:12` (line 586).
-//   • `.img-overlay` (line 87): `linear-gradient(180deg, rgba(0,0,0,0) 40%,
-//     rgba(0,0,0,0.72) 100%)`.
-//   • text block `padding:'10px 12px'`: a 9px/600 0.1em uppercase court-count eyebrow at
-//     65% white, then the serif 16px name (lines 589–592).
+//   • card slot: `width:calc(45vw)`, `maxWidth:190`, `minWidth:150`, `aspectRatio:'3/4'`
+//     (line 586) — Home's own responsive strip sizing, kept on the `<li>`.
 //
-// Restyled from the v1 responsive grid to the prototype's scrolling portrait strip. Still
+// The card itself is the shared `CollectionCard` (`@/features/collections`) — the same
+// component `/collections`' `FeaturedCollectionsStrip` uses — rather than a bespoke inline
+// card. `CollectionCard` is size-agnostic (`h-full w-full`, no aspect ratio of its own), so
+// it fills whatever box the `<li>` establishes; its own header comment carries its
+// prototype geometry (count pill, 22px serif name, optional description, arrow affordance).
+//
 // PRESENTATIONAL & data-driven: the collections arrive as a prop from `app/page.tsx`, the
 // single repository boundary. No fetching, no @tennis/mock-data.
 //
-// PENDING STATES (CLAUDE.md §4 rule 1): the whole card navigates ⇒ `PendingCardLink`; the
-// "View all" link ⇒ `PendingLink`. Nothing here mutates.
+// PENDING STATES (CLAUDE.md §4 rule 1): the whole card navigates ⇒ `CollectionCard`'s own
+// `PendingCardLink`; the "View all" link ⇒ `PendingLink`. The save heart (Task 42) is a
+// database-backed action ⇒ the rule-2 triad, inside `CollectionSaveHeart`, rendered as a
+// SIBLING of the card link.
 
 export interface HomeCollectionsTeaserProps {
   collections: CollectionDTO[];
   title?: string;
   cta?: { label: string; href: string };
+  /** Ids of the editorial collections this visitor has already saved (Task 42). */
+  savedCollectionIds: ReadonlySet<string>;
+  /** False for a logged-out visitor in `api` mode → save hearts route to /signin. */
+  signedIn?: boolean;
 }
 
 const DEFAULT_TITLE = 'Collections';
@@ -37,6 +45,8 @@ export function HomeCollectionsTeaser({
   collections,
   title = DEFAULT_TITLE,
   cta = DEFAULT_CTA,
+  savedCollectionIds,
+  signedIn = true,
 }: HomeCollectionsTeaserProps) {
   if (collections.length === 0) return null;
 
@@ -61,42 +71,35 @@ export function HomeCollectionsTeaser({
           row still bleeds off the edge as it scrolls. Same treatment as the courts
           strip. */}
       <div className="container-page">
-        <ul className="no-scrollbar -mr-[clamp(20px,4vw,64px)] flex gap-3 overflow-x-auto pb-1">
-          {collections.map((collection) => (
-            <li key={collection.id} className="w-[45vw] min-w-[150px] max-w-[190px] shrink-0">
-              <PendingCardLink
-                href={`/collections/${collection.slug}`}
-                ariaLabel={collection.name}
-                className="block aspect-[3/4] overflow-hidden rounded-lg"
-              >
-                <Image
-                  src={collection.coverImageUrl}
-                  alt=""
-                  fill
-                  sizes="(max-width: 480px) 45vw, 190px"
-                  className="object-cover"
-                />
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0"
-                  style={{
-                    background:
-                      'linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.72) 100%)',
-                  }}
-                />
-                <span className="absolute inset-x-0 bottom-0 block px-3 pb-2.5 pt-3">
-                  <span className="mb-[3px] block text-[9px] font-semibold uppercase tracking-[0.1em] text-paper/65">
-                    {collection.count} courts
-                  </span>
-                  <span className="serif block text-[16px] font-normal leading-tight text-paper">
-                    {collection.name}
-                  </span>
-                </span>
-              </PendingCardLink>
-            </li>
-          ))}
-          <li aria-hidden className="w-5 shrink-0" />
-        </ul>
+        <HScrollArrows>
+          {(scrollRef) => (
+            <ul
+              ref={scrollRef}
+              className="no-scrollbar -mr-[clamp(20px,4vw,64px)] flex gap-3 overflow-x-auto pb-1"
+            >
+              {collections.map((collection, index) => (
+                <li
+                  key={collection.id}
+                  className="relative w-[45vw] min-w-[150px] max-w-[190px] aspect-[3/4] shrink-0"
+                >
+                  <CollectionCard
+                    collection={collection}
+                    priority={index === 0}
+                    className="collection-card"
+                  />
+                  <CollectionSaveHeart
+                    collectionId={collection.id}
+                    collectionSlug={collection.slug}
+                    collectionLabel={collection.name}
+                    initialSaved={savedCollectionIds.has(collection.id)}
+                    signedIn={signedIn}
+                  />
+                </li>
+              ))}
+              <li aria-hidden className="w-5 shrink-0" />
+            </ul>
+          )}
+        </HScrollArrows>
       </div>
     </section>
   );

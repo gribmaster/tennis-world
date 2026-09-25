@@ -8,8 +8,11 @@ import { ManageBillingButton } from '@/features/billing';
 //   • `membership === 'free'`         → the existing dark "Choose your membership." card
 //     (unchanged copy/CTA — PaywallTrigger opens the shared Paywall modal).
 //   • `membership !== 'free'` (active) → the prototype's gradient dark card with a
-//     status eyebrow + "✦ Active" badge, its CTA swapped for ManageBillingButton (the
+//     subhead + "✦ Active" badge, its CTA swapped for ManageBillingButton (the
 //     existing "Subscription & Purchases" mechanism — Feature 67 — not a new one).
+//     Task 44: the status-label eyebrow above the subhead ("Active Subscriber" /
+//     "Lifetime Member") was removed — redundant with the "✦ Active" pill and not in
+//     the mobile design.
 //
 // `lifetime` IS a real membership state (`MembershipStatus`, `EntitlementKind.
 // lifetime_unlock`) reachable via manual grant or promo — its handling is kept, not
@@ -41,11 +44,6 @@ const MEMBERSHIP_CARD_COPY: MembershipCardCopy = {
   eyebrow: 'Membership',
   headline: 'Choose your membership.',
   ctaLabel: 'See Membership',
-};
-
-const ACTIVE_STATUS_LABEL: Record<'subscription' | 'lifetime', string> = {
-  subscription: 'Active Subscriber',
-  lifetime: 'Lifetime Member',
 };
 
 const ACTIVE_SUBHEAD: Record<'subscription' | 'lifetime', string> = {
@@ -88,8 +86,7 @@ export function ProfileMembershipCard({
         style={{ background: 'linear-gradient(135deg, #1A1A1A, #2A2A2A)' }}
       >
         <div>
-          <div className="eyebrow text-gold">{ACTIVE_STATUS_LABEL[membership]}</div>
-          <div className="body-m mt-1 text-bone/90">{ACTIVE_SUBHEAD[membership]}</div>
+          <div className="body-m text-bone/90">{ACTIVE_SUBHEAD[membership]}</div>
         </div>
         <div className="flex items-center gap-3">
           <span className="eyebrow inline-flex items-center gap-1 rounded-pill border border-gold px-2.5 py-1 text-gold">

@@ -13,8 +13,12 @@
 // `padding:'16px 0'`, hairline `borderRight` dividers between cells).
 //
 // Each cell is a whole-cell link (ProfileStatLink → PendingCardLink) to the matching
-// listing page. There is no dedicated "countries" route in the app, so Countries
-// points at /map — the existing browse-all-courts screen — rather than an invented one.
+// listing page. Collections and Countries deep-link into the Saved page's matching tab
+// via its `?tab=` search param (Task 44) — Collections opens Saved's Collections tab
+// (the "Your Folders" section reads the SAME getSavedCollections() data this stat
+// counts), and Countries opens Saved's Wishlist Map tab (which plots this visitor's own
+// saved courts — the same courts countriesCount is derived from) instead of the
+// unrelated browse-everything /map screen.
 
 import { ProfileStatLink } from './ProfileStatLink';
 
@@ -32,8 +36,8 @@ export function ProfileStats({
   // Labels are local page chrome (not domain data); the VALUES come from props.
   const cells: Array<{ value: number; label: string; href: string; ariaLabel: string }> = [
     { value: savedCourtsCount, label: 'Saved Courts', href: '/saved', ariaLabel: 'View saved courts' },
-    { value: collectionsCount, label: 'Collections', href: '/collections', ariaLabel: 'View collections' },
-    { value: countriesCount, label: 'Countries', href: '/map', ariaLabel: 'View countries' },
+    { value: collectionsCount, label: 'Collections', href: '/saved?tab=collections', ariaLabel: 'View collections' },
+    { value: countriesCount, label: 'Countries', href: '/saved?tab=wishlist', ariaLabel: 'View countries' },
   ];
 
   return (

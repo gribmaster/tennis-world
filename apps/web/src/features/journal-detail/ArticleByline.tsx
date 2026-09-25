@@ -93,18 +93,6 @@ export function ArticleByline({ article, className }: ArticleBylineProps) {
       </div>
 
       <div className="flex-1" />
-
-      {/* Inert Share placeholder — see PHASE_1_PLACEHOLDER_CTA_AUDIT.md. No Web Share
-          API, no clipboard, no analytics. Disabled so it carries no behavior. */}
-      <button
-        type="button"
-        disabled
-        aria-label="Share (coming soon)"
-        className="flex h-9 items-center gap-1.5 border border-hairline px-3.5 text-xs text-stone disabled:cursor-not-allowed"
-      >
-        <ShareGlyph />
-        Share
-      </button>
     </div>
   );
 }

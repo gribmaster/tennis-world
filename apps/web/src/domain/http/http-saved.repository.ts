@@ -21,6 +21,10 @@
 //   renameUserCollection(id, name)         → PATCH  /v1/me/collections/:id { name }
 //   toggleCourtInCollection(id, courtId)   → POST   /v1/me/collections/:id/courts { courtId }
 //                                          | DELETE /v1/me/collections/:id/courts/:courtId
+//   getSavedEditorialCollections()         → GET    /v1/me/saved-collections
+//   isCollectionSaved(collectionId)        → GET    /v1/me/saved-collections (membership check)
+//   saveCollection(collectionId)           → POST   /v1/me/saved-collections   { collectionId }
+//   unsaveCollection(collectionId)         → DELETE /v1/me/saved-collections/:collectionId
 //
 // ── TOGGLE BRIDGE (prompt task 4; intake §12 Q1) ─────────────────────────────────
 // The web interface exposes a single idempotent-feeling
@@ -49,6 +53,7 @@
 // other HTTP repositories; the DTO TYPES come from `@tennis/contracts`.
 
 import type {
+  CollectionDTO,
   CourtSummaryDTO,
   UserCollectionDTO,
   UserCollectionWithCourtsDTO,
@@ -169,6 +174,43 @@ export class HttpSavedRepository implements SavedRepository {
   async unsaveCourt(courtId: string): Promise<void> {
     await deleteJson<{ ok: true }>(
       `/me/saved-courts/${encodeURIComponent(courtId)}`,
+      this.auth,
+    );
+  }
+
+  // ── Individual saved editorial collections (standalone heart — Task 42 endpoints) ─
+
+  /** GET /v1/me/saved-collections — the authed user's saved editorial collections. */
+  async getSavedEditorialCollections(): Promise<CollectionDTO[]> {
+    return getJson<CollectionDTO[]>('/me/saved-collections', this.auth);
+  }
+
+  /**
+   * Whether this collection is in the user's saved editorial collections. Derived from
+   * the saved-collections LIST, mirroring `isCourtSaved`.
+   */
+  async isCollectionSaved(collectionId: string): Promise<boolean> {
+    const saved = await this.getSavedEditorialCollections();
+    return saved.some((c) => c.id === collectionId);
+  }
+
+  /**
+   * POST /v1/me/saved-collections { collectionId } — save a collection (idempotent
+   * server-side; a re-save is a no-op 201). The API returns the collection; discarded
+   * here (the interface is `void`).
+   */
+  async saveCollection(collectionId: string): Promise<void> {
+    await postJson<CollectionDTO>('/me/saved-collections', { collectionId }, this.auth);
+  }
+
+  /**
+   * DELETE /v1/me/saved-collections/:collectionId — unsave a collection (idempotent
+   * server-side; a repeat/never-saved unsave still succeeds with `{ ok: true }`,
+   * discarded here).
+   */
+  async unsaveCollection(collectionId: string): Promise<void> {
+    await deleteJson<{ ok: true }>(
+      `/me/saved-collections/${encodeURIComponent(collectionId)}`,
       this.auth,
     );
   }

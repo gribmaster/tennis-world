@@ -4,9 +4,9 @@ import { PendingCardLink } from '@/components/navigation';
 import { courtDisplay } from '@/components/court/court-display';
 
 // CourtDetailNearbyStrip — the "Nearby courts" horizontal card row
-// (design_v2_stripped.html:1127–1152): 120px-wide cards, a 90px-tall image with an 8px
-// radius, the premium badge over a locked court's image, then the name and a secondary
-// line beneath.
+// (design_v2_stripped.html:1127–1152): 210px-wide cards, a 158px-tall image (4:3, TASK 37
+// scaled 1.75× from the prototype's 120×90) with an 8px radius, the premium badge over a
+// locked court's image, then the name and a secondary line beneath.
 //
 // NO DISTANCE IS RENDERED — this is the one deliberate divergence from the prototype, and
 // it is a correctness decision, not a styling one. The prototype's "3 km / 12 km / 28 km /
@@ -70,22 +70,22 @@ export function CourtDetailNearbyStrip({
   if (courts.length === 0) return null;
 
   return (
-    <ul className="no-scrollbar flex gap-3 overflow-x-auto px-5 pb-[2px] md:px-0">
+    <ul className="no-scrollbar flex gap-4 overflow-x-auto px-5 pb-[2px] md:px-0">
       {courts.map((court) => {
         const display = courtDisplay(court, viewerIsEntitled);
         return (
-          <li key={court.id} className="w-[120px] shrink-0">
+          <li key={court.id} className="w-[210px] shrink-0">
             <PendingCardLink
               href={`/courts/${court.slug}`}
               ariaLabel={display.name}
               className="block"
             >
-              <span className="relative block h-[90px] w-full overflow-hidden rounded-md">
+              <span className="relative block h-[158px] w-full overflow-hidden rounded-md">
                 <Image
                   src={court.heroImageUrl}
                   alt=""
                   fill
-                  sizes="120px"
+                  sizes="210px"
                   className="object-cover"
                 />
                 {display.locked ? (
@@ -98,11 +98,11 @@ export function CourtDetailNearbyStrip({
                   </span>
                 ) : null}
               </span>
-              <span className="mt-1.5 block truncate text-[12px] font-medium leading-[1.2] text-ink">
+              <span className="mt-1.5 block truncate text-[14px] font-medium leading-[1.2] text-ink">
                 {display.name}
               </span>
               {/* Country · region — what stands in for the prototype's fake kilometres. */}
-              <span className="mt-0.5 block truncate text-[11px] text-stone">
+              <span className="mt-0.5 block truncate text-[13px] text-stone">
                 {display.location}
               </span>
             </PendingCardLink>

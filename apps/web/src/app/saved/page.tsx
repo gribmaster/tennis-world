@@ -1,8 +1,14 @@
 import type { Metadata } from 'next';
 import { AppShell } from '@/components/layout';
-import { SavedTabs } from '@/features/saved';
+import { SavedTabs, type TabId } from '@/features/saved';
 import { getRepositoriesForRequest } from '@/lib/repositories.server';
 import { loadOrSignIn } from '@/lib/auth-redirect';
+
+const VALID_TABS: ReadonlyArray<TabId> = ['courts', 'collections', 'wishlist'];
+
+function parseInitialTab(tab: string | undefined): TabId {
+  return VALID_TABS.includes(tab as TabId) ? (tab as TabId) : 'courts';
+}
 
 // Saved page (`/saved`) — originally a Phase-1 screen (Feature 20, built from
 // docs/FEATURE_19_SAVED_PAGE_LAYOUT.md), rebuilt to the v2 prototype's `SavedScreen` in
@@ -33,19 +39,30 @@ export const metadata: Metadata = {
   description: 'Your saved courts, wishlist folders, and trip map.',
 };
 
-export default async function SavedPage() {
+export default async function SavedPage({
+  searchParams,
+}: {
+  // Next 15: `searchParams` is async and must be awaited (same pattern as
+  // `app/profile/page.tsx`'s `?checkout=` param). Drives which tab opens initially
+  // (Task 44) — invalid/missing values fall back to `'courts'`, today's default.
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const initialTab = parseInitialTab((await searchParams).tab);
   const repositories = await getRepositoriesForRequest();
 
   // Task 26: alongside the two existing saved reads, also resolve this viewer's real
   // membership so locked-court content on the Courts tab / Wishlist Map can unmask for a
-  // paying visitor. The page is already guaranteed-signed-in past `loadOrSignIn`, so a
-  // failure here is a real fault, not a "logged out" case to degrade.
-  const [savedCourts, savedCollections, user] = await loadOrSignIn(
+  // paying visitor. Task 42 adds a fourth read: the visitor's saved EDITORIAL collections,
+  // for the Collections tab's new "Saved Collections" section. The page is already
+  // guaranteed-signed-in past `loadOrSignIn`, so a failure here is a real fault, not a
+  // "logged out" case to degrade.
+  const [savedCourts, savedCollections, user, savedEditorialCollections] = await loadOrSignIn(
     () =>
       Promise.all([
         repositories.saved.getSavedCourts(),
         repositories.saved.getSavedCollections(),
         repositories.user.getCurrentUser(),
+        repositories.saved.getSavedEditorialCollections(),
       ]),
     '/saved',
   );
@@ -58,7 +75,9 @@ export default async function SavedPage() {
       <SavedTabs
         savedCourts={savedCourts}
         savedCollections={savedCollections}
+        savedEditorialCollections={savedEditorialCollections}
         viewerIsEntitled={viewerIsEntitled}
+        initialTab={initialTab}
       />
     </AppShell>
   );

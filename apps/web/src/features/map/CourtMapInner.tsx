@@ -263,6 +263,13 @@ export interface CourtMapInnerProps {
   interactive?: boolean;
   /** Navigate to `/courts/{slug}` when a marker is clicked (list/explorer maps). */
   navigateOnClick?: boolean;
+  /**
+   * Called instead of navigating when a marker is clicked (Task 27's tap-to-preview). When
+   * provided, this component does NOT navigate internally — the caller decides what a
+   * marker click means (e.g. MapExplorer routes it to a preview sheet on mobile, straight
+   * navigation on desktop). `navigateOnClick` is ignored while this is set.
+   */
+  onMarkerClick?: (marker: MapMarker) => void;
   /** One-shot view move, applied once per distinct `token` (see MapFocusRequest). */
   focus?: MapFocusRequest | null;
   /**
@@ -352,6 +359,7 @@ export function CourtMapInner({
   zoom,
   interactive = true,
   navigateOnClick = false,
+  onMarkerClick,
   focus = null,
   onUserInteraction,
 }: CourtMapInnerProps) {
@@ -526,7 +534,7 @@ export function CourtMapInner({
     clusterer.clearMarkers();
     markerInstancesRef.current = [];
 
-    const clickable = interactive || navigateOnClick;
+    const clickable = interactive || navigateOnClick || Boolean(onMarkerClick);
     const points: google.maps.LatLngLiteral[] = [];
     const advancedMarkers: google.maps.marker.AdvancedMarkerElement[] = [];
     for (const m of markers) {
@@ -536,7 +544,9 @@ export function CourtMapInner({
         content: markerContent(m.state, m.name, clickable, m.heroImageUrl ?? ''),
         gmpClickable: clickable,
       });
-      if (navigateOnClick) {
+      if (onMarkerClick) {
+        advancedMarker.addListener('gmp-click', () => onMarkerClick(m));
+      } else if (navigateOnClick) {
         advancedMarker.addListener('gmp-click', () => router.push(`/courts/${m.slug}`));
       }
       advancedMarkers.push(advancedMarker);
@@ -592,7 +602,16 @@ export function CourtMapInner({
       map.setCenter(FALLBACK_CENTER);
       map.setZoom(FALLBACK_ZOOM);
     }
-  }, [markers, center, zoom, interactive, navigateOnClick, router, beginProgrammaticMove]);
+  }, [
+    markers,
+    center,
+    zoom,
+    interactive,
+    navigateOnClick,
+    onMarkerClick,
+    router,
+    beginProgrammaticMove,
+  ]);
 
   useEffect(() => {
     drawMarkersRef.current = drawMarkers;
@@ -626,5 +645,11 @@ export function CourtMapInner({
     if (mapRef.current) applyFocus();
   }, [applyFocus]);
 
-  return <div ref={containerRef} className="tw-map-surface" aria-hidden={!navigateOnClick} />;
+  return (
+    <div
+      ref={containerRef}
+      className="tw-map-surface"
+      aria-hidden={!navigateOnClick && !onMarkerClick}
+    />
+  );
 }

@@ -239,7 +239,7 @@ export function CourtDetailGalleryHero({ backControl, actions }: CourtDetailGall
       </div>
 
       {/* Counter chip, bottom-left (prototype lines 1032–1037). */}
-      <div className="pointer-events-none absolute bottom-3 left-4 flex items-center gap-1 rounded-pill bg-ink/50 px-2.5 py-1 text-paper backdrop-blur-[8px] md:left-[clamp(20px,4vw,64px)]">
+      <div className="pointer-events-none absolute bottom-12 left-4 flex items-center gap-1 rounded-pill bg-ink/50 px-2.5 py-1 text-paper backdrop-blur-[8px] md:left-[clamp(20px,4vw,64px)]">
         <ImageGlyph />
         <span className="text-[11px] font-medium">
           {activeIndex + 1} / {slides.length}
@@ -250,11 +250,38 @@ export function CourtDetailGalleryHero({ backControl, actions }: CourtDetailGall
           anchor, not navigation, so no pending primitive (§4 rule 10). */}
       <a
         href="#court-gallery-strip"
-        className="absolute bottom-3 right-4 inline-flex items-center gap-[5px] rounded-pill bg-ink/50 px-2.5 py-1 text-[10px] font-medium text-paper backdrop-blur-[8px] transition-colors hover:bg-ink/65 md:right-[clamp(20px,4vw,64px)]"
+        className="absolute bottom-12 right-4 inline-flex items-center gap-[5px] rounded-pill bg-ink/50 px-2.5 py-1 text-[10px] font-medium text-paper backdrop-blur-[8px] transition-colors hover:bg-ink/65 md:right-[clamp(20px,4vw,64px)]"
       >
         <ImageGlyph size={11} />
         All photos
       </a>
+
+      {/* Desktop prev/next arrows (TASK 37) — reuse the existing `goPrev`/`goNext` that
+          already drive the dot pager and keyboard nav above; no new navigation logic.
+          Hidden on mobile, which already has swipe (same "touch covers mobile" reasoning
+          as `HScrollArrows`). Style lifted from the old locked-page gallery's own
+          prev/next buttons (`CourtDetailFramedGallery.tsx`) — an established precedent
+          for a nav control floating over a photo. */}
+      {hasMultiple ? (
+        <>
+          <button
+            type="button"
+            onClick={goPrev}
+            aria-label="Previous image"
+            className="absolute left-3 top-1/2 hidden h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/85 text-ink shadow-sm transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/50 md:grid"
+          >
+            <span aria-hidden>‹</span>
+          </button>
+          <button
+            type="button"
+            onClick={goNext}
+            aria-label="Next image"
+            className="absolute right-3 top-1/2 hidden h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/85 text-ink shadow-sm transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/50 md:grid"
+          >
+            <span aria-hidden>›</span>
+          </button>
+        </>
+      ) : null}
 
       {/* Dot pager (prototype lines 1041–1046): 6px dots, the active one widening to 20px
           over 200ms. Real buttons, not the prototype's clickable <div>s. */}
@@ -283,9 +310,9 @@ export function CourtDetailGalleryHero({ backControl, actions }: CourtDetailGall
 }
 
 /**
- * The "Gallery" thumbnail strip (prototype lines 1116–1125): 90×72 thumbs in a
- * horizontally scrolling row, the one matching the hero's current image at full opacity
- * with an ink border.
+ * The "Gallery" thumbnail strip (prototype lines 1116–1125): 210×158 thumbs (TASK 38,
+ * matching the "Nearby courts" card size) in a horizontally scrolling row, the one
+ * matching the hero's current image at full opacity with an ink border.
  *
  * TASK 18: clicking a thumbnail no longer touches the shared `activeIndex` — it used to
  * call the same `setActiveIndex` the hero's dots use, which silently re-pointed the hero
@@ -317,9 +344,10 @@ export function CourtDetailGalleryStrip() {
                 aria-label={`Show ${courtLabel} image ${i + 1}`}
                 aria-current={isActive ? 'true' : undefined}
                 className={[
-                  // Fixed 90×72 box (prototype `.gallery-thumb`) — the border is always
-                  // 2px, only its colour changes, so selecting never reflows the row.
-                  'relative block h-[72px] md:h-[150px] w-[90px] md:w-[150px] overflow-hidden rounded-md border-2 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/50',
+                  // TASK 38: matches the "Nearby courts" card size (CourtDetailNearbyStrip,
+                  // w-[210px]/h-[158px]) at every breakpoint — the border is always 2px,
+                  // only its colour changes, so selecting never reflows the row.
+                  'relative block h-[158px] w-[210px] overflow-hidden rounded-md border-2 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/50',
                   isActive ? 'border-ink opacity-100' : 'border-transparent opacity-75 hover:opacity-100',
                 ].join(' ')}
               >
@@ -327,7 +355,7 @@ export function CourtDetailGalleryStrip() {
                   src={slide.url || FALLBACK_IMAGE}
                   alt=""
                   fill
-                  sizes="90px"
+                  sizes="210px"
                   className="object-cover"
                 />
               </button>

@@ -1,10 +1,11 @@
 import type { MembershipStatus, UserProfileDTO } from '@tennis/contracts';
 import { ConsultationTrigger } from '@/features/consultation';
 import { ManageBillingButton } from '@/features/billing';
+import { SignOutButton } from '@/features/auth';
 import { SettingsAccountRow } from './SettingsAccountRow';
 
-// SettingsMenuCard — the /profile/settings three-row card (TASK_14 point 8), ported
-// from the v2 prototype's SettingsScreen (`new design/tennis_world_v2_standalone.html`
+// SettingsMenuCard — the /profile/settings four-row card (TASK_14 point 8, TASK_45),
+// ported from the v2 prototype's SettingsScreen (`new design/tennis_world_v2_standalone.html`
 // lines 1527-1545): a single rounded paper card, hairline dividers between rows, each
 // row a label (+ optional stone subcopy) and a trailing chevron.
 //
@@ -21,6 +22,9 @@ import { SettingsAccountRow } from './SettingsAccountRow';
 //   • Contact us             → ConsultationTrigger (the existing, already-real
 //     mechanism used elsewhere as "Contact Concierge" — NOT a `mailto:` link, which
 //     does not exist as a wired capability here).
+//   • Sign Out               → SignOutButton (Feature 57's real sign-out mechanism,
+//     folded into this card as its last row per TASK_45 — previously a separate block
+//     below the card).
 //
 // Rows the OLD ProfileMenuList carried that have NO real backing (Notifications,
 // Language, Help & Support) are simply not present here — see the Settings page's own
@@ -52,6 +56,9 @@ export function SettingsMenuCard({ user }: SettingsMenuCardProps) {
       <ConsultationTrigger source="settings" className={ROW_CLASS}>
         <RowContent label="Contact us" />
       </ConsultationTrigger>
+      <div className="h-px bg-hairline" />
+
+      <SignOutButton className={ROW_CLASS} />
     </div>
   );
 }

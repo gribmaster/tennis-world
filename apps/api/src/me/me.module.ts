@@ -9,6 +9,8 @@ import { MeController } from './me.controller';
 import { MeService } from './me.service';
 import { SavedCourtsController } from './saved-courts.controller';
 import { SavedCourtsService } from './saved-courts.service';
+import { SavedCollectionsController } from './saved-collections.controller';
+import { SavedCollectionsService } from './saved-collections.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MeModule — the authenticated user's own resources (Features 53/54).
@@ -37,6 +39,12 @@ import { SavedCourtsService } from './saved-courts.service';
 // same gate Feature 62 wired) and a PRIVATE exact select from courts.mapper.ts (a pure
 // function import — no CourtsModule provider dependency), so the public court selects
 // stay untouched and coords leave the DB only on this guarded, entitled path.
+//
+// Task 42 adds the saved-EDITORIAL-collections surface (GET/POST/DELETE
+// /v1/me/saved-collections) — the same standalone-heart shape as Feature 54's
+// saved-courts, applied to `Collection` instead of `Court`. Its service REUSES the
+// Collections module's public select/mapper (a pure function import from
+// collections.mapper.ts — no CollectionsModule provider dependency needed).
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Module({
@@ -44,12 +52,14 @@ import { SavedCourtsService } from './saved-courts.service';
   controllers: [
     MeController,
     SavedCourtsController,
+    SavedCollectionsController,
     CollectionsController,
     ExactLocationController,
   ],
   providers: [
     MeService,
     SavedCourtsService,
+    SavedCollectionsService,
     CollectionsService,
     ExactLocationService,
   ],

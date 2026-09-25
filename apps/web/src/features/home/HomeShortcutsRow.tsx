@@ -119,7 +119,7 @@ export function HomeShortcutsRow({ state, onToggle }: HomeShortcutsRowProps) {
     <section className="pt-5 home-categories" id="home-categories">
       <div className="container-page">
         <div
-          className="no-scrollbar flex gap-1 md:gap-3 overflow-x-auto pb-0.5"
+          className="no-scrollbar flex gap-1 md:gap-3 overflow-x-auto pb-0.5 md:justify-around"
           role="group"
           aria-label="Filter courts by experience"
         >

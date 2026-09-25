@@ -16,8 +16,9 @@ import { PendingCardLink } from '@/components/navigation';
 // The prototype draws saved *podborki* (editorial collections the visitor bookmarked) here.
 // This card carries the prototype's TREATMENT but not that MEANING: `getSavedCollections()`
 // returns `UserCollectionDTO[]` — the folders a user creates and fills with courts.
-// Bookmarking an editorial `CollectionDTO` has no model, no endpoint and no repository
-// method in this product, and is not being built. See the grid's own note.
+// Bookmarking an editorial `CollectionDTO` IS now a real feature (Task 42), but it lives in
+// its own sibling section (`SavedEditorialCollectionsGrid.tsx`, which reuses `CollectionCard`
+// + `CollectionSaveHeart` — not this component). See the grid's own note.
 //
 // Prototype geometry, from the file:
 //   • grid `gridTemplateColumns:'1fr 1fr'`, `gap:12` (line 1265) — owned by the grid.

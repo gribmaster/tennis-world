@@ -43,3 +43,8 @@ export type { MapCourtListProps } from './MapCourtList';
 
 export { MapCourtRow } from './MapCourtRow';
 export type { MapCourtRowProps } from './MapCourtRow';
+
+// Mobile pin-tap preview (Task 27/Feature 86) — the compact card MapExplorer docks
+// over the canvas when a marker is tapped on a small viewport.
+export { MapCourtPreview } from './MapCourtPreview';
+export type { MapCourtPreviewProps } from './MapCourtPreview';

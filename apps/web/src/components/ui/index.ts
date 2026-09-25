@@ -14,3 +14,6 @@ export type { InlineSpinnerProps } from './InlineSpinner';
 
 export { UserAvatar } from './UserAvatar';
 export type { UserAvatarProps } from './UserAvatar';
+
+export { HScrollArrows } from './HScrollArrows';
+export type { HScrollArrowsProps } from './HScrollArrows';

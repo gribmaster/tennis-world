@@ -30,8 +30,10 @@ import { isDemoMode } from '@/lib/demo-auth';
 import {
   createUserCollectionAction,
   renameUserCollectionAction,
+  saveCollectionAction,
   saveCourtAction,
   toggleCourtInCollectionAction,
+  unsaveCollectionAction,
   unsaveCourtAction,
   updateProfileAction,
 } from '@/lib/saved-actions';
@@ -90,6 +92,12 @@ class DemoActionSavedRepository implements SavedRepository {
   unsaveCourt(courtId: string): Promise<void> {
     return unsaveCourtAction(courtId);
   }
+  saveCollection(collectionId: string): Promise<void> {
+    return saveCollectionAction(collectionId);
+  }
+  unsaveCollection(collectionId: string): Promise<void> {
+    return unsaveCollectionAction(collectionId);
+  }
   toggleCourtInCollection(collectionId: string, courtId: string): Promise<void> {
     return toggleCourtInCollectionAction(collectionId, courtId);
   }
@@ -115,6 +123,12 @@ class DemoActionSavedRepository implements SavedRepository {
   }
   isCourtSaved(): never {
     return DemoActionSavedRepository.unsupported('isCourtSaved');
+  }
+  getSavedEditorialCollections(): never {
+    return DemoActionSavedRepository.unsupported('getSavedEditorialCollections');
+  }
+  isCollectionSaved(): never {
+    return DemoActionSavedRepository.unsupported('isCollectionSaved');
   }
 }
 

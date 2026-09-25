@@ -192,11 +192,21 @@ export function CourtDetailLocationPreview({
   if (variant === 'v2') {
     return (
       <div>
-        <h2 className="mb-3 text-[16px] font-semibold text-ink">Location</h2>
+        <h2 className="mb-3 text-[16px] font-semibold flex items-center text-ink">
+            Location
+            <span className="items-center inline-flex gap-1 ml-2 text-[11px] leading-[1.4] text-stone md:text-[13px]">
+              <PinGlyph />
+                    {/* Country · region — NOT a street address; the model carries none. Locked ⇒
+                      the prototype's "Address hidden" (line 1106). Unlike the description
+                      below, this string is fully REPLACED — nothing to reveal in the DOM. */}
+                    <span>{locked ? 'Address hidden' : (locationLine ?? '')}</span>
+            </span>
+        </h2>
+
         <div className="grid md:flex md:flex-col grid-cols-2 gap-2.5">
           {/* Left: the map box. Prototype `height:100`, `borderRadius:10` (line 1096) —
               allowed to grow on desktop where the two columns get much wider. */}
-          <div className="h-[100px] overflow-hidden rounded-[10px] border border-hairline md:h-[clamp(100px,14vw,180px)]">
+          <div className="h-[100px] overflow-hidden rounded-[10px] border border-hairline md:h-[clamp(100px,14vw,480px)]">
             {locked ? (
               <div className="relative h-full w-full">
                 {/* No live map — see LockedMapPlaceholder above (Feature 88 §6.1). No
@@ -223,14 +233,6 @@ export function CourtDetailLocationPreview({
 
           {/* Right: the location text over the directions button (prototype 1104–1113). */}
           <div className="flex flex-col justify-between">
-            <p className="flex items-start gap-1 text-[11px] leading-[1.4] text-stone md:text-[13px]">
-              <PinGlyph />
-              {/* Country · region — NOT a street address; the model carries none. Locked ⇒
-                  the prototype's "Address hidden" (line 1106). Unlike the description
-                  below, this string is fully REPLACED — nothing to reveal in the DOM. */}
-              <span>{locked ? 'Address hidden' : (locationLine ?? '')}</span>
-            </p>
-
             {locked ? (
               // LOCKED: the prototype disables this button (line 1109, `disabled={isLocked}`)
               // and relabels it "Unlock location" (line 1110). There is no `directionsUrl`
@@ -249,7 +251,7 @@ export function CourtDetailLocationPreview({
                 type="button"
                 aria-disabled="true"
                 title="Membership required to see this court's exact location"
-                className="btn btn-primary mt-2 w-full !h-10 cursor-not-allowed justify-center gap-1.5 !px-4 !text-[11px] opacity-40"
+                className="btn btn-primary mt-2 w-full !h-10 cursor-not-allowed justify-center gap-1.5 !px-4 !text-[11px] opacity-40 md:hidden"
               >
                 <PinGlyph size={11} />
                 Unlock location
@@ -264,7 +266,7 @@ export function CourtDetailLocationPreview({
                 href={exactLocation.directionsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-primary mt-2 w-full !h-10 justify-center gap-1.5 !px-4 !text-[11px]"
+                className="btn btn-primary mt-2 w-full !h-10 justify-center gap-1.5 !px-4 !text-[11px]  md:hidden"
               >
                 <PinGlyph size={11} />
                 Open in Maps

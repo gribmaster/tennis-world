@@ -6,8 +6,8 @@ import {
   CountriesStrip,
   CuratedCollectionsList,
 } from '@/features/collections';
-import { repositories } from '@/lib/repositories';
-import { isSignedIn } from '@/lib/session.server';
+import { repositories, AuthRequiredError } from '@/lib/repositories';
+import { getRepositoriesForRequest } from '@/lib/repositories.server';
 
 // Collections page (`/collections`) — rebuilt to the v2 prototype in Feature 76
 // (`CollectionsScreen`, tennis_world_v2_standalone.html:1290–1377): a header, a featured
@@ -30,9 +30,11 @@ import { isSignedIn } from '@/lib/session.server';
 //     way to reach it: no direct `HttpCountryRepository` construction, no fetch in a
 //     component, no hardcoded country array (the prototype's lines 227–234 are gone).
 //
-// `isSignedIn()` is unrelated to the content — it only picks the header's user icon
-// destination (/profile vs /signin). Nothing on this screen is gated, and nothing here
-// mutates, so there is no protected read and no auth degradation path to handle.
+// A THIRD, PROTECTED read (Task 42) seeds each editorial collection card's save heart
+// with this visitor's real saved-collections set — the same degrade-on-`AuthRequiredError`
+// pattern `app/page.tsx` uses for saved courts. This replaces the old `isSignedIn()` call
+// (which only picked the header's user icon destination); `signedIn` now comes out of the
+// same protected read and serves both purposes.
 //
 // TOP-LEVEL NAV ROUTE (CLAUDE.md §5): `/collections` is in `nav-items.ts`, so it gets NO
 // Back button. It also becomes a bottom-tab destination in Feature 84, which is why the
@@ -50,11 +52,27 @@ export const metadata: Metadata = {
 const FEATURED_COUNT = 3;
 
 export default async function CollectionsPage() {
-  const [collections, countries, signedIn] = await Promise.all([
+  const protectedRepos = await getRepositoriesForRequest();
+
+  const [collections, countries] = await Promise.all([
     repositories.collections.list(),
     repositories.countries.list(),
-    isSignedIn(),
   ]);
+
+  // Protected read (Task 42) — degrades for a logged-out visitor on this public page,
+  // exactly as `app/page.tsx` does for saved courts.
+  let savedCollectionIds: string[] = [];
+  let signedIn = true;
+  try {
+    const saved = await protectedRepos.saved.getSavedEditorialCollections();
+    savedCollectionIds = saved.map((c) => c.id);
+  } catch (err) {
+    if (err instanceof AuthRequiredError) {
+      signedIn = false;
+    } else {
+      throw err;
+    }
+  }
 
   const featured = collections.slice(0, FEATURED_COUNT);
 
@@ -71,9 +89,17 @@ export default async function CollectionsPage() {
           <p className="container-page body-m pt-8 text-stone">No collections to show yet.</p>
         ) : (
           <>
-            <FeaturedCollectionsStrip collections={featured} />
+            <FeaturedCollectionsStrip
+              collections={featured}
+              savedCollectionIds={new Set(savedCollectionIds)}
+              signedIn={signedIn}
+            />
             <CountriesStrip countries={countries} />
-            <CuratedCollectionsList collections={collections} />
+            <CuratedCollectionsList
+              collections={collections}
+              savedCollectionIds={new Set(savedCollectionIds)}
+              signedIn={signedIn}
+            />
           </>
         )}
       </div>

@@ -13,5 +13,5 @@ export type { CourtMetaProps } from './CourtMeta';
 export { CourtImage } from './CourtImage';
 export type { CourtImageProps } from './CourtImage';
 
-export { courtDisplay, courtLocation } from './court-display';
+export { courtDisplay, courtLocation, courtCategoryTags } from './court-display';
 export type { CourtDisplay } from './court-display';

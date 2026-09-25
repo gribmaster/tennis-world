@@ -204,7 +204,7 @@ export function SavedCourtsGrid({
 
   return (
     <div className="flex flex-col gap-3">
-      <ul className="flex flex-col gap-3">
+      <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
         {visible.map((court, index) => {
           const display = courtDisplay(court, viewerIsEntitled);
           const isPending = pending.has(court.id);

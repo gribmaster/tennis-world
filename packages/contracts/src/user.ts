@@ -141,6 +141,16 @@ export const CourtIdRefSchema = z.object({
 export type CourtIdRefDTO = z.infer<typeof CourtIdRefSchema>;
 
 /**
+ * Body for `POST /v1/me/saved-collections` — the editorial collection being
+ * saved, by id. The matching remove is a path param on a DELETE, so it needs no
+ * body.
+ */
+export const CollectionIdRefSchema = z.object({
+  collectionId: z.string(),
+});
+export type CollectionIdRefDTO = z.infer<typeof CollectionIdRefSchema>;
+
+/**
  * Body for `PATCH /v1/me` — update the current user's profile. Only `name` is
  * editable in the Phase-4 scope (the Profile screen has no edit UI yet, Feature 50
  * §4.2 — this exists so the endpoint has a contract when one is built). `membership`

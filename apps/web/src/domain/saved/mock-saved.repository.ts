@@ -28,8 +28,15 @@
 // Plain TypeScript only — no React, no Next.js — so it is independently unit-testable
 // (Phase 1 §1.2). Wiring it into the app is the factory's job, not this file's.
 
-import { COURTS, DEFAULT_SAVED_COURT_SLUGS, DEFAULT_USER_COLLECTIONS } from '@tennis/mock-data';
+import {
+  COLLECTIONS,
+  COURTS,
+  DEFAULT_SAVED_COLLECTION_SLUGS,
+  DEFAULT_SAVED_COURT_SLUGS,
+  DEFAULT_USER_COLLECTIONS,
+} from '@tennis/mock-data';
 import type {
+  CollectionDTO,
   CourtSummaryDTO,
   UserCollectionDTO,
   UserCollectionWithCourtsDTO,
@@ -145,6 +152,13 @@ export class MockSavedRepository implements SavedRepository {
   // Monotonic counter for generated folder ids (`user-col-1`, `user-col-2`, …). Kept
   // deterministic (no Date.now()/random) so construction is server-safe and stable.
   private nextId = 1;
+
+  // Resolve saved editorial-collection slugs → DTOs once, seeding the in-memory saved
+  // list. Mirrors `savedCourts` above. `COLLECTIONS` carries the derived `count` already,
+  // so no projection is needed (unlike courts, which drop down to a summary shape).
+  private savedCollections: CollectionDTO[] = DEFAULT_SAVED_COLLECTION_SLUGS.map((slug) =>
+    COLLECTIONS.find((c) => c.slug === slug),
+  ).filter((c): c is CollectionDTO => c !== undefined);
 
   // ── Reads ──────────────────────────────────────────────────────────────────
 
@@ -270,6 +284,31 @@ export class MockSavedRepository implements SavedRepository {
   async unsaveCourt(courtId: string): Promise<void> {
     // Idempotent: unsaving a court that isn't saved is a no-op (no error).
     this.savedCourts = this.savedCourts.filter((c) => c.id !== courtId);
+  }
+
+  // ── Individual saved editorial collections (standalone heart — mock-only in-memory seam) ─
+
+  async getSavedEditorialCollections(): Promise<CollectionDTO[]> {
+    return this.savedCollections.map((c) => ({ ...c }));
+  }
+
+  async isCollectionSaved(collectionId: string): Promise<boolean> {
+    return this.savedCollections.some((c) => c.id === collectionId);
+  }
+
+  async saveCollection(collectionId: string): Promise<void> {
+    // Idempotent (mirrors the API's PK upsert): a re-save is a no-op. Resolve the
+    // collection the SAME way the seed does — only a real, known collection can be saved
+    // (matches the API's 404-on-unpublished/unknown).
+    if (this.savedCollections.some((c) => c.id === collectionId)) return;
+    const collection = COLLECTIONS.find((c) => c.id === collectionId);
+    if (!collection) return; // unknown collection — no-op, no dangling save
+    this.savedCollections.push({ ...collection });
+  }
+
+  async unsaveCollection(collectionId: string): Promise<void> {
+    // Idempotent: unsaving a collection that isn't saved is a no-op (no error).
+    this.savedCollections = this.savedCollections.filter((c) => c.id !== collectionId);
   }
 
   // Project an internal folder down to the minimal `UserCollectionDTO` wire shape,

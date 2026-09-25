@@ -93,6 +93,7 @@ export const courtExactLocationSelect = {
   id: true,
   slug: true,
   status: true,
+  isLocked: true,
   lat: true,
   lng: true,
   mapLinkUrl: true,

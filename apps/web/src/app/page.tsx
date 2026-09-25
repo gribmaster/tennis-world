@@ -52,8 +52,9 @@ import { getRepositoriesForRequest } from '@/lib/repositories.server';
 // The hearts then route to /signin instead of mutating. This block also replaces the
 // separate `isSignedIn()` call v1 made purely for the header icon, and now ALSO reads
 // `/v1/me` for `membership` (Task 26) so locked-court content across Home unmasks for a
-// paying visitor — both protected reads run together and degrade together on the same
-// `AuthRequiredError` catch, so this stays two reads total, not three.
+// paying visitor, AND reads `/v1/me/saved-collections` (Task 42) to seed the Collections
+// teaser strip's save hearts — all three protected reads run together and degrade
+// together on the same `AuthRequiredError` catch, so this stays three reads total.
 //
 // `overHero` puts the full-bleed hero behind the transparent app header (which supplies
 // the wordmark and avatar the prototype drew inside its own hero — see HomeHero).
@@ -75,15 +76,18 @@ export default async function Home() {
   // second read (Task 26) resolves this viewer's real membership so locked-court content
   // across Home can unmask for a paying visitor, not just on the court's own detail page.
   let savedCourtIds: string[] = [];
+  let savedCollectionIds: string[] = [];
   let signedIn = true;
   let viewerIsEntitled = false;
   try {
-    const [saved, user] = await Promise.all([
+    const [saved, user, savedCollections] = await Promise.all([
       protectedRepos.saved.getSavedCourts(),
       protectedRepos.user.getCurrentUser(),
+      protectedRepos.saved.getSavedEditorialCollections(),
     ]);
     savedCourtIds = saved.map((court) => court.id);
     viewerIsEntitled = user.membership !== 'free';
+    savedCollectionIds = savedCollections.map((collection) => collection.id);
   } catch (err) {
     if (err instanceof AuthRequiredError) {
       signedIn = false;
@@ -103,6 +107,7 @@ export default async function Home() {
         collections={collections}
         articles={articles}
         savedCourtIds={savedCourtIds}
+        savedCollectionIds={savedCollectionIds}
         signedIn={signedIn}
         viewerIsEntitled={viewerIsEntitled}
       />

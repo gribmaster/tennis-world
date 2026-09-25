@@ -218,6 +218,7 @@ model Collection {
   sortOrder     Int               @default(0)
   isPublished   Boolean           @default(true)
   courts        CollectionCourt[]
+  savedBy       SavedCollection[]
 }
 
 model CollectionCourt {
@@ -285,6 +286,7 @@ model User {
 
   entitlements         Entitlement[]
   savedCourts          SavedCourt[]
+  savedCollections     SavedCollection[]
   userCollections      UserCollection[]
   consultationRequests ConsultationRequest[]
   // Feature 80 — back-relation for the write-only Review model (see `Review`). The
@@ -366,6 +368,20 @@ model SavedCourt {
   savedAt DateTime @default(now())
 
   @@id([userId, courtId])
+}
+
+// Task 42 — the standalone save/unsave "heart" for an editorial Collection, mirroring
+// `SavedCourt` exactly (same composite-PK idempotency shape, same relation pattern).
+// Distinct from `UserCollection`/`UserCollectionCourt` (the visitor's OWN wishlist
+// folders) — this bookmarks an EDITORIAL `Collection` the user does not own.
+model SavedCollection {
+  userId       String
+  user         User       @relation(fields: [userId], references: [id])
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id])
+  savedAt      DateTime   @default(now())
+
+  @@id([userId, collectionId])
 }
 
 model UserCollection {

@@ -5,7 +5,7 @@
 // presentational. None of them fetch data or import a repository / @tennis/mock-data
 // — the page supplies the saved courts + collections via props.
 export { SavedTabs } from './SavedTabs';
-export type { SavedTabsProps } from './SavedTabs';
+export type { SavedTabsProps, TabId } from './SavedTabs';
 
 export { SavedCourtsGrid } from './SavedCourtsGrid';
 export type { SavedCourtsGridProps } from './SavedCourtsGrid';

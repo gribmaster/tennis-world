@@ -210,7 +210,7 @@ export function HomeSearchBar({
                           </span>
                         </span>
                         <span className="meta-chip shrink-0 !px-2.5 !py-1 !text-[11px]">
-                          {display.chip}
+                          {court.surface}
                         </span>
                       </PendingCardLink>
                     </li>

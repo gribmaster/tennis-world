@@ -25,6 +25,12 @@ export const DEFAULT_SAVED_COURT_SLUGS: string[] = [
   'soho-farmhouse',
 ];
 
+/** Default saved editorial-collection slugs — the mock's initial bookmarked set. */
+export const DEFAULT_SAVED_COLLECTION_SLUGS: string[] = [
+  'coastal-courts',
+  'historic-clubs',
+];
+
 /**
  * A mock wishlist folder plus its membership. `courtIds` (the courts in the folder)
  * is the seed-only join the mock SavedRepository resolves into `CourtSummaryDTO[]`

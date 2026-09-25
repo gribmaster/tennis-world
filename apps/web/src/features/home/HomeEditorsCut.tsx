@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import type { CourtSummaryDTO } from '@tennis/contracts';
 import { PendingCardLink } from '@/components/navigation';
-import { courtDisplay } from '@/components/court/court-display';
+import { courtCategoryTags, courtDisplay } from '@/components/court/court-display';
 
 // HomeEditorsCut — the editorial "Editor's Cut" section, RESTYLED to the v2 language
 // (Feature 74).
@@ -24,7 +24,10 @@ import { courtDisplay } from '@/components/court/court-display';
 //
 // LOCKED COURTS: masking comes from the same shared `courtDisplay` helper the strip and
 // the search panel use, so a locked court reads "Premium Court" / "Unlock to reveal
-// location" identically wherever it appears.
+// location" identically wherever it appears. The top-left gold "Premium" ribbon (Task 33)
+// is copied verbatim from `HomeFeaturedCourts.tsx` — it's the only lock signal left once
+// the bottom tag row stops carrying a masked 'Premium' string (category tags are never
+// masked; see `courtCategoryTags`).
 //
 // PRESENTATIONAL & data-driven: courts arrive as a prop from `app/page.tsx` — a subset of
 // the set already fetched there, so this section adds NO repository call. No fetching, no
@@ -32,6 +35,26 @@ import { courtDisplay } from '@/components/court/court-display';
 //
 // PENDING STATES (CLAUDE.md §4 rule 1): each row is a whole-card navigation ⇒
 // `PendingCardLink`. Nothing here mutates, so no save control and no pending triad.
+
+/** Small lock glyph for the premium ribbon (verbatim from HomeFeaturedCourts.tsx). */
+function LockGlyph() {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="4" y="10" width="16" height="11" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
 
 export interface HomeEditorsCutProps {
   /** The courts to feature. Expected to be a small set (2–3). */
@@ -81,9 +104,27 @@ export function HomeEditorsCut({
                         'linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.72) 100%)',
                     }}
                   />
+
+                  {display.locked ? (
+                    <span
+                      className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-pill px-2.5 py-[3px] text-[10px] font-semibold uppercase tracking-caption text-paper"
+                      style={{ background: 'linear-gradient(135deg,#C8A860,#B89968)' }}
+                    >
+                      <LockGlyph />
+                      Premium
+                    </span>
+                  ) : null}
+
                   <span className="absolute inset-x-0 bottom-0 block px-4 pb-4 pt-6">
-                    <span className="mb-2 inline-flex rounded-pill border border-paper/35 bg-bone/20 px-2.5 py-1 text-[11px] font-medium tracking-[0.03em] text-paper backdrop-blur-sm">
-                      {display.chip}
+                    <span className="mb-2 flex flex-wrap gap-1.5">
+                      {courtCategoryTags(court).map((tag) => (
+                        <span
+                          key={tag}
+                          className="inline-flex rounded-pill border border-paper/35 bg-bone/20 px-2.5 py-1 text-[11px] font-medium tracking-[0.03em] text-paper backdrop-blur-sm"
+                        >
+                          {tag}
+                        </span>
+                      ))}
                     </span>
                     <span className="serif mb-[5px] block text-[24px] font-normal leading-[30px] text-paper">
                       {display.name}

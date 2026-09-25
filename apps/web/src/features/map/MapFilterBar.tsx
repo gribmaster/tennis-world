@@ -108,9 +108,12 @@ export function MapFilterBar({
 }: MapFilterBarProps) {
   return (
     <div className="sticky top-[72px] z-30 border-b border-hairline bg-bone px-[clamp(16px,4vw,40px)] py-4">
-      <div className="mx-auto block container-page items-center gap-3 md:flex">
-        {/* Search pill */}
-        <div className="pill mb-3 flex h-11 max-w-[480px] flex-1 items-center gap-2.5 border border-hairline bg-ivory px-4 md:mb-0">
+      <div className="mx-auto container-page">
+        {/* Search pill — same structure as HomeSearchBar's: glyph, input, divider,
+            filter control embedded inside the pill. Map keeps its own bordered
+            `bg-ivory`/`h-11` look; only the "button lives inside the pill" pattern
+            is copied from Home. */}
+        <div className="pill flex h-11 max-w-[480px] items-center gap-2.5 border border-hairline bg-ivory px-4">
           <span className="shrink-0 text-stone">
             <SearchGlyph />
           </span>
@@ -122,36 +125,12 @@ export function MapFilterBar({
             aria-label="Search courts"
             className="body-m w-full min-w-0 border-none bg-transparent text-ink outline-none placeholder:text-stone"
           />
-        </div>
 
-        <div className="flex min-w-0 shrink-0 items-center gap-2">
-          {/* Quick-filter chips — the fast path. Horizontally scrollable on narrow
-              screens; each is a toggle reflecting (and writing) the shared state. */}
-          <div
-            className="no-scrollbar flex min-w-0 gap-2 overflow-x-auto"
-            role="group"
-            aria-label="Quick filters"
-          >
-            {MAP_QUICK_FILTERS.map((option) => {
-              const selected = isOptionSelected(state, option);
-              return (
-                <button
-                  key={optionId(option)}
-                  type="button"
-                  onClick={() => onToggleOption(option)}
-                  aria-pressed={selected}
-                  className={['filter-pill', selected ? 'is-active' : '']
-                    .filter(Boolean)
-                    .join(' ')}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
+          {/* Divider + filter control — copied structure from HomeSearchBar.tsx. No
+              text label here, matching Home's icon-only embedded button; the
+              accessible name comes entirely from aria-label. */}
+          <span aria-hidden className="h-5 w-px shrink-0 bg-mist/50" />
 
-          {/* Opens the full filter sheet. Shows the active-chip count when non-zero —
-              the count is in the accessible name too, not colour/shape alone. */}
           <button
             type="button"
             onClick={onOpenSheet}
@@ -161,16 +140,42 @@ export function MapFilterBar({
                 ? `Filters, ${activeCount} selected`
                 : 'Filters'
             }
-            className="filter-pill shrink-0 gap-2"
+            className="flex shrink-0 items-center gap-1.5 p-1.5 text-ink transition-opacity hover:opacity-70"
           >
             <FilterGlyph />
-            <span>Filters</span>
             {activeCount > 0 ? (
               <span aria-hidden className="filter-pill-badge">
                 {activeCount}
               </span>
             ) : null}
           </button>
+        </div>
+
+        {/* Quick-filter chips — the fast path. Now always its own row below the
+            pill (the button that used to share this row moved inside the pill
+            above), horizontally scrollable on narrow screens; each is a toggle
+            reflecting (and writing) the shared state. */}
+        <div
+          className="no-scrollbar mt-3 flex gap-2 overflow-x-auto"
+          role="group"
+          aria-label="Quick filters"
+        >
+          {MAP_QUICK_FILTERS.map((option) => {
+            const selected = isOptionSelected(state, option);
+            return (
+              <button
+                key={optionId(option)}
+                type="button"
+                onClick={() => onToggleOption(option)}
+                aria-pressed={selected}
+                className={['filter-pill', selected ? 'is-active' : '']
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {option.label}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

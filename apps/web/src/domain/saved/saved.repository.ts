@@ -34,6 +34,7 @@
 // exactly once and reused by both the mock and the real (HTTP) repository.
 
 import type {
+  CollectionDTO,
   CourtSummaryDTO,
   UserCollectionDTO,
   UserCollectionWithCourtsDTO,
@@ -118,4 +119,31 @@ export interface SavedRepository {
    * mock mode → the in-memory saved list.
    */
   unsaveCourt(courtId: string): Promise<void>;
+
+  // ── Individual saved editorial collections (standalone heart — API-backed) ───
+
+  /**
+   * The user's saved (bookmarked) editorial collections. Distinct from
+   * `getSavedCollections()` above, which returns the user's OWN wishlist folders
+   * (`UserCollectionDTO[]`) — this returns editorial `CollectionDTO[]` the user has
+   * hearted. In `api` mode → GET /v1/me/saved-collections; in mock mode → the
+   * in-memory saved list.
+   */
+  getSavedEditorialCollections(): Promise<CollectionDTO[]>;
+
+  /**
+   * Whether `collectionId` is in the user's saved editorial collections. Seeds a
+   * collection card's initial heart state. Derived from the same source as
+   * `getSavedEditorialCollections()`. Read-only; `false` for an unknown/unsaved id.
+   */
+  isCollectionSaved(collectionId: string): Promise<boolean>;
+
+  /** Save an editorial collection (idempotent). POST /v1/me/saved-collections in
+   * `api` mode; the in-memory saved list in mock mode. */
+  saveCollection(collectionId: string): Promise<void>;
+
+  /** Unsave an editorial collection (idempotent). DELETE
+   * /v1/me/saved-collections/:collectionId in `api` mode; the in-memory saved list
+   * in mock mode. */
+  unsaveCollection(collectionId: string): Promise<void>;
 }

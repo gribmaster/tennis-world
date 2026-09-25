@@ -36,14 +36,12 @@ export interface CourtDisplay {
   readonly name: string;
   /** "Country · Region", or the locked placeholder. */
   readonly location: string;
-  /** First experience tag (the single chip the prototype shows), or the locked label. */
-  readonly chip: string;
   /**
    * Whether this is premium CONTENT (`court.isLocked`) — drives the "Premium"
    * badge/ribbon callers render over the photo. Deliberately UNAFFECTED by
    * `viewerIsEntitled`: it keeps meaning "this is one of our premium courts," which an
    * entitled viewer may still reasonably want to see (an acknowledgment of what their
-   * membership unlocks), not "this is masked for you." Only `name`/`location`/`chip`
+   * membership unlocks), not "this is masked for you." Only `name`/`location`
    * above are gated by viewer entitlement.
    */
   readonly locked: boolean;
@@ -57,10 +55,6 @@ export function courtLocation(court: CourtSummaryDTO): string {
 /**
  * Resolve what to display for one court, applying the locked mask.
  *
- * The chip falls back to the court's `setting` when it carries no tags, so a card never
- * renders an empty chip (the prototype's `c.labels[0]` assumes every court has at least
- * one label; the real `tags` array is allowed to be empty).
- *
  * `viewerIsEntitled` (Task 26) determines whether the mask actually applies: a locked
  * court still masks for a non-entitled viewer (the default), but shows real strings to a
  * viewer this page has determined carries an active membership. `locked` in the returned
@@ -72,7 +66,18 @@ export function courtDisplay(court: CourtSummaryDTO, viewerIsEntitled = false): 
   return {
     name: mask ? 'Premium Court' : court.name,
     location: mask ? 'Unlock to reveal location' : courtLocation(court),
-    chip: mask ? 'Premium' : (court.tags[0] ?? court.setting),
     locked: court.isLocked,
   };
+}
+
+/**
+ * The court's location/experience tag — its first `CourtTag`, if it has one — as a
+ * single-element array (or empty). Kept as an array, not a plain string | undefined, so
+ * every render site's existing `.map()` over this value keeps working unchanged; only the
+ * SOURCE fields changed (Task 35 correction: card shows location only, not surface/access).
+ * NEVER masked — see the file header and `CourtSummarySchema`'s own doc comment: tags are
+ * always-public descriptive metadata, not part of the name/location teaser gate.
+ */
+export function courtCategoryTags(court: CourtSummaryDTO): string[] {
+  return court.tags[0] ? [court.tags[0]] : [];
 }

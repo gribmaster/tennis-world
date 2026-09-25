@@ -3,7 +3,8 @@
 import Image from 'next/image';
 import type { CourtSummaryDTO } from '@tennis/contracts';
 import { PendingCardLink, PendingLink } from '@/components/navigation';
-import { courtDisplay } from '@/components/court/court-display';
+import { HScrollArrows } from '@/components/ui';
+import { courtCategoryTags, courtDisplay } from '@/components/court/court-display';
 import { HomeCourtSaveHeart } from './HomeCourtSaveHeart';
 
 // HomeFeaturedCourts — the v2 portrait courts strip (Feature 74), rebuilt from the
@@ -132,73 +133,89 @@ export function HomeFeaturedCourts({
         // stopping short — the prototype's `padding:'0 0 4px 20px'` effect, kept correct
         // on desktop. A trailing spacer closes the row.
         <div className="container-page">
-          <ul className="no-scrollbar -mr-[clamp(20px,4vw,64px)] flex gap-3.5 overflow-x-auto pb-1">
-            {courts.map((court, index) => {
-              const display = courtDisplay(court, viewerIsEntitled);
-              return (
-                // `relative` so the save heart can position against this box while
-                // remaining a SIBLING of the card link, never a descendant of the anchor.
-                <li
-                  key={court.id}
-                  className="relative w-[75vw] min-w-[240px] max-w-[292px] shrink-0"
-                >
-                  <PendingCardLink
-                    href={`/courts/${court.slug}`}
-                    ariaLabel={display.name}
-                    className="block aspect-[2/3] overflow-hidden rounded-[14px]"
-                  >
-                    <Image
-                      src={court.heroImageUrl}
-                      alt=""
-                      fill
-                      priority={index === 0}
-                      sizes="(max-width: 480px) 75vw, 292px"
-                      className="object-cover"
-                    />
-                    {/* `.img-overlay` — transparent to 40%, then to 72% black. */}
-                    <span
-                      aria-hidden
-                      className="pointer-events-none absolute inset-0"
-                      style={{
-                        background:
-                          'linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.72) 100%)',
-                      }}
-                    />
-
-                    {display.locked ? (
-                      <span
-                        className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-pill px-2.5 py-[3px] text-[10px] font-semibold uppercase tracking-caption text-paper"
-                        style={{ background: 'linear-gradient(135deg,#C8A860,#B89968)' }}
+          <HScrollArrows>
+            {(scrollRef) => (
+              <ul
+                ref={scrollRef}
+                className="no-scrollbar -mr-[clamp(20px,4vw,64px)] flex gap-3.5 overflow-x-auto pb-1"
+              >
+                {courts.map((court, index) => {
+                  const display = courtDisplay(court, viewerIsEntitled);
+                  return (
+                    // `relative` so the save heart can position against this box while
+                    // remaining a SIBLING of the card link, never a descendant of the anchor.
+                    <li
+                      key={court.id}
+                      className="relative w-[75vw] min-w-[240px] max-w-[292px] shrink-0"
+                    >
+                      <PendingCardLink
+                        href={`/courts/${court.slug}`}
+                        ariaLabel={display.name}
+                        className="block aspect-[2/3] overflow-hidden rounded-[14px]"
                       >
-                        <LockGlyph />
-                        Premium
-                      </span>
-                    ) : null}
+                        <Image
+                          src={court.heroImageUrl}
+                          alt=""
+                          fill
+                          priority={index === 0}
+                          sizes="(max-width: 480px) 75vw, 292px"
+                          className="object-cover"
+                        />
+                        {/* `.img-overlay` — transparent to 40%, then to 72% black. */}
+                        <span
+                          aria-hidden
+                          className="pointer-events-none absolute inset-0"
+                          style={{
+                            background:
+                              'linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.72) 100%)',
+                          }}
+                        />
 
-                    <span className="absolute inset-x-0 bottom-0 block px-3.5 pb-4 pt-5">
-                      <span className="mb-2 inline-flex rounded-pill border border-paper/35 bg-bone/20 px-2.5 py-1 text-[11px] font-medium tracking-[0.03em] text-paper backdrop-blur-sm">
-                        {display.chip}
-                      </span>
-                      <span className="serif mb-[5px] block text-[20px] font-normal leading-tight text-paper">
-                        {display.name}
-                      </span>
-                      <span className="block text-[13px] text-paper/70">{display.location}</span>
-                    </span>
-                  </PendingCardLink>
+                        {display.locked ? (
+                          <span
+                            className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-pill px-2.5 py-[3px] text-[10px] font-semibold uppercase tracking-caption text-paper"
+                            style={{ background: 'linear-gradient(135deg,#C8A860,#B89968)' }}
+                          >
+                            <LockGlyph />
+                            Premium
+                          </span>
+                        ) : null}
 
-                  {/* Sibling overlay — the save mutation, never the card's navigation. */}
-                  <HomeCourtSaveHeart
-                    courtId={court.id}
-                    courtSlug={court.slug}
-                    courtLabel={display.name}
-                    initialSaved={savedCourtIds.has(court.id)}
-                    signedIn={signedIn}
-                  />
-                </li>
-              );
-            })}
-            <li aria-hidden className="w-5 shrink-0" />
-          </ul>
+                        <span className="absolute inset-x-0 bottom-0 block px-3.5 pb-4 pt-5">
+                          <span className="mb-2 flex flex-wrap gap-1.5">
+                            {courtCategoryTags(court).map((tag) => (
+                              <span
+                                key={tag}
+                                className="inline-flex rounded-pill border border-paper/35 bg-bone/20 px-2.5 py-1 text-[11px] font-medium tracking-[0.03em] text-paper backdrop-blur-sm"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </span>
+                          <span className="serif mb-[5px] block text-[20px] font-normal leading-tight text-paper">
+                            {display.name}
+                          </span>
+                          <span className="block text-[13px] text-paper/70">
+                            {display.location}
+                          </span>
+                        </span>
+                      </PendingCardLink>
+
+                      {/* Sibling overlay — the save mutation, never the card's navigation. */}
+                      <HomeCourtSaveHeart
+                        courtId={court.id}
+                        courtSlug={court.slug}
+                        courtLabel={display.name}
+                        initialSaved={savedCourtIds.has(court.id)}
+                        signedIn={signedIn}
+                      />
+                    </li>
+                  );
+                })}
+                <li aria-hidden className="w-5 shrink-0" />
+              </ul>
+            )}
+          </HScrollArrows>
         </div>
       )}
     </section>

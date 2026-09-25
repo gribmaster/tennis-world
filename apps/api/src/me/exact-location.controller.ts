@@ -21,11 +21,12 @@ import { ExactLocationService } from './exact-location.service';
 // same `@CurrentUser()` ergonomics. The path is `me/courts/:slug/exact-location` (a
 // Me-scoped sibling of the PUBLIC `/v1/courts/:slug`, which stays masked).
 //
-// FAILURE SEMANTICS (intake §4.5; delegated to the service):
-//   - no/invalid auth         → 401 (AuthGuard, before handler)
-//   - real court, not entitled → 403
-//   - unknown/unpublished slug → 404 (existence checked first — leaks nothing new)
-//   - entitled + real court    → 200 ExactLocationDTO
+// FAILURE SEMANTICS (intake §4.5, revised; delegated to the service):
+//   - no/invalid auth              → 401 (AuthGuard, before handler)
+//   - premium court, not entitled   → 403
+//   - unknown/unpublished slug      → 404 (existence checked first — leaks nothing new)
+//   - free court (isLocked=false)   → 200 ExactLocationDTO, any authed viewer
+//   - entitled + premium court      → 200 ExactLocationDTO
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Controller('me/courts')

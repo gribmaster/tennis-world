@@ -1,9 +1,10 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import type { CourtSummaryDTO, UserCollectionDTO } from '@tennis/contracts';
+import type { CollectionDTO, CourtSummaryDTO, UserCollectionDTO } from '@tennis/contracts';
 import { SavedCourtsGrid } from './SavedCourtsGrid';
 import { SavedCollectionsGrid } from './SavedCollectionsGrid';
+import { SavedEditorialCollectionsGrid } from './SavedEditorialCollectionsGrid';
 import { SavedWishlistMap } from './SavedWishlistMap';
 import { SavedSortControl, sortSavedCourts, type SavedSortKey } from './SavedSortControl';
 
@@ -102,12 +103,12 @@ function MapGlyph() {
   );
 }
 
-type TabId = 'courts' | 'collections' | 'wishlist';
+export type TabId = 'courts' | 'collections' | 'wishlist';
 
 const TABS: ReadonlyArray<{ id: TabId; label: string; icon: () => React.ReactElement }> = [
   { id: 'courts', label: 'Courts', icon: CourtGlyph },
   { id: 'collections', label: 'Collections', icon: CollectGlyph },
-  { id: 'wishlist', label: 'Wishlist Map', icon: MapGlyph },
+  { id: 'wishlist', label: 'My Map', icon: MapGlyph },
 ];
 
 const SUBTITLE = 'All your favourite tennis destinations in one place.';
@@ -116,19 +117,34 @@ export interface SavedTabsProps {
   savedCourts: CourtSummaryDTO[];
   savedCollections: UserCollectionDTO[];
   /**
+   * The editorial collections this visitor has bookmarked via the save heart (Task 42) —
+   * DISTINCT from `savedCollections` above, which is the visitor's OWN wishlist folders.
+   * Rendered as its own "Saved Collections" section on the Collections tab, alongside (not
+   * replacing) the folders section.
+   */
+  savedEditorialCollections: CollectionDTO[];
+  /**
    * Whether this viewer carries an active (non-free) membership (Task 26). Resolved
    * server-side, once, in `app/saved/page.tsx` — unmasks locked-court names/locations on
    * the Courts tab grid and the Wishlist Map markers for an entitled viewer.
    */
   viewerIsEntitled?: boolean;
+  /**
+   * Which tab opens initially, driven by the page's `?tab=` search param (Task 44) so
+   * `/profile`'s Collections/Countries stat links can deep-link straight into the
+   * matching tab. Defaults to `'courts'`, today's behaviour.
+   */
+  initialTab?: TabId;
 }
 
 export function SavedTabs({
   savedCourts,
   savedCollections,
+  savedEditorialCollections,
   viewerIsEntitled = false,
+  initialTab,
 }: SavedTabsProps) {
-  const [activeTab, setActiveTab] = useState<TabId>('courts');
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? 'courts');
   const [sortKey, setSortKey] = useState<SavedSortKey>('recent');
 
   // Courts optimistically unsaved on the Courts tab. This lives HERE, not inside
@@ -145,6 +161,26 @@ export function SavedTabs({
       return next;
     });
   }, []);
+
+  // Editorial collections optimistically unsaved on the Collections tab's "Saved
+  // Collections" section (Task 42). A SEPARATE set from `unsavedIds` above — that one is
+  // scoped to courts (read by the Wishlist Map too); conflating the two would let unsaving
+  // a collection accidentally affect the courts count/map.
+  const [unsavedEditorialCollectionIds, setUnsavedEditorialCollectionIds] = useState<
+    ReadonlySet<string>
+  >(new Set());
+
+  const handleEditorialUnsavedChange = useCallback(
+    (collectionId: string, unsaved: boolean) => {
+      setUnsavedEditorialCollectionIds((prev) => {
+        const next = new Set(prev);
+        if (unsaved) next.add(collectionId);
+        else next.delete(collectionId);
+        return next;
+      });
+    },
+    [],
+  );
 
   // Collections created during this session via the Create-Collection modal (Feature 35).
   // The server page supplies the seed `savedCollections`; folders created client-side are
@@ -167,12 +203,27 @@ export function SavedTabs({
   // Client-side ordering over the ALREADY-FETCHED array — no refetch, no query param.
   const orderedCourts = useMemo(() => sortSavedCourts(courts, sortKey), [courts, sortKey]);
 
+  // Editorial collections currently visible in the "Saved Collections" section — the
+  // server's list minus anything unsaved in this session.
+  const visibleEditorialCollections = useMemo(
+    () =>
+      savedEditorialCollections.filter(
+        (collection) => !unsavedEditorialCollectionIds.has(collection.id),
+      ),
+    [savedEditorialCollections, unsavedEditorialCollectionIds],
+  );
+
   // The count line reflects the ACTIVE tab (prototype line 1213). Wishlist Map plots the
-  // same saved courts, so it shares the courts count.
-  const count = activeTab === 'collections' ? collections.length : courts.length;
+  // same saved courts, so it shares the courts count. The Collections tab's count COMBINES
+  // the visitor's own folders and their saved editorial collections (Task 42, decided) —
+  // the tab's job is "everything under Collections," not folders alone.
+  const count =
+    activeTab === 'collections'
+      ? collections.length + visibleEditorialCollections.length
+      : courts.length;
 
   return (
-    <div className="bg-bone pb-section-lg">
+    <div className="bg-bone pb-section-lg min-h-[70vh]">
       <header className="container-page pt-8">
         <h1 className="serif display-l text-ink">Saved</h1>
         <p className="mt-1 text-[13px] leading-snug text-stone">{SUBTITLE}</p>
@@ -234,12 +285,32 @@ export function SavedTabs({
           />
         ) : null}
         {activeTab === 'collections' ? (
-          <SavedCollectionsGrid
-            collections={collections}
-            onCollectionCreated={(collection) =>
-              setCreatedCollections((prev) => [...prev, collection])
-            }
-          />
+          <div className="flex flex-col gap-6">
+            {/* Saved Collections — editorial collections this visitor has bookmarked via
+                the heart (Task 42). Only rendered alongside a non-empty grid (the grid
+                itself returns null when empty), so there is never a bare heading. */}
+            {visibleEditorialCollections.length > 0 ? (
+              <div>
+                <h3 className="mb-3 text-[14px] font-semibold text-ink">Saved Collections</h3>
+                <SavedEditorialCollectionsGrid
+                  collections={visibleEditorialCollections}
+                  unsavedIds={unsavedEditorialCollectionIds}
+                  onUnsavedChange={handleEditorialUnsavedChange}
+                />
+              </div>
+            ) : null}
+
+            {/* Your Folders — the visitor's own wishlist folders, unchanged. */}
+            <div>
+              <h3 className="mb-3 text-[14px] font-semibold text-ink">Your Folders</h3>
+              <SavedCollectionsGrid
+                collections={collections}
+                onCollectionCreated={(collection) =>
+                  setCreatedCollections((prev) => [...prev, collection])
+                }
+              />
+            </div>
+          </div>
         ) : null}
         {activeTab === 'wishlist' ? (
           <SavedWishlistMap courts={courts} viewerIsEntitled={viewerIsEntitled} />

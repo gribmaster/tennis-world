@@ -1,5 +1,6 @@
 import type { CollectionDTO } from '@tennis/contracts';
 import { CollectionCard } from './CollectionCard';
+import { CollectionSaveHeart } from './CollectionSaveHeart';
 
 // FeaturedCollectionsStrip — the "Featured Collections" section of /collections
 // (Feature 76), rebuilt from the prototype's CollectionsScreen
@@ -22,12 +23,17 @@ import { CollectionCard } from './CollectionCard';
 // `app/collections/page.tsx`, the screen's single repository boundary.
 //
 // PENDING STATES (CLAUDE.md §4 rule 1): each card navigates as a whole ⇒ `PendingCardLink`,
-// inside CollectionCard. Nothing in this section mutates, so no `PendingButton`.
+// inside CollectionCard. The save heart is a database-backed action ⇒ the rule-2 triad,
+// inside `CollectionSaveHeart` — a SIBLING of the card link, never a PendingButton.
 
 export interface FeaturedCollectionsStripProps {
   /** The collections to feature — already sliced by the page. */
   collections: CollectionDTO[];
   title?: string;
+  /** Ids of the editorial collections this visitor has already saved (Task 42). */
+  savedCollectionIds: ReadonlySet<string>;
+  /** False for a logged-out visitor in `api` mode → save hearts route to /signin. */
+  signedIn?: boolean;
 }
 
 const DEFAULT_TITLE = 'Featured Collections';
@@ -35,6 +41,8 @@ const DEFAULT_TITLE = 'Featured Collections';
 export function FeaturedCollectionsStrip({
   collections,
   title = DEFAULT_TITLE,
+  savedCollectionIds,
+  signedIn = true,
 }: FeaturedCollectionsStripProps) {
   // An empty featured set renders nothing at all — never a bare heading over a void.
   if (collections.length === 0) return null;
@@ -48,8 +56,15 @@ export function FeaturedCollectionsStrip({
       <div className="container-page">
         <ul className="no-scrollbar -mr-[clamp(20px,4vw,64px)] flex gap-3 overflow-x-auto pb-1">
           {collections.map((collection, index) => (
-            <li key={collection.id} className="h-[240px] w-[200px] shrink-0">
-              <CollectionCard collection={collection} priority={index === 0} />
+            <li key={collection.id} className="relative h-[240px] w-[200px] shrink-0">
+              <CollectionCard collection={collection} priority={index === 0} className="collection-card" />
+              <CollectionSaveHeart
+                collectionId={collection.id}
+                collectionSlug={collection.slug}
+                collectionLabel={collection.name}
+                initialSaved={savedCollectionIds.has(collection.id)}
+                signedIn={signedIn}
+              />
             </li>
           ))}
           <li aria-hidden className="w-5 shrink-0" />
