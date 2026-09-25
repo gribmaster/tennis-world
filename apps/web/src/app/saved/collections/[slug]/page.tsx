@@ -16,9 +16,13 @@ import { AuthRequiredError } from '@/lib/repositories';
 // folder + its member courts by slug, 404s if it doesn't exist, and passes plain DTO
 // data down to the hero + courts grid. The page itself never mutates.
 //
-// Repository method used by THIS page (read-only, Feature 33):
+// Repository methods used by THIS page (read-only, Feature 33):
 //   • repositories.saved.getUserCollectionBySlug(slug)
 //       → UserCollectionWithCourtsDTO | null   (folder + member CourtSummaryDTO[])
+//   • repositories.saved.getSavedCourts()
+//       → CourtSummaryDTO[]   (read alongside the two above in the same `loadOrSignIn`
+//         call — no extra round trip through the sign-in redirect logic — purely to seed
+//         each card's save heart in the grid, Task 48)
 //
 // RENAME (Feature 37 / 57): the hero mounts a small <UserCollectionRename> client island.
 // In `api` mode it calls the protected `PATCH /v1/me/collections/:id` via the browser
@@ -72,11 +76,12 @@ export default async function UserCollectionDetailPage({
   // unknown slug → `null` → notFound(). Task 26: also resolve this viewer's real
   // membership alongside the folder read so locked-court content in the grid can unmask
   // for a paying visitor.
-  const [collection, user] = await loadOrSignIn(
+  const [collection, user, savedCourts] = await loadOrSignIn(
     () =>
       Promise.all([
         repositories.saved.getUserCollectionBySlug(slug),
         repositories.user.getCurrentUser(),
+        repositories.saved.getSavedCourts(),
       ]),
     `/saved/collections/${slug}`,
   );
@@ -85,12 +90,17 @@ export default async function UserCollectionDetailPage({
     notFound();
   }
   const viewerIsEntitled = user.membership !== 'free';
+  const savedCourtIds = savedCourts.map((court) => court.id);
 
   return (
     // Private folder — if it rendered, the visitor is signed in.
     <AppShell unlocked={false} signedIn>
       <UserCollectionHero collection={collection} courtCount={collection.courts.length} />
-      <UserCollectionCourtsGrid courts={collection.courts} viewerIsEntitled={viewerIsEntitled} />
+      <UserCollectionCourtsGrid
+        courts={collection.courts}
+        viewerIsEntitled={viewerIsEntitled}
+        savedCourtIds={savedCourtIds}
+      />
     </AppShell>
   );
 }

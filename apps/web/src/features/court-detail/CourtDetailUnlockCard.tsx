@@ -30,7 +30,7 @@ import { PaywallTrigger, PAYWALL_COPY } from '@/features/paywall';
 
 export function CourtDetailUnlockCard() {
   return (
-    <div className="rounded-lg bg-ink p-5 text-center">
+    <div className="rounded-lg bg-ink p-5 text-center flex flex-col justify-center">
       {/* 11px / 0.08em uppercase, 60% bone (prototype line 1171). */}
       <p className="text-[11px] uppercase tracking-caption text-bone/60">Premium Content</p>
       {/* 22px serif, weight 300 (prototype line 1172). */}

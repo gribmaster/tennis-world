@@ -251,7 +251,7 @@ export function SavedTabs({
                 aria-selected={isActive}
                 onClick={() => setActiveTab(tab.id)}
                 className={[
-                  'filter-pill flex-1 justify-center gap-1.5 whitespace-normal px-1.5 py-3',
+                  'filter-pill justify-center gap-1.5 whitespace-normal px-1.5 py-3',
                   'text-[13px] font-semibold leading-tight sm:gap-2 sm:px-4 sm:text-[14px]',
                   isActive ? 'is-active' : '',
                 ]
@@ -285,7 +285,7 @@ export function SavedTabs({
           />
         ) : null}
         {activeTab === 'collections' ? (
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 mt-8">
             {/* Saved Collections — editorial collections this visitor has bookmarked via
                 the heart (Task 42). Only rendered alongside a non-empty grid (the grid
                 itself returns null when empty), so there is never a bare heading. */}

@@ -356,8 +356,7 @@ function renderUnlocked({
           {/* "Played here? Leave a review" (prototype lines 1154–1166) — Feature 80. It
               sits in the UNLOCKED branch only, where the prototype puts it
               (`{!isLocked && …}`) and where it makes sense: a viewer who cannot be told
-              where the court is has not played there. The locked branch keeps
-              `CourtDetailUnlockCard` in this exact slot instead.
+              where the court is has not played there.
 
               COLLECTION ONLY: the card opens a form that collects a rating and a note and
               POSTs them. It displays NO score, NO average and NO review count, and neither
@@ -539,15 +538,6 @@ function renderLocked({
           <section className="mt-5 md:px-[clamp(20px,4vw,64px)]">
             <div className={column}>
               <CourtDetailGalleryStrip />
-            </div>
-          </section>
-
-          {/* The dark unlock card (prototype lines 1169–1176). It stands where the unlocked
-              branch's review card would go — the prototype shows that card only when
-              unlocked, and this one only when locked. */}
-          <section className={`${gutter} mt-5`}>
-            <div className={column}>
-              <CourtDetailUnlockCard />
             </div>
           </section>
 

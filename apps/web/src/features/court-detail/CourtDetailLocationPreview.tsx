@@ -1,6 +1,7 @@
 import type { ExactLocationDTO } from '@tennis/contracts';
 import { CourtMap, type MapMarker } from '@/features/map';
 import { PaywallTrigger } from '@/features/paywall';
+import {CourtDetailUnlockCard} from "@/features/court-detail/CourtDetailUnlockCard";
 
 // CourtDetailLocationPreview — the location block on Court Detail (Feature 11 §2),
 // restyled for the v2 redesign (Feature 78). Its map engine moved off Leaflet to Google
@@ -208,16 +209,21 @@ export function CourtDetailLocationPreview({
               allowed to grow on desktop where the two columns get much wider. */}
           <div className="h-[100px] overflow-hidden rounded-[10px] border border-hairline md:h-[clamp(100px,14vw,480px)]">
             {locked ? (
-              <div className="relative h-full w-full">
-                {/* No live map — see LockedMapPlaceholder above (Feature 88 §6.1). No
+              <div className="flex h-full">
+                  <div className="relative h-full w-full" id="single-court-map-container">
+                      {/* No live map — see LockedMapPlaceholder above (Feature 88 §6.1). No
                     coordinate, exact or approximate, is present in this state. */}
-                <div aria-hidden className="absolute inset-0 scale-105 blur-[6px]">
-                  <LockedMapPlaceholder />
-                </div>
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-bone/60 text-stone backdrop-blur-[2px]">
-                  <LockGlyph />
-                  <span className="text-[10px]">Unlock to reveal</span>
-                </div>
+                      <div aria-hidden className="absolute inset-0 scale-105 blur-[6px]">
+                          <LockedMapPlaceholder />
+                      </div>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-bone/60 text-stone backdrop-blur-[2px]">
+                          <LockGlyph />
+                          <span className="text-[10px]">Unlock to reveal</span>
+                      </div>
+                  </div>
+                  <div className="flex relative">
+                      <CourtDetailUnlockCard />
+                  </div>
               </div>
             ) : (
               // Unlocked: entitled → exact marker; otherwise → approximate marker.

@@ -41,7 +41,7 @@ export function ProfileStats({
   ];
 
   return (
-    <div className="mt-5 grid grid-cols-3 divide-x divide-hairline rounded-lg bg-paper py-4">
+    <div className="mt-5 grid grid-cols-3 divide-x divide-hairline rounded-lg bg-paper">
       {cells.map(({ value, label, href, ariaLabel }) => (
         <ProfileStatLink key={label} href={href} value={value} label={label} ariaLabel={ariaLabel} />
       ))}

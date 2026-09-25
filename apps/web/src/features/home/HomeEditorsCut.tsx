@@ -2,6 +2,7 @@ import Image from 'next/image';
 import type { CourtSummaryDTO } from '@tennis/contracts';
 import { PendingCardLink } from '@/components/navigation';
 import { courtCategoryTags, courtDisplay } from '@/components/court/court-display';
+import { HomeCourtSaveHeart } from './HomeCourtSaveHeart';
 
 // HomeEditorsCut — the editorial "Editor's Cut" section, RESTYLED to the v2 language
 // (Feature 74).
@@ -34,7 +35,15 @@ import { courtCategoryTags, courtDisplay } from '@/components/court/court-displa
 // @tennis/mock-data.
 //
 // PENDING STATES (CLAUDE.md §4 rule 1): each row is a whole-card navigation ⇒
-// `PendingCardLink`. Nothing here mutates, so no save control and no pending triad.
+// `PendingCardLink`. It now also hosts a save heart (`HomeCourtSaveHeart`, imported
+// as-is from the Featured strip rather than duplicated — both sections live in this same
+// feature folder), rendered as a SIBLING of the card link so a click on the heart can
+// never trigger the card's navigation — the same rule-2 triad and structure
+// `HomeFeaturedCourts` already uses.
+//
+// STAYS A SERVER COMPONENT: rendering `HomeCourtSaveHeart` (a client component) as a
+// child does not require this file to add `'use client'` — Next.js server components can
+// render client children directly, and nothing else here needs client-side state.
 
 /** Small lock glyph for the premium ribbon (verbatim from HomeFeaturedCourts.tsx). */
 function LockGlyph() {
@@ -62,6 +71,10 @@ export interface HomeEditorsCutProps {
   title?: string;
   /** Whether this viewer carries an active membership (Task 26) — unmasks a locked court. */
   viewerIsEntitled?: boolean;
+  /** Ids of the courts the visitor has already saved (seeds each heart). */
+  savedCourtIds: ReadonlySet<string>;
+  /** False for a logged-out visitor in `api` mode → hearts route to /signin. */
+  signedIn: boolean;
 }
 
 const DEFAULT_TITLE = "Editor's cut";
@@ -70,6 +83,8 @@ export function HomeEditorsCut({
   courts,
   title = DEFAULT_TITLE,
   viewerIsEntitled = false,
+  savedCourtIds,
+  signedIn,
 }: HomeEditorsCutProps) {
   if (courts.length === 0) return null;
 
@@ -82,7 +97,10 @@ export function HomeEditorsCut({
           {courts.map((court) => {
             const display = courtDisplay(court, viewerIsEntitled);
             return (
-              <li key={court.id} className="md:w-[75vw] min-w-[240px] md:max-w-[292px] shrink-0">
+              <li
+                key={court.id}
+                className="relative md:w-[75vw] min-w-[240px] md:max-w-[292px] shrink-0"
+              >
                 <PendingCardLink
                   href={`/courts/${court.slug}`}
                   ariaLabel={display.name}
@@ -132,6 +150,15 @@ export function HomeEditorsCut({
                     <span className="block text-[13px] text-paper/70">{display.location}</span>
                   </span>
                 </PendingCardLink>
+
+                {/* Sibling overlay — the save mutation, never the card's navigation. */}
+                <HomeCourtSaveHeart
+                  courtId={court.id}
+                  courtSlug={court.slug}
+                  courtLabel={display.name}
+                  initialSaved={savedCourtIds.has(court.id)}
+                  signedIn={signedIn}
+                />
               </li>
             );
           })}

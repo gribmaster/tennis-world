@@ -286,7 +286,7 @@ const FALLBACK_ZOOM = 2;
 /** The map's enforced zoom range (also the focus clamp's bounds below — the Maps JS API
  *  has no `getMinZoom`/`getMaxZoom` query to read it back, unlike Leaflet). 19 mirrors the
  *  old Leaflet tile layer's own cap; 2 mirrors the fallback world view. */
-const MIN_ZOOM = 2;
+const MIN_ZOOM = 4;
 const MAX_ZOOM = 19;
 const FIT_BOUNDS_MAX_ZOOM = 6;
 const FIT_BOUNDS_PADDING_PX = 48;

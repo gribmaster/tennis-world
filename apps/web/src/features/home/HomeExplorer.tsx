@@ -200,7 +200,12 @@ export function HomeExplorer({
         viewerIsEntitled={viewerIsEntitled}
       />
 
-      <HomeEditorsCut courts={editorsCutCourts} viewerIsEntitled={viewerIsEntitled} />
+      <HomeEditorsCut
+        courts={editorsCutCourts}
+        viewerIsEntitled={viewerIsEntitled}
+        savedCourtIds={savedSet}
+        signedIn={signedIn}
+      />
 
       <HomeCollectionsTeaser
         collections={collections}

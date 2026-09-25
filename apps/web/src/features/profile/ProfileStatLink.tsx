@@ -19,9 +19,9 @@ export function ProfileStatLink({ href, value, label, ariaLabel }: ProfileStatLi
     <PendingCardLink
       href={href}
       ariaLabel={ariaLabel}
-      className="block rounded-sm text-center transition-colors hover:bg-ink/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/40 active:bg-ink/[0.06]"
+      className="block rounded-sm text-center transition-colors py-5 hover:bg-ink/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/40 active:bg-ink/[0.06]"
     >
-      <div className="display-m text-ink">{value}</div>
+      <div className="display-m text-ink leading-none">{value}</div>
       <div className="eyebrow mt-1.5 text-stone">{label}</div>
     </PendingCardLink>
   );

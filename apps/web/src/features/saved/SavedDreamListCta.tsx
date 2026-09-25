@@ -56,7 +56,7 @@ export function SavedDreamListCta({ imageUrls = [] }: SavedDreamListCtaProps) {
   const tiles = imageUrls.slice(0, TILE_CLASSES.length);
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-mist/30 bg-ivory p-4">
+    <div className="flex items-center gap-3 rounded-lg border border-mist/30 bg-ivory p-4 mt-8">
       <div className="min-w-0 flex-1">
         <p className="text-[12px] font-semibold text-gold">Create your</p>
         <p className="serif mt-1 text-[22px] font-normal leading-[1.1] text-ink">Dream List</p>

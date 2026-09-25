@@ -37,7 +37,9 @@ import { SavedDreamListCta } from './SavedDreamListCta';
 //     `lineHeight:1.2, marginBottom:4`; a pin glyph + 12px location at 85% white with
 //     `marginBottom:8`; then up to THREE tag chips — `rgba(245,242,236,0.22)` on a
 //     `1px solid rgba(255,255,255,0.35)` border, `padding:'3px 9px'`, `borderRadius:100`,
-//     `fontSize:11, fontWeight:500` (lines 1233–1242).
+//     `fontSize:11, fontWeight:500` (lines 1233–1242). TASK 49: the tag-chip row was
+//     removed from this card (Saved's Courts tab only) — do not restore it as a fidelity
+//     fix; the name + location is now the whole text block.
 //
 // ── THE SURFACE CHIP OVER AN IMAGE ──────────────────────────────────────────────────────
 // The prototype's `SurfaceLabel` uses the pale `chip-surface-*` palette (e.g. clay =
@@ -120,9 +122,6 @@ function PinGlyph() {
   );
 }
 
-/** Prototype: `c.labels.slice(0,3)` — at most three chips per card (line 1239). */
-const MAX_TAG_CHIPS = 3;
-
 export interface SavedCourtsGridProps {
   courts: CourtSummaryDTO[];
   /**
@@ -203,12 +202,11 @@ export function SavedCourtsGrid({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 mt-8">
       <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
         {visible.map((court, index) => {
           const display = courtDisplay(court, viewerIsEntitled);
           const isPending = pending.has(court.id);
-          const tags = court.tags.slice(0, MAX_TAG_CHIPS);
 
           return (
             // `relative` so the unsave control can position against this box while
@@ -247,22 +245,10 @@ export function SavedCourtsGrid({
                   <span className="serif mb-1 block text-[19px] font-normal leading-[1.2] text-paper">
                     {display.name}
                   </span>
-                  <span className="mb-2 flex items-center gap-[5px] text-paper/85">
+                  <span className="flex items-center gap-[5px] text-paper/85">
                     <PinGlyph />
                     <span className="text-[12px]">{display.location}</span>
                   </span>
-                  {tags.length > 0 ? (
-                    <span className="flex flex-wrap gap-1.5">
-                      {tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="inline-flex rounded-pill border border-paper/35 bg-bone/20 px-2.5 py-[3px] text-[11px] font-medium text-paper backdrop-blur-sm"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </span>
-                  ) : null}
                 </span>
               </PendingCardLink>
 
