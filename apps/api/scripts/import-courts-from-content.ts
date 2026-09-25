@@ -173,19 +173,45 @@ const TAG_PHRASE_MAP: { phrase: string; pattern: RegExp; tags: CourtTagValue[] }
   // court, inland ones included (e.g. the Mouratoglou academy). Only a token that
   // IS the word "riviera" on its own counts.
   { phrase: 'riviera', pattern: /^riviera$/i, tags: ['Sea View'] },
+  // Unverified against real content (TASK 50 step 2) — conservative guesses at
+  // common listing phrasing, not confirmed against production info.txt files.
+  { phrase: 'oceanfront', pattern: /\bocean(front)?\b/i, tags: ['Sea View'] },
+  { phrase: 'waterfront', pattern: /\bwaterfront\b/i, tags: ['Sea View'] },
+  { phrase: 'coastal', pattern: /\bcoastal\b/i, tags: ['Sea View'] },
   { phrase: 'pampelonne beach', pattern: /\bbeach\b/i, tags: ['Beach Club'] },
   // Relief
   { phrase: 'saint-tropez hills', pattern: /\bhills?\b/i, tags: ['Mountains'] },
   { phrase: 'alpine view', pattern: /\balpine\b/i, tags: ['Mountains'] },
   { phrase: 'mountain resort', pattern: /\bmountains?\b/i, tags: ['Mountains'] },
+  // Unverified against real content (TASK 50 step 2).
+  { phrase: 'hilltop', pattern: /\bhill(top|side)\b/i, tags: ['Mountains'] },
   // Water
   { phrase: 'lake estate', pattern: /\blakes?\b/i, tags: ['Lakeside'] },
+  // Unverified against real content (TASK 50 step 2).
+  { phrase: 'lakefront', pattern: /\blakefront\b/i, tags: ['Lakeside'] },
+  { phrase: 'lakeside', pattern: /\blakeside\b/i, tags: ['Lakeside'] },
   // Greenery
   { phrase: 'garden court', pattern: /\bgardens?\b/i, tags: ['Garden'] },
   // Heritage
   { phrase: 'heritage club', pattern: /\bheritage\b/i, tags: ['Historic'] },
   { phrase: 'art deco', pattern: /\bart\s*deco\b/i, tags: ['Historic'] },
   { phrase: 'historic park', pattern: /\bhistoric\b/i, tags: ['Historic'] },
+  // Unverified against real content (TASK 50 step 2).
+  { phrase: 'manor', pattern: /\bmanor\b/i, tags: ['Historic'] },
+  { phrase: 'centuries-old', pattern: /\bcenturies[-\s]?old\b/i, tags: ['Historic'] },
+  // Jungle / tropical (TASK 50 — previously unmapped)
+  { phrase: 'jungle', pattern: /\bjungle\b/i, tags: ['Jungle'] },
+  { phrase: 'rainforest', pattern: /\brainforest\b/i, tags: ['Jungle'] },
+  { phrase: 'tropical garden', pattern: /\btropical\b/i, tags: ['Jungle'] },
+  // Island (TASK 50 — previously unmapped)
+  { phrase: 'island', pattern: /\bisland\b/i, tags: ['Island'] },
+  // Rooftop (TASK 50 — previously unmapped)
+  { phrase: 'rooftop court', pattern: /\brooftop\b/i, tags: ['Rooftop'] },
+  { phrase: 'roof terrace', pattern: /\broof\s*terrace\b/i, tags: ['Rooftop'] },
+  // Countryside (TASK 50 — previously unmapped)
+  { phrase: 'countryside estate', pattern: /\bcountryside\b/i, tags: ['Countryside'] },
+  { phrase: 'vineyard estate', pattern: /\bvineyard\b/i, tags: ['Countryside'] },
+  { phrase: 'château', pattern: /\bch[aâ]teau\b/i, tags: ['Countryside'] },
 ];
 
 /**

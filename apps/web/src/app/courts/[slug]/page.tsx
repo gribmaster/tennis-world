@@ -292,10 +292,10 @@ function renderUnlocked({
           </header>
 
           {/* Tag chips — a scrolling row, never a wrapping one (prototype lines 1062–1069).
-              Renders nothing at all when the court carries no tags. */}
+              Always shows at least the access chip, plus Scenic when flagged. */}
           <div className="mt-3.5">
             <div className={column}>
-              <CourtDetailTagStrip tags={court.tags} />
+              <CourtDetailTagStrip tags={court.tags} access={court.access} isScenic={court.isScenic} />
             </div>
           </div>
 
@@ -497,7 +497,7 @@ function renderLocked({
           {/* Tag chips STAY too — same component, same scrolling row as unlocked. */}
           <div className="mt-3.5">
             <div className={column}>
-              <CourtDetailTagStrip tags={court.tags} />
+              <CourtDetailTagStrip tags={court.tags} access={court.access} isScenic={court.isScenic} />
             </div>
           </div>
 
