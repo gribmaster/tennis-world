@@ -251,7 +251,7 @@ export function SavedTabs({
                 aria-selected={isActive}
                 onClick={() => setActiveTab(tab.id)}
                 className={[
-                  'filter-pill justify-center gap-1.5 whitespace-normal px-1.5 py-3',
+                  'filter-pill justify-center gap-1.5 whitespace-normal px-2.5 py-3',
                   'text-[13px] font-semibold leading-tight sm:gap-2 sm:px-4 sm:text-[14px]',
                   isActive ? 'is-active' : '',
                 ]

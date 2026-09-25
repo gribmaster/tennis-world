@@ -204,12 +204,12 @@ export function CourtDetailLocationPreview({
             </span>
         </h2>
 
-        <div className="grid md:flex md:flex-col grid-cols-2 gap-2.5">
+        <div className=" md:flex md:flex-col grid-cols-2 gap-2.5">
           {/* Left: the map box. Prototype `height:100`, `borderRadius:10` (line 1096) —
               allowed to grow on desktop where the two columns get much wider. */}
-          <div className="h-[100px] overflow-hidden rounded-[10px] border border-hairline md:h-[clamp(100px,14vw,480px)]">
+          <div className="h-[200px] overflow-hidden rounded-[10px] border border-hairline md:h-[clamp(200px,14vw,480px)]">
             {locked ? (
-              <div className="flex h-full">
+              <div className="flex h-full flex-col md:flex-row">
                   <div className="relative h-full w-full" id="single-court-map-container">
                       {/* No live map — see LockedMapPlaceholder above (Feature 88 §6.1). No
                     coordinate, exact or approximate, is present in this state. */}

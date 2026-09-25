@@ -233,13 +233,13 @@ export function CourtDetailShell({
               href={directionsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn-primary flex-1 justify-center gap-2"
+              className="btn btn-primary justify-center gap-2"
             >
               <PinGlyph />
               Get directions
             </a>
           ) : (
-            <a href="#" className="btn btn-primary flex-1 justify-center gap-2">
+            <a href="#" className="btn btn-primaryjustify-center gap-2">
               <PinGlyph />
               Get directions
             </a>

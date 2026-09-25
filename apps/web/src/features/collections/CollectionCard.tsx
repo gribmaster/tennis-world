@@ -106,7 +106,7 @@ export function CollectionCard({ collection, priority = false, className }: Coll
         {/* Decorative affordance for the card's own navigation — see the header note. */}
         <span
           aria-hidden
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-paper/50 bg-paper/20 text-paper"
+          className="hidden md:flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-paper/50 bg-paper/20 text-paper"
         >
           <ArrowGlyph />
         </span>

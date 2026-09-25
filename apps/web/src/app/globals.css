@@ -482,6 +482,10 @@
     .map-canvas-wrap {
       position: relative;
       height: 500px;
+      z-index: 9;
+    }
+    .filter-container-fix {
+      padding: 0;
     }
   }
 }

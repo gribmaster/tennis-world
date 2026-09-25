@@ -108,7 +108,7 @@ export function MapFilterBar({
 }: MapFilterBarProps) {
   return (
     <div className="sticky top-[72px] z-30 border-b border-hairline bg-bone px-[clamp(16px,4vw,40px)] py-4">
-      <div className="mx-auto container-page">
+      <div className="mx-auto container-page filter-container-fix">
         {/* Search pill — same structure as HomeSearchBar's: glyph, input, divider,
             filter control embedded inside the pill. Map keeps its own bordered
             `bg-ivory`/`h-11` look; only the "button lives inside the pill" pattern
