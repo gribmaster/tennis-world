@@ -1,40 +1,50 @@
-import type { AccessType, CourtTag } from '@tennis/contracts';
+import type { AccessType, CourtTag, IndoorOutdoor } from '@tennis/contracts';
 
-// CourtDetailTagStrip — the court's Experience tags, access classification, and Scenic
-// flag as one horizontally scrolling chip row (prototype `CourtDetailScreen` lines
-// 1062–1069, the `.h-scroll` of `<Label type="exp">`, which mixes tags/access/Scenic
-// together in one flat `court.labels` array — Task 51 carries that fidelity over to the
-// real schema's typed `tags` / `access` / `isScenic` fields).
+// CourtDetailTagStrip — the court's Experience tags, access classification,
+// indoor/outdoor value, and Scenic flag as one horizontally scrolling chip row
+// (prototype `CourtDetailScreen` lines 1062–1069, the `.h-scroll` of
+// `<Label type="exp">`, which mixes tags/access/Scenic together in one flat
+// `court.labels` array — Task 51 carries that fidelity over to the real schema's
+// typed `tags` / `access` / `indoorOutdoor` / `isScenic` fields. Indoor/outdoor
+// was never modeled as a label in the prototype's demo data, but it's added here
+// on the same always-public basis as access and Scenic).
 //
 // SCROLLS, NEVER WRAPS (brief §4): `.chip-exp` chips are `white-space:nowrap` and the row
 // is `overflow-x-auto` with `no-scrollbar`, so a court carrying many tags scrolls sideways
 // instead of growing a second line and pushing the title block, description and location
 // down the page. That is the whole reason the prototype uses `.h-scroll` here.
 //
-// `access` is a required, always-populated enum on every court, so the combined row can
-// never be empty — unlike the old tags-only version, which could legitimately render
-// nothing for a no-tags court.
+// `access` and `indoorOutdoor` are required, always-populated fields on every court, so
+// the combined row can never be empty — unlike the old tags-only version, which could
+// legitimately render nothing for a no-tags court.
 //
 // The chip styling matches the prototype's `.chip-exp` (line 72): a 6%-ink wash, graphite
 // text, pill radius, no border — reusing the existing tokens, not a new chip system. Tags,
-// access, and Scenic all share this one treatment, matching the prototype's single flat
-// `labels` list.
+// access, indoor/outdoor, and Scenic all share this one treatment, matching the
+// prototype's single flat `labels` list.
 //
-// PRESENTATIONAL: tags, access, and isScenic are all always-public descriptive metadata
-// (contracts note on `CourtSummarySchema`) and have nothing to do with the exact-location
-// gate. This component receives no coordinates and no lock state.
+// PRESENTATIONAL: tags, access, indoorOutdoor, and isScenic are all always-public
+// descriptive metadata (contracts note on `CourtSummarySchema`) and have nothing to do
+// with the exact-location gate. This component receives no coordinates and no lock state.
 
 export interface CourtDetailTagStripProps {
   /** The court's Experience tags, in canonical vocabulary order. May be empty. */
   tags: CourtTag[];
   /** The court's access classification — always present, rendered as its own chip. */
   access: AccessType;
+  /** "Indoor" or "Outdoor" — always present, rendered as its own chip. */
+  indoorOutdoor: IndoorOutdoor;
   /** Whether this court is flagged scenic — adds a "Scenic" chip when true. */
   isScenic: boolean;
 }
 
-export function CourtDetailTagStrip({ tags, access, isScenic }: CourtDetailTagStripProps) {
-  const labels: string[] = [...tags, access, ...(isScenic ? ['Scenic'] : [])];
+export function CourtDetailTagStrip({
+  tags,
+  access,
+  indoorOutdoor,
+  isScenic,
+}: CourtDetailTagStripProps) {
+  const labels: string[] = [...tags, access, indoorOutdoor, ...(isScenic ? ['Scenic'] : [])];
 
   if (labels.length === 0) return null;
 

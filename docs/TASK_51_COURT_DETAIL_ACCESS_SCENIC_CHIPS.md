@@ -1,4 +1,4 @@
-# TASK 51 — Court Detail: add Access + Scenic chips to the Experience chip row
+# TASK 51 — Court Detail: add Access + Indoor/Outdoor + Scenic chips to the Experience chip row
 
 **Model: Sonnet 5, reasoning effort: low.**
 
@@ -34,34 +34,47 @@ task. Do not add access/scenic chips to any card component.
 
 ## No backend/contract change needed
 
-`access` and `isScenic` are already on `CourtSummarySchema` (and therefore
-`CourtDTO`, which extends it) — confirmed in `packages/contracts/src/court.ts`.
-Both are always-public fields (no entitlement gating, unlike `lat`/`lng`), exactly
-like `tags` already is. This is a frontend-only change.
+`access`, `indoorOutdoor`, and `isScenic` are already on `CourtSummarySchema` (and
+therefore `CourtDTO`, which extends it) — confirmed in
+`packages/contracts/src/court.ts`. All three are always-public fields (no
+entitlement gating, unlike `lat`/`lng`), exactly like `tags` already is. This is a
+frontend-only change.
 
 ## The change
 
 ### `apps/web/src/features/court-detail/CourtDetailTagStrip.tsx`
 
 ```tsx
-import type { AccessType, CourtTag } from '@tennis/contracts';
+import type { AccessType, CourtTag, IndoorOutdoor } from '@tennis/contracts';
 
 export interface CourtDetailTagStripProps {
   /** The court's Experience tags, in canonical vocabulary order. May be empty. */
   tags: CourtTag[];
   /** The court's access classification — always present, rendered as its own chip. */
   access: AccessType;
+  /** "Indoor" or "Outdoor" — always present, rendered as its own chip. */
+  indoorOutdoor: IndoorOutdoor;
   /** Whether this court is flagged scenic — adds a "Scenic" chip when true. */
   isScenic: boolean;
 }
 
-export function CourtDetailTagStrip({ tags, access, isScenic }: CourtDetailTagStripProps) {
-  // Access is always present, so this row is never empty (unlike the old
-  // tags-only version, which could legitimately render nothing for a
-  // no-tags court). Kept as a plain array so every chip — tag, access,
-  // Scenic — shares one `.chip-exp` treatment and one scroll row, matching
-  // the prototype's single flat `labels` list.
-  const labels: string[] = [...tags, access, ...(isScenic ? ['Scenic'] : [])];
+export function CourtDetailTagStrip({
+  tags,
+  access,
+  indoorOutdoor,
+  isScenic,
+}: CourtDetailTagStripProps) {
+  // Access and indoor/outdoor are always present, so this row is never empty
+  // (unlike the old tags-only version, which could legitimately render nothing
+  // for a no-tags court). Kept as a plain array so every chip — tag, access,
+  // indoor/outdoor, Scenic — shares one `.chip-exp` treatment and one scroll
+  // row, matching the prototype's single flat `labels` list.
+  const labels: string[] = [
+    ...tags,
+    access,
+    indoorOutdoor,
+    ...(isScenic ? ['Scenic'] : []),
+  ];
 
   return (
     <ul className="no-scrollbar flex gap-2 overflow-x-auto px-5 pb-[2px] md:px-0">
@@ -81,35 +94,40 @@ export function CourtDetailTagStrip({ tags, access, isScenic }: CourtDetailTagSt
   required, always-populated enum on every court, so the combined `labels` array
   can never be empty now. (If you want a defensive `if (labels.length === 0) return
   null` left in for safety, that's fine — it just won't ever trigger in practice.)
-- Order: existing Experience tags first (unchanged from today), then the access
-  chip, then "Scenic" last if `isScenic` — matches the prototype's own ordering
-  closely enough (tags, then access-like values, then Scenic) without trying to
-  force an exact 1:1 replay of its demo array (the prototype's demo data isn't
-  schema-accurate — e.g. one example court lists BOTH "Resort" and "Private" as if
-  access were multi-valued, but the real schema's `access` is a single enum value
-  per court, so only one access chip will ever show).
+- Order: existing Experience tags first (unchanged from today), then access, then
+  indoor/outdoor, then "Scenic" last if `isScenic` — matches the prototype's own
+  ordering closely enough (tags, then access-like values, then Scenic) without
+  trying to force an exact 1:1 replay of its demo array (the prototype's demo data
+  isn't schema-accurate — e.g. one example court lists BOTH "Resort" and "Private"
+  as if access were multi-valued, but the real schema's `access` is a single enum
+  value per court, so only one access chip will ever show; the prototype's demo
+  data also never modeled indoor/outdoor as a label at all, so there's no example
+  to match against for its position — end of the tags/access group, before Scenic,
+  is a reasonable placement).
 - Update the file's header comment: it currently says "the court's Experience tags
   as a horizontally scrolling chip row" and "PRESENTATIONAL: tags are
   always-public descriptive metadata... This component receives no coordinates and
-  no lock state" — extend it to describe the access + Scenic additions and why
-  (prototype fidelity, this task), and note both new fields are equally
-  always-public / not lock-gated, same as tags already are.
+  no lock state" — extend it to describe the access + indoor/outdoor + Scenic
+  additions and why (prototype fidelity for access/Scenic; indoor/outdoor added
+  alongside them on the same always-public basis), and note all three new fields
+  are equally always-public / not lock-gated, same as tags already are.
 
 ### `apps/web/src/app/courts/[slug]/page.tsx` — both `renderUnlocked()` and `renderLocked()`
 
-Pass the two new required props at both call sites:
+Pass the three new required props at both call sites:
 
 ```tsx
 <CourtDetailTagStrip
   tags={court.tags}
   access={court.access}
+  indoorOutdoor={court.indoorOutdoor}
   isScenic={court.isScenic}
 />
 ```
 
-Both fields are always-public (not part of the locked/unlocked entitlement split),
-so they're passed identically in both branches — same treatment `tags` already
-gets today (shown regardless of lock state).
+All three fields are always-public (not part of the locked/unlocked entitlement
+split), so they're passed identically in both branches — same treatment `tags`
+already gets today (shown regardless of lock state).
 
 ## Do not touch
 
@@ -131,20 +149,22 @@ gets today (shown regardless of lock state).
 
 - On any Court Detail page (locked or unlocked reading), the Experience chip row
   now also shows the court's access classification (e.g. "Resort", "Private",
-  "Club", "Academy") and, if the court is flagged scenic, a "Scenic" chip at the
-  end — alongside its existing Experience tags, all in the same horizontally
-  scrolling row.
-- A court with zero Experience tags still shows a row now (just the access chip,
-  plus Scenic if applicable) — confirm this doesn't look broken/empty-ish for such
-  a court (e.g. `mouratoglou-tennis-academy`, which currently has no tags).
-- Locked and unlocked readings both show the same access/scenic chips for the same
-  court — neither is masked or omitted based on lock state.
+  "Club", "Academy"), its "Indoor" or "Outdoor" value, and, if the court is
+  flagged scenic, a "Scenic" chip at the end — alongside its existing Experience
+  tags, all in the same horizontally scrolling row.
+- A court with zero Experience tags still shows a row now (just access +
+  indoor/outdoor, plus Scenic if applicable) — confirm this doesn't look
+  broken/empty-ish for such a court (e.g. `mouratoglou-tennis-academy`, which
+  currently has no tags).
+- Locked and unlocked readings both show the same access/indoor-outdoor/scenic
+  chips for the same court — none of the three is masked or omitted based on lock
+  state.
 - No change to any card component's chip display anywhere else in the app.
 - `pnpm typecheck`, `pnpm lint`, `pnpm build` clean.
 
 ## Report
 
-Confirm both new props are required (not optional/defaulted) and wired at both
-`renderUnlocked()`/`renderLocked()` call sites, confirm no card component was
+Confirm all three new props are required (not optional/defaulted) and wired at
+both `renderUnlocked()`/`renderLocked()` call sites, confirm no card component was
 touched, and confirm the old empty-row early return was removed or is provably
 dead code now. No git commit or push unless asked.

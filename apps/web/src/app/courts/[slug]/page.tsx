@@ -295,7 +295,12 @@ function renderUnlocked({
               Always shows at least the access chip, plus Scenic when flagged. */}
           <div className="mt-3.5">
             <div className={column}>
-              <CourtDetailTagStrip tags={court.tags} access={court.access} isScenic={court.isScenic} />
+              <CourtDetailTagStrip
+                tags={court.tags}
+                access={court.access}
+                indoorOutdoor={court.indoorOutdoor}
+                isScenic={court.isScenic}
+              />
             </div>
           </div>
 
@@ -497,7 +502,12 @@ function renderLocked({
           {/* Tag chips STAY too — same component, same scrolling row as unlocked. */}
           <div className="mt-3.5">
             <div className={column}>
-              <CourtDetailTagStrip tags={court.tags} access={court.access} isScenic={court.isScenic} />
+              <CourtDetailTagStrip
+                tags={court.tags}
+                access={court.access}
+                indoorOutdoor={court.indoorOutdoor}
+                isScenic={court.isScenic}
+              />
             </div>
           </div>
 
