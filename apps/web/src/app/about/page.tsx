@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { AppShell } from '@/components/layout';
 import { AboutPage } from '@/features/static-pages';
-import { isSignedIn } from '@/lib/session.server';
+import { getViewerAuthState } from '@/lib/session.server';
 
 // About page (`/about`) — a static marketing screen (Feature 29). Resolves the
 // footer "Company → About" link.
@@ -20,9 +20,9 @@ export const metadata: Metadata = {
 };
 
 export default async function AboutRoute() {
-  const signedIn = await isSignedIn();
+  const { signedIn, viewerIsEntitled } = await getViewerAuthState();
   return (
-    <AppShell unlocked={false} signedIn={signedIn}>
+    <AppShell unlocked={viewerIsEntitled} signedIn={signedIn}>
       <AboutPage />
     </AppShell>
   );

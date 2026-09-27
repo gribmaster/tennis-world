@@ -8,7 +8,7 @@ import {
   ArticleRelated,
 } from '@/features/journal-detail';
 import { repositories } from '@/lib/repositories';
-import { isSignedIn } from '@/lib/session.server';
+import { getViewerAuthState } from '@/lib/session.server';
 
 // Journal Detail page (`/journal/[slug]`) — a Phase-1 screen (Feature 18). Resolves
 // the per-article links already emitted by the /journal cards and HomeJournalTeaser
@@ -64,16 +64,16 @@ export default async function JournalDetailPage({
   // slug, and take 3. Page-level (not a repository getRelated()) to avoid an interface
   // change; handles fewer than 3 siblings gracefully (slice never over-reads, and
   // <ArticleRelated> renders nothing for an empty list).
-  const [allArticles, signedIn] = await Promise.all([
+  const [allArticles, { signedIn, viewerIsEntitled }] = await Promise.all([
     repositories.journal.list(),
-    isSignedIn(),
+    getViewerAuthState(),
   ]);
   const related = allArticles
     .filter((a) => a.slug !== article.slug)
     .slice(0, 3);
 
   return (
-    <AppShell unlocked={false} signedIn={signedIn}>
+    <AppShell unlocked={viewerIsEntitled} signedIn={signedIn}>
       <ArticleHero article={article} />
 
       {/* Readable, mobile-first article column: a narrow max-width text measure that

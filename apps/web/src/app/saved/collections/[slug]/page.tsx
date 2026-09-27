@@ -94,7 +94,7 @@ export default async function UserCollectionDetailPage({
 
   return (
     // Private folder — if it rendered, the visitor is signed in.
-    <AppShell unlocked={false} signedIn>
+    <AppShell unlocked={viewerIsEntitled} signedIn>
       <UserCollectionHero collection={collection} courtCount={collection.courts.length} />
       <UserCollectionCourtsGrid
         courts={collection.courts}

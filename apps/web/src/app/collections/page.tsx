@@ -59,16 +59,22 @@ export default async function CollectionsPage() {
     repositories.countries.list(),
   ]);
 
-  // Protected read (Task 42) — degrades for a logged-out visitor on this public page,
-  // exactly as `app/page.tsx` does for saved courts.
+  // Protected reads (Task 42 + Task 52) — degrade together for a logged-out visitor on
+  // this public page, exactly as `app/page.tsx` does for saved courts + membership.
   let savedCollectionIds: string[] = [];
   let signedIn = true;
+  let viewerIsEntitled = false;
   try {
-    const saved = await protectedRepos.saved.getSavedEditorialCollections();
+    const [saved, user] = await Promise.all([
+      protectedRepos.saved.getSavedEditorialCollections(),
+      protectedRepos.user.getCurrentUser(),
+    ]);
     savedCollectionIds = saved.map((c) => c.id);
+    viewerIsEntitled = user.membership !== 'free';
   } catch (err) {
     if (err instanceof AuthRequiredError) {
       signedIn = false;
+      viewerIsEntitled = false;
     } else {
       throw err;
     }
@@ -81,7 +87,7 @@ export default async function CollectionsPage() {
   const isEmpty = collections.length === 0 && countries.length === 0;
 
   return (
-    <AppShell unlocked={false} signedIn={signedIn}>
+    <AppShell unlocked={viewerIsEntitled} signedIn={signedIn}>
       <div className="bg-bone pb-section-lg">
         <CollectionsHero />
 

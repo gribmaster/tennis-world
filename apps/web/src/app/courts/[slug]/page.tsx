@@ -140,29 +140,42 @@ export default async function CourtDetailPage({
   let memberCollectionIds: string[] = [];
   let initialSaved = false;
   let signedIn = true;
+  let viewerIsEntitled = false;
   try {
-    [savedCollections, memberCollectionIds, initialSaved] = await Promise.all([
+    const [collections, ids, saved, user] = await Promise.all([
       protectedRepos.saved.getSavedCollections(),
       protectedRepos.saved.getCollectionIdsForCourt(court.id),
       // Standalone saved-court state for the heart button. Same protected read set; a
       // logged-out visitor's 401 degrades the whole block to signed-out (below), so the
       // button prompts sign-in rather than showing a stale pressed state.
       protectedRepos.saved.isCourtSaved(court.id),
+      // This viewer's real membership (Task 52) — drives the header CTA and the Nearby
+      // Courts masking below, independently of THIS court's own exact-location unlock.
+      protectedRepos.user.getCurrentUser(),
     ]);
+    savedCollections = collections;
+    memberCollectionIds = ids;
+    initialSaved = saved;
+    viewerIsEntitled = user.membership !== 'free';
   } catch (err) {
     if (err instanceof AuthRequiredError) {
       signedIn = false;
+      viewerIsEntitled = false;
     } else {
       throw err;
     }
   }
 
-  // ENTITLEMENT (Feature 64): the locked/unlocked state derives ENTIRELY from the REAL
-  // exact-location unlock (`GET /v1/me/courts/:slug/exact-location`, Feature 63) — the
-  // single source of truth — NOT `court.isLocked` and NOT `UserProfileDTO.membership`
-  // (which would add an extra /v1/me call to this public page). The endpoint IS the
-  // membership gate: 200 ⇒ entitled, 401/403/404 ⇒ not (the repo collapses all three to
-  // `null`). Derived ONCE here and passed down as props — components never recompute it.
+  // ENTITLEMENT (Feature 64): the locked/unlocked state for THIS court derives ENTIRELY
+  // from the REAL exact-location unlock (`GET /v1/me/courts/:slug/exact-location`,
+  // Feature 63) — the single source of truth — NOT `court.isLocked` and NOT
+  // `UserProfileDTO.membership`. The endpoint IS the membership gate: 200 ⇒ entitled,
+  // 401/403/404 ⇒ not (the repo collapses all three to `null`). Derived ONCE here and
+  // passed down as props — components never recompute it. `viewerIsEntitled` above is a
+  // SEPARATE signal (Task 52) — this viewer's real, account-wide membership, independent
+  // of THIS court's own unlock — used for the header CTA and Nearby Courts masking, since
+  // Task 41 made free courts unlock (`locked === false`) for every viewer regardless of
+  // membership.
   //
   // Attempted for EVERY court, regardless of `court.isLocked` — that flag describes the
   // imported/seeded content, not the viewer's entitlement, so gating the call on it would
@@ -189,6 +202,7 @@ export default async function CourtDetailPage({
     memberCollectionIds,
     initialSaved,
     signedIn,
+    viewerIsEntitled,
   };
 
   return locked ? renderLocked(shared) : renderUnlocked(shared);
@@ -204,6 +218,7 @@ interface RenderProps {
   memberCollectionIds: string[];
   initialSaved: boolean;
   signedIn: boolean;
+  viewerIsEntitled: boolean;
 }
 
 function PinGlyph() {
@@ -236,6 +251,7 @@ function renderUnlocked({
   memberCollectionIds,
   initialSaved,
   signedIn,
+  viewerIsEntitled,
 }: RenderProps) {
   // Section gutters follow the prototype's flat 20px on mobile and widen into
   // `.container-page`'s own gutter on desktop, so the card content lines up with the rest
@@ -246,8 +262,10 @@ function renderUnlocked({
   return (
     // `overHero` — the v2 hero is a FULL-BLEED image, so the header sits transparently over
     // it (the same treatment Home uses) rather than as a solid bar with a content offset.
-    // `signedIn` also points the header user icon at /profile vs /signin.
-    <AppShell overHero unlocked signedIn={signedIn}>
+    // `signedIn` also points the header user icon at /profile vs /signin. `unlocked` is the
+    // viewer's REAL membership (Task 52) — not implied by this court's own unlock, since
+    // Task 41 made free courts unlock for every viewer regardless of membership.
+    <AppShell overHero unlocked={viewerIsEntitled} signedIn={signedIn}>
       <CourtDetailShell
         images={court.images}
         heroImageUrl={court.heroImageUrl}
@@ -343,17 +361,17 @@ function renderUnlocked({
 
           {/* Nearby courts. From `getRelated()` — shared country + surface, not proximity.
               No distance is rendered; see CourtDetailNearbyStrip's header for why.
-              Task 26: `viewerIsEntitled={true}` is explicit here — this branch only runs
-              when `locked === false`, i.e. this viewer's real exact-location unlock
-              already proved they are entitled, so the strip's own locked-court masks
-              unmask for them too, not just this court's own name/location above. */}
+              Task 52: uses this viewer's REAL membership, not `locked === false` for THIS
+              court — Task 41 made free courts unlock for every viewer, so a non-paying
+              visitor can reach this branch on a free court and must still see OTHER,
+              premium nearby courts masked. */}
           {related.length > 0 ? (
             <section className="mt-5 md:px-[clamp(20px,4vw,64px)]">
               <div className={column}>
                 <div className="mb-3 flex items-baseline justify-between px-5 md:px-0">
                   <h2 className="text-[16px] font-semibold text-ink">Nearby courts</h2>
                 </div>
-                <CourtDetailNearbyStrip courts={related} viewerIsEntitled={true} />
+                <CourtDetailNearbyStrip courts={related} viewerIsEntitled={viewerIsEntitled} />
               </div>
             </section>
           ) : null}

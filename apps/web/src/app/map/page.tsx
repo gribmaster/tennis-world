@@ -62,7 +62,7 @@ export default async function MapPage({
   const initialQuery = typeof params.q === 'string' ? params.q : '';
 
   return (
-    <AppShell unlocked={false} signedIn={signedIn}>
+    <AppShell unlocked={viewerIsEntitled} signedIn={signedIn}>
       <MapExplorer
         courts={courts}
         pins={pins}

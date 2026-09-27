@@ -58,8 +58,8 @@ import { getRepositoriesForRequest } from '@/lib/repositories.server';
 //
 // `overHero` puts the full-bleed hero behind the transparent app header (which supplies
 // the wordmark and avatar the prototype drew inside its own hero — see HomeHero).
-// `unlocked` stays false: this page renders no gated content, and entitlement is resolved
-// server-side wherever it actually matters.
+// `unlocked` now derives from the same `viewerIsEntitled` (Task 52) so the header CTA and
+// the paywall band both reflect the viewer's real membership.
 export default async function Home() {
   const protectedRepos = await getRepositoriesForRequest();
 
@@ -99,7 +99,7 @@ export default async function Home() {
   }
 
   return (
-    <AppShell overHero unlocked={false} signedIn={signedIn}>
+    <AppShell overHero unlocked={viewerIsEntitled} signedIn={signedIn}>
       <HomeHero />
 
       <HomeExplorer

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { AppShell } from '@/components/layout';
 import { LegalPage, termsContent } from '@/features/static-pages';
-import { isSignedIn } from '@/lib/session.server';
+import { getViewerAuthState } from '@/lib/session.server';
 
 // Terms page (`/terms`) — a static, sectioned legal screen (Feature 29). Resolves
 // the footer "Company → Terms" link.
@@ -20,9 +20,9 @@ export const metadata: Metadata = {
 };
 
 export default async function TermsRoute() {
-  const signedIn = await isSignedIn();
+  const { signedIn, viewerIsEntitled } = await getViewerAuthState();
   return (
-    <AppShell unlocked={false} signedIn={signedIn}>
+    <AppShell unlocked={viewerIsEntitled} signedIn={signedIn}>
       <LegalPage content={termsContent} />
     </AppShell>
   );

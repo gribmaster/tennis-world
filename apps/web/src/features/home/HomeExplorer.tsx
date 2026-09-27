@@ -213,7 +213,7 @@ export function HomeExplorer({
         signedIn={signedIn}
       />
 
-      <HomePaywallBand />
+      {!viewerIsEntitled ? <HomePaywallBand /> : null}
 
       <HomeJournalTeaser articles={articles} />
     </>

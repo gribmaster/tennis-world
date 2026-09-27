@@ -71,7 +71,7 @@ export default async function SavedPage({
   return (
     // Saved is private — if it rendered, the visitor is signed in. Point the header icon
     // at /profile.
-    <AppShell unlocked={false} signedIn>
+    <AppShell unlocked={viewerIsEntitled} signedIn>
       <SavedTabs
         savedCourts={savedCourts}
         savedCollections={savedCollections}

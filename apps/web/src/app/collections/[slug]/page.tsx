@@ -89,7 +89,7 @@ export default async function CollectionDetailPage({
   }
 
   return (
-    <AppShell unlocked={false} signedIn={signedIn}>
+    <AppShell unlocked={viewerIsEntitled} signedIn={signedIn}>
       <CollectionDetailHero collection={collection} />
       <CollectionCourtsGrid
         courts={courts}
