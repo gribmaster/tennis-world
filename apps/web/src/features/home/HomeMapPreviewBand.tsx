@@ -58,6 +58,30 @@ import { PendingCardLink } from '@/components/navigation';
 // is the ONE tap target (`/map`) — `PendingCardLink`, matching the "whole-card links" row
 // in CLAUDE.md §4's table and the intake's own interaction call ("Map-preview band click
 // → /map | Real navigation → PendingCardLink").
+//
+// DESKTOP (`md:`) SPLIT — ORIGINAL LAYOUT, NOT A PROTOTYPE MATCH (Task 53): the source
+// prototype is a 390px-wide mobile-only mock, so there is no desktop reference for this
+// band at all — everything below `md:` is this component's own design, not a fidelity
+// port. At `md:` the stacked mobile layout (image over info bar) becomes a side-by-side
+// row: image on the right (`md:order-2`), title + subtitle + the arrow button stacked
+// vertically on the left (`md:order-1`, `md:flex-col`), vertically centered. The image
+// column drops the mobile `aspect-[1754/896]` ratio (`md:aspect-auto`) and instead
+// stretches to match the text column's height via flex's default `align-items:stretch` —
+// the image `div` has no intrinsic height of its own (`<Image fill>` is
+// `position:absolute`), so its height is driven entirely by the text column's content +
+// `md:py-10` padding, not a hardcoded number. `md:min-h-[260px]` is only a floor for an
+// unusually short text column, not the normal height source. The mobile `border-t`
+// divider becomes `md:border-r`, moving from above/below to between the two columns.
+//
+// CROP DIRECTION FLIPS ON DESKTOP: at mobile width the container and image share one
+// aspect ratio, so `object-cover` crops nothing (see the pin-visibility note above). On
+// desktop the image column (`md:w-[44%]`) is narrower and proportionally taller relative
+// to its own width than the image's native ~1.96:1 ratio, so `object-cover` now crops the
+// LEFT/RIGHT edges to fill the box instead of top/bottom. Verified in the browser at a
+// wide desktop width that all 5 gold pins baked into the source image stay visible with
+// the default center crop — no `object-position` nudge was needed. If a future asset swap
+// moves a pin near the left/right edge, prefer `object-cover object-[<x>%_50%]` on the
+// `<Image>` over changing the column width/aspect.
 
 function ArrowGlyph() {
   return (
@@ -84,28 +108,42 @@ export function HomeMapPreviewBand() {
         <PendingCardLink
           href="/map"
           ariaLabel="Explore the map"
-          className="block overflow-hidden rounded-[14px] shadow-[0_2px_16px_rgba(15,15,15,0.1)]"
+          className="flex flex-col overflow-hidden rounded-[14px] shadow-[0_2px_16px_rgba(15,15,15,0.1)] md:flex-row md:min-h-[300px]"
         >
-          <div className="relative aspect-[1754/896] overflow-hidden">
+          {/* Image: top on mobile (unchanged), RIGHT column on desktop (md:order-2).
+              Mobile keeps the fixed aspect ratio documented above (no crop at full
+              width). Desktop drops that ratio (`md:aspect-auto`) — the div has no
+              content of its own (the Image uses `fill`, which is position:absolute and
+              doesn't contribute to layout height), so with no explicit height it
+              stretches to match the text column's height via flex's default
+              `align-items:stretch`. That means the row's height is driven by the text
+              side's content + padding, not a hardcoded number. */}
+          <div className="relative aspect-[1754/896] overflow-hidden md:aspect-auto md:order-2 md:w-[52%] md:shrink-0">
             <Image
               src="/home/map-preview.png"
               alt=""
               fill
-              sizes="(max-width: 768px) 100vw, 1152px"
+              sizes="(max-width: 768px) 100vw, 507px"
               className="object-cover"
             />
           </div>
 
-          <div className="flex items-center justify-between gap-4 border-t border-hairline bg-ivory px-4 py-3.5">
-            <div className="min-w-0">
-              <p className="serif text-[20px] font-normal leading-tight text-ink">
+          {/* Info: below the image on mobile (unchanged row layout), LEFT column on
+              desktop (md:order-1), switched from a horizontal row to a vertical stack
+              so title → subtitle → button read top-to-bottom instead of
+              text-block-left/button-pinned-right. `md:border-r` replaces the mobile
+              `border-t` divider — same hairline, now vertical between the two columns
+              instead of horizontal between two stacked sections. */}
+          <div className="flex items-center justify-between gap-4 border-t border-hairline bg-ivory px-4 py-3.5 md:order-1 md:w-[48%] md:flex-col md:items-start md:justify-center md:gap-6 md:border-t-0 md:border-r md:px-10 md:py-10">
+            <div className="min-w-0 md:max-w-[300px]">
+              <p className="serif text-[20px] font-normal leading-tight text-ink md:text-[26px]">
                 Explore the map
               </p>
-              <p className="mt-0.5 text-[12px] leading-snug text-stone">
+              <p className="mt-0.5 text-[12px] leading-snug text-stone md:mt-2 md:text-[14px]">
                 Discover 120+ courts in the world&rsquo;s most beautiful locations.
               </p>
             </div>
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[1.5px] border-ink/20 text-ink">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[1.5px] border-ink/20 text-ink md:h-11 md:w-11">
               <ArrowGlyph />
             </span>
           </div>
