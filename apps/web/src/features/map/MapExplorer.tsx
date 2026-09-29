@@ -32,11 +32,13 @@ import {
 // It holds the interactive state (a single `CourtFilterState` — search text plus every
 // selected chip — and the sheet's open/closed flag) and derives the
 // visible set in memory FROM THE PROPS it was handed. Feature 76 added ONE thing to that:
-// the search text can be SEEDED from `?q=` via the `initialQuery` prop (see below), which
-// is how a country card on /collections lands here pre-filtered. It is an initial value
-// only — this component is still the single owner of the live filter state, and every
-// other behaviour on this screen (chips, sheet, reset, geolocation focus) is untouched.
-// It does NOT call a
+// the whole filter state can be SEEDED from the URL via the `initialFilters` prop (see
+// below) — widened in Task 54 from `q`-only to every chip dimension, which is how Home's
+// shortcut row and filter sheet land here pre-filtered, alongside the pre-existing
+// `/map?q=<country>` links from /collections. It is an initial value only — this
+// component is still the single owner of the live filter state, and every other
+// behaviour on this screen (chips, sheet, reset, geolocation focus) is untouched. It does
+// NOT call a
 // repository and does NOT import @tennis/mock-data — the server page
 // (app/map/page.tsx) is the single data boundary and passes the full, unfiltered
 // `courts` + `pins` arrays in as props.
@@ -76,19 +78,20 @@ export interface MapExplorerProps {
   /** Pin positions + state, one per court. Used ONLY for `state`, keyed by `slug`. */
   pins: MapPinDTO[];
   /**
-   * Free-text query to START with (Feature 76). Supplied by `app/map/page.tsx` from
-   * `?q=`, which is how the Collections screen's "By Country" strip arrives here
-   * (`/map?q=<country name>`). Defaults to `''` — the previous always-empty behaviour, so
-   * every other entry point to /map is unchanged.
+   * The filter state to START with (Task 54; previously `initialQuery`, `q`-only).
+   * Supplied by `app/map/page.tsx` from the URL — see `parseCourtFilterSearchParams`.
+   * Defaults to fully empty, so every entry point to /map with no query params is
+   * unchanged (this is also how the Collections screen's "By Country" strip
+   * (`/map?q=<country name>`) keeps working — it only ever populates `q`).
    *
-   * SEED ONLY, NOT A CONTROLLED VALUE: it is the initial value of the `q` field inside
-   * this component's own filter state, and nothing here writes it back to the URL or
-   * re-reads it. MapExplorer stays the single owner of the live filter state — typing in
-   * the search box, toggling a chip, or hitting "reset" all behave exactly as before, and
-   * reset clears back to EMPTY (not back to the seed), because reset means "show
-   * everything".
+   * SEED ONLY, NOT A CONTROLLED VALUE: this is the initial value of this component's
+   * own filter state, and nothing here writes it back to the URL or re-reads it.
+   * MapExplorer stays the single owner of the live filter state — typing in the
+   * search box, toggling a chip, or hitting "reset" all behave exactly as before,
+   * and reset clears back to EMPTY (not back to the seed), because reset means
+   * "show everything".
    */
-  initialQuery?: string;
+  initialFilters?: CourtFilterState;
   /**
    * Whether this viewer carries an active (non-free) membership (Task 26). Resolved
    * server-side, once, in `app/map/page.tsx` — unmasks locked-court names/locations on
@@ -100,7 +103,7 @@ export interface MapExplorerProps {
 export function MapExplorer({
   courts,
   pins,
-  initialQuery = '',
+  initialFilters,
   viewerIsEntitled = false,
 }: MapExplorerProps) {
   const router = useRouter();
@@ -109,10 +112,9 @@ export function MapExplorer({
   // shaped one-to-one against the API's query params. The sheet's open/closed flag is
   // separate: it is view state, not filter state.
   //
-  // Lazy initializer so the seed is read ONCE on mount and never on a re-render; `q` is
-  // the only field it can set, so every chip dimension still starts empty.
-  const [filters, setFilters] = useState<CourtFilterState>(() =>
-    initialQuery ? { ...EMPTY_COURT_FILTER_STATE, q: initialQuery } : EMPTY_COURT_FILTER_STATE,
+  // Lazy initializer so the seed is read ONCE on mount and never on a re-render.
+  const [filters, setFilters] = useState<CourtFilterState>(
+    () => initialFilters ?? EMPTY_COURT_FILTER_STATE,
   );
   const [sheetOpen, setSheetOpen] = useState(false);
 

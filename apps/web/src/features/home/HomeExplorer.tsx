@@ -1,15 +1,15 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { ArticleDTO, CollectionDTO, CourtSummaryDTO } from '@tennis/contracts';
 import {
   FilterSheet,
   EMPTY_COURT_FILTER_STATE,
   countActiveFilters,
+  filterStateToMapHref,
   hasAnyFilter,
-  isOptionSelected,
   narrowCourts,
-  toggleFilterValue,
   type CourtFilterState,
 } from '@/components/filters';
 import { HomeSearchBar } from './HomeSearchBar';
@@ -20,7 +20,6 @@ import { HomeCollectionsTeaser } from './HomeCollectionsTeaser';
 import { HomeJournalTeaser } from './HomeJournalTeaser';
 import { HomePaywallBand } from './HomePaywallBand';
 import { HomeMapPreviewBand } from './HomeMapPreviewBand';
-import { HOME_SHORTCUTS, type HomeShortcut } from './home-shortcuts';
 
 // HomeExplorer — the ONE `'use client'` boundary on the Home screen (Feature 74).
 //
@@ -30,18 +29,16 @@ import { HOME_SHORTCUTS, type HomeShortcut } from './home-shortcuts';
 // repository and does NOT import @tennis/mock-data — `app/page.tsx` is the single data
 // boundary and passes the full, unfiltered arrays in.
 //
-// ONE STATE, THREE EDITORS (the brief's requirement that shortcuts and the sheet agree):
-// the search field, the icon-shortcut row and the shared `FilterSheet` all read and write
-// the SAME `CourtFilterState` object. A shortcut is not a parallel `activeFilter` id — it
-// is a `CourtFilterOption`, the same value type a sheet chip is (see home-shortcuts.ts) —
-// so a selection made in one surface is visibly lit in the other with no translation and
-// no possibility of drift. The prototype kept them separate, and its sheet's "Show
-// results" was a literal no-op comment; that split is precisely what is not reproduced.
+// ONE LOCAL STATE, ONE NAVIGATING SURFACE (Task 54): the search field still narrows
+// Home's own in-memory strip through the SAME `CourtFilterState` object as before. The
+// icon-shortcut row and the shared `FilterSheet`'s primary action no longer write into
+// that state, though — both now hand off to `/map` (via `filterStateToMapHref`), already
+// filtered, instead of narrowing Home's own (much shorter) list in place. The prototype's
+// "Show results" was a literal no-op; this screen's version is a real navigation.
 //
-// SHARED MODULE CONSUMED UNMODIFIED: `FilterSheet`, `CourtFilterState`, `narrowCourts`,
-// `toggleFilterValue`, `countActiveFilters` and `isOptionSelected` are used exactly as
-// Feature 73 shipped them. Nothing under `components/filters/` was edited for Home, and
-// nothing needed to be.
+// SHARED MODULE CONSUMED UNMODIFIED: `FilterSheet`, `CourtFilterState`, `narrowCourts`
+// and `countActiveFilters` are used exactly as Feature 73 shipped them. Nothing under
+// `components/filters/` was edited for Home's own local-state handling.
 //
 // SCALING LIMIT (the same hedge Feature 73 and MapExplorer made, stated again because
 // this screen now narrows the full catalogue rather than six rows): narrowing runs
@@ -88,6 +85,8 @@ export function HomeExplorer({
   signedIn,
   viewerIsEntitled = false,
 }: HomeExplorerProps) {
+  const router = useRouter();
+
   // ONE state object for every dimension the visitor can narrow by (chips + free text).
   // The sheet's open flag is separate: it is view state, not filter state.
   const [filters, setFilters] = useState<CourtFilterState>(EMPTY_COURT_FILTER_STATE);
@@ -124,14 +123,10 @@ export function HomeExplorer({
     return (featured.length > 0 ? featured : courts).slice(0, FEATURED_STRIP_LIMIT);
   }, [courts, isFiltered, matchingCourts]);
 
-  // The heading becomes the active shortcut's label (prototype line 523). With two or
-  // more shortcuts lit no single label is truthful, so it falls back to a neutral one.
-  const stripTitle = useMemo(() => {
-    const lit = HOME_SHORTCUTS.filter((shortcut) => isOptionSelected(filters, shortcut.option));
-    if (lit.length === 1 && lit[0]) return lit[0].label;
-    if (isFiltered) return 'Courts';
-    return 'Featured courts';
-  }, [filters, isFiltered]);
+  // No shortcut can ever be "active" in Home's own state anymore (Task 54 — shortcuts
+  // navigate to /map instead of setting local state), so the heading only ever reflects
+  // the free-text query.
+  const stripTitle = isFiltered ? 'Courts' : 'Featured courts';
 
   // Editor's Cut keeps showing editorial picks from the full set — it is a curated stack,
   // not a view of the filter, so a shortcut does not empty it.
@@ -145,14 +140,16 @@ export function HomeExplorer({
     setFilters((prev) => ({ ...prev, q }));
   }, []);
 
-  const handleToggleShortcut = useCallback((shortcut: HomeShortcut) => {
-    setFilters((prev) => toggleFilterValue(prev, shortcut.option.key, shortcut.option.value));
-  }, []);
+  // handleToggleShortcut is REMOVED — HomeShortcutsRow now builds its own /map hrefs
+  // directly (Task 54) and needs no callback from here.
 
-  const handleApplyFilters = useCallback((next: CourtFilterState) => {
-    setFilters(next);
-    setSheetOpen(false);
-  }, []);
+  const handleApplyFilters = useCallback(
+    (next: CourtFilterState) => {
+      setSheetOpen(false);
+      router.push(filterStateToMapHref(next));
+    },
+    [router],
+  );
 
   const handleCloseSheet = useCallback(() => setSheetOpen(false), []);
   const handleOpenSheet = useCallback(() => setSheetOpen(true), []);
@@ -173,16 +170,18 @@ export function HomeExplorer({
         viewerIsEntitled={viewerIsEntitled}
       />
 
-      <HomeShortcutsRow state={filters} onToggle={handleToggleShortcut} />
+      <HomeShortcutsRow queryText={filters.q} />
 
       {/* The SHARED sheet (components/filters), mounted unmodified — the same component
           instance type MapExplorer mounts. Draft-then-apply lives inside it: nothing here
-          changes until "Show results" fires `onApply`. */}
+          changes until the primary button fires `onApply`, which now navigates to /map
+          (Task 54) rather than committing locally, so the label says so. */}
       <FilterSheet
         open={sheetOpen}
         state={filters}
         onApply={handleApplyFilters}
         onClose={handleCloseSheet}
+        primaryCtaLabel="View on map"
       />
 
       {/* Map preview band (Task 30) — both blockers behind Feature 74's deferral are now

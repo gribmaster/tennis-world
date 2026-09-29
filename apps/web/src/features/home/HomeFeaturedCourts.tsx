@@ -137,7 +137,7 @@ export function HomeFeaturedCourts({
             {(scrollRef) => (
               <ul
                 ref={scrollRef}
-                className="no-scrollbar -mr-[clamp(20px,4vw,64px)] flex gap-3.5 overflow-x-auto pb-1"
+                className="no-scrollbar flex gap-3.5 overflow-x-auto pb-1"
               >
                 {courts.map((court, index) => {
                   const display = courtDisplay(court, viewerIsEntitled);
@@ -182,18 +182,18 @@ export function HomeFeaturedCourts({
                         ) : null}
 
                         <span className="absolute inset-x-0 bottom-0 block px-3.5 pb-4 pt-5">
+                          <span className="serif mb-[5px] block text-[20px] font-normal leading-tight text-paper">
+                            {display.name}
+                          </span>
                           <span className="mb-2 flex flex-wrap gap-1.5">
                             {courtCategoryTags(court).map((tag) => (
-                              <span
-                                key={tag}
-                                className="inline-flex rounded-pill border border-paper/35 bg-bone/20 px-2.5 py-1 text-[11px] font-medium tracking-[0.03em] text-paper backdrop-blur-sm"
-                              >
+                                <span
+                                    key={tag}
+                                    className="inline-flex rounded-pill border border-paper/35 bg-bone/20 px-2.5 py-1 text-[11px] font-medium tracking-[0.03em] text-paper backdrop-blur-sm"
+                                >
                                 {tag}
                               </span>
                             ))}
-                          </span>
-                          <span className="serif mb-[5px] block text-[20px] font-normal leading-tight text-paper">
-                            {display.name}
                           </span>
                           <span className="block text-[13px] text-paper/70">
                             {display.location}

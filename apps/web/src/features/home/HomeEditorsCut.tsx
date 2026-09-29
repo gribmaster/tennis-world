@@ -134,18 +134,18 @@ export function HomeEditorsCut({
                   ) : null}
 
                   <span className="absolute inset-x-0 bottom-0 block px-4 pb-4 pt-6">
+                    <span className="serif mb-[5px] block text-[24px] font-normal leading-[30px] text-paper">
+                      {display.name}
+                    </span>
                     <span className="mb-2 flex flex-wrap gap-1.5">
                       {courtCategoryTags(court).map((tag) => (
-                        <span
-                          key={tag}
-                          className="inline-flex rounded-pill border border-paper/35 bg-bone/20 px-2.5 py-1 text-[11px] font-medium tracking-[0.03em] text-paper backdrop-blur-sm"
-                        >
+                          <span
+                              key={tag}
+                              className="inline-flex rounded-pill border border-paper/35 bg-bone/20 px-2.5 py-1 text-[11px] font-medium tracking-[0.03em] text-paper backdrop-blur-sm"
+                          >
                           {tag}
                         </span>
                       ))}
-                    </span>
-                    <span className="serif mb-[5px] block text-[24px] font-normal leading-[30px] text-paper">
-                      {display.name}
                     </span>
                     <span className="block text-[13px] text-paper/70">{display.location}</span>
                   </span>

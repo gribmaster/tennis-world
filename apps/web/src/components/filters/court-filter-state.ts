@@ -219,6 +219,77 @@ export function toCourtQuery(state: CourtFilterState): {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// State ⇄ URL (Task 54) — lets a filter chosen on Home hand off to /map already
+// applied, instead of narrowing Home's own (much shorter) in-memory list.
+//
+// NOT `toCourtQuery`: that function's shape is dictated by `GET /v1/courts`'s
+// SINGLE-VALUE-per-dimension limitation (see its own comment above). This mapping
+// is a purely CLIENT-SIDE seed for MapExplorer's own `narrowCourts`, which already
+// supports multiple values per dimension today — so every dimension here may
+// carry more than one value, with no "unsupported" caveat.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** One raw query value, in whatever shape Next's `searchParams` hands it back. */
+type RawSearchParamValue = string | string[] | undefined;
+
+/** Serialize a filter selection into `/map` query params (comma-joined per dimension). */
+export function filterStateToSearchParams(state: CourtFilterState): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const key of DIMENSION_KEYS) {
+    const values = state[key] as readonly unknown[];
+    if (values.length > 0) params.set(key, values.map(String).join(','));
+  }
+  const q = state.q.trim();
+  if (q) params.set('q', q);
+  return params;
+}
+
+/** `filterStateToSearchParams`, joined into a ready `/map` (or `/map?...`) href. */
+export function filterStateToMapHref(state: CourtFilterState): string {
+  const qs = filterStateToSearchParams(state).toString();
+  return qs ? `/map?${qs}` : '/map';
+}
+
+const VALID_TAGS = new Set<string>(COURT_TAGS);
+const VALID_SURFACES = new Set<string>(SurfaceEnum.options);
+const VALID_ACCESS = new Set<string>(AccessTypeEnum.options);
+const VALID_INDOOR_OUTDOOR = new Set<string>(IndoorOutdoorEnum.options);
+
+function splitValues(raw: RawSearchParamValue): string[] {
+  if (raw === undefined) return [];
+  // A repeated `?tags=a&tags=b` collapses to Next's array form; take the first
+  // (matches `map/page.tsx`'s existing tolerance for a repeated `?q=`). A single
+  // param can ALSO carry a comma-joined list — that's how this module itself
+  // writes multiple values — so split on comma either way.
+  const first = Array.isArray(raw) ? raw[0] : raw;
+  return typeof first === 'string'
+    ? first.split(',').map((v) => v.trim()).filter(Boolean)
+    : [];
+}
+
+/**
+ * Parse `/map`'s raw `searchParams` object back into a full `CourtFilterState`.
+ * UNTRUSTED URL INPUT: every chip value is checked against its real contract enum;
+ * anything unrecognized is silently DROPPED, never coerced or thrown on — the same
+ * philosophy `map/page.tsx` already documents for a non-string `q`.
+ */
+export function parseCourtFilterSearchParams(
+  raw: Record<string, RawSearchParamValue>,
+): CourtFilterState {
+  const tags = splitValues(raw.tags).filter((v): v is CourtTag => VALID_TAGS.has(v));
+  const surface = splitValues(raw.surface).filter((v): v is Surface => VALID_SURFACES.has(v));
+  const access = splitValues(raw.access).filter((v): v is AccessType => VALID_ACCESS.has(v));
+  const indoorOutdoor = splitValues(raw.indoorOutdoor).filter(
+    (v): v is IndoorOutdoor => VALID_INDOOR_OUTDOOR.has(v),
+  );
+  const scenic: boolean[] = splitValues(raw.scenic).includes('true') ? [true] : [];
+  const qRaw = Array.isArray(raw.q) ? raw.q[0] : raw.q;
+  const q = typeof qRaw === 'string' ? qRaw : '';
+
+  return { tags, surface, access, indoorOutdoor, scenic, q };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // State → client predicate (derived from the SAME dimensions)
 // ─────────────────────────────────────────────────────────────────────────────
 

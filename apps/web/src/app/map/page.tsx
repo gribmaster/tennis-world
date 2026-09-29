@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { AppShell } from '@/components/layout';
+import { parseCourtFilterSearchParams } from '@/components/filters';
 import { MapExplorer } from '@/features/map';
 import { repositories } from '@/lib/repositories';
 import { getViewerAuthState } from '@/lib/session.server';
@@ -11,8 +12,9 @@ import { getViewerAuthState } from '@/lib/session.server';
 // fetches ONCE, unfiltered, and hands the full dataset to the single `'use client'`
 // MapExplorer, which owns the search/filter state and narrows the arrays in memory
 // (see MapExplorer for why filtering is client-side in Phase 1). The fetch is UNCHANGED
-// by the `?q=` support added in Feature 76 — `q` only seeds the client's initial query;
-// it is not a server-side filter:
+// by the URL-seeded filter state (Feature 76's `?q=`, widened in Task 54 to every chip
+// dimension) — the URL only seeds the client's initial filter state; it is not a
+// server-side filter:
 //   • repositories.courts.list()       → CourtSummaryDTO[] (list panel + filter source)
 //   • repositories.courts.getMapPins() → MapPinDTO[]       (canvas pin positions/state)
 //
@@ -38,14 +40,18 @@ export const metadata: Metadata = {
 export default async function MapPage({
   searchParams,
 }: {
-  // Next 15: `searchParams` is async and must be awaited. The ONLY param this page reads
-  // is `q` — the initial free-text query (Feature 76). The Collections screen's "By
-  // Country" strip links here as `/map?q=<country name>`, and `GET /v1/courts`'s `q`
-  // (and the in-memory `narrowCourts` predicate the client uses) already searches the
-  // country name, so the country filter needs no new filter dimension. Nothing else about
-  // the map reads the URL: the query is an INITIAL value only, and MapExplorer remains the
-  // single owner of the live filter state.
-  searchParams: Promise<{ q?: string }>;
+  // Next 15: `searchParams` is async and must be awaited. Every chip dimension
+  // (`tags`, `surface`, `access`, `indoorOutdoor`, `scenic`) plus the free-text `q`
+  // can arrive here now (Task 54) — Home's shortcut row and filter sheet both link
+  // here pre-filtered instead of narrowing Home's own much smaller in-memory list.
+  // Parsed by the shared, framework-free `parseCourtFilterSearchParams`
+  // (components/filters), which validates every chip value against its real
+  // contract enum and drops anything unrecognized — untrusted URL input is never
+  // trusted blindly. Still an INITIAL value only: MapExplorer remains the single
+  // owner of the live filter state (unchanged from the `q`-only behavior before
+  // this task). The Collections screen's "By Country" strip still links here as
+  // `/map?q=<country name>` and parses to exactly the same result as before.
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const [courts, pins, { signedIn, viewerIsEntitled }, params] = await Promise.all([
     repositories.courts.list(),
@@ -57,16 +63,14 @@ export default async function MapPage({
     searchParams,
   ]);
 
-  // A repeated `?q=` yields an array under Next's parsing; the type above narrows to the
-  // single-value case, and a non-string is simply ignored rather than coerced.
-  const initialQuery = typeof params.q === 'string' ? params.q : '';
+  const initialFilters = parseCourtFilterSearchParams(params);
 
   return (
     <AppShell unlocked={viewerIsEntitled} signedIn={signedIn}>
       <MapExplorer
         courts={courts}
         pins={pins}
-        initialQuery={initialQuery}
+        initialFilters={initialFilters}
         viewerIsEntitled={viewerIsEntitled}
       />
     </AppShell>

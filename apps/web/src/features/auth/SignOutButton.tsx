@@ -71,7 +71,7 @@ export function SignOutButton({ className }: SignOutButtonProps) {
       aria-disabled={busy || undefined}
       className={[className, 'text-clay transition-opacity hover:opacity-70 disabled:opacity-50'].join(' ')}
     >
-      <span className="body-l inline-flex items-center gap-2">
+      <span className="block text-[14px] font-normal text-ink">
         {busy ? <InlineSpinner label="Signing out…" /> : null}
         {busy ? 'Signing out…' : 'Sign Out'}
       </span>

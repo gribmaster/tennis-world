@@ -89,7 +89,7 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
 
       <div className="flex-1">
         <h1 className="serif text-[26px] font-normal leading-[1.1] text-ink">{user.name}</h1>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
+        <div className="mt-2 flex flex-wrap items-center gap-2 hidden">
           {badgeLabel ? (
             <Badge tone="gold">{badgeLabel}</Badge>
           ) : (

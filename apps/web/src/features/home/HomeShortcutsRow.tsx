@@ -1,8 +1,13 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { isOptionSelected, type CourtFilterState } from '@/components/filters';
-import { HOME_SHORTCUTS, type HomeShortcut } from './home-shortcuts';
+import { PendingCardLink } from '@/components/navigation';
+import {
+  EMPTY_COURT_FILTER_STATE,
+  filterStateToMapHref,
+  toggleFilterValue,
+} from '@/components/filters';
+import { HOME_SHORTCUTS } from './home-shortcuts';
 
 // HomeShortcutsRow — the horizontally scrolling circular-icon filter row (Feature 74),
 // from the prototype's HomeScreen (design_v2_stripped.html:469–481).
@@ -16,19 +21,18 @@ import { HOME_SHORTCUTS, type HomeShortcut } from './home-shortcuts';
 //   • the row is `.h-scroll` at `gap:4` (line 471) — a plain overflow-x row, no carousel.
 //   • 22px glyphs (line 474).
 //
-// SHARED STATE, NOT A SECOND VOCABULARY: each shortcut is a `CourtFilterOption` (see
-// home-shortcuts.ts) — the same type the FilterSheet's own chips are. Selection is read
-// with the shared `isOptionSelected` and written by emitting the option upward, so a
-// shortcut lit here is a chip lit in the sheet, and vice versa, with no mapping step. The
-// prototype instead kept a separate `activeFilter` id that its filter sheet ignored
-// entirely; that split is exactly what this does not reproduce.
+// NAVIGATION, NOT A LOCAL TOGGLE (Task 54): tapping a shortcut now navigates straight to
+// `/map` with the equivalent filter pre-applied, instead of narrowing Home's own (much
+// shorter) in-memory list in place. Because the tap leaves Home immediately, there is no
+// meaningful "currently active" shortcut to show on Home itself — this is a static row of
+// links, not a controlled toggle group, and it carries no `state`/`onToggle` props. Each
+// shortcut's href is built with the shared `toggleFilterValue` (on a throwaway empty seed,
+// carrying Home's current free-text query) + `filterStateToMapHref`, so the URL scheme is
+// the exact same one `FilterSheet`'s "View on map" button produces (see
+// `components/filters/court-filter-state.ts`).
 //
-// PENDING STATES (CLAUDE.md §4 rule 10): these are LOCAL UI TOGGLES. Tapping one narrows
-// an already-fetched in-memory array — no navigation, no repository call, nothing that can
-// be in flight or fail. So no PendingButton, no spinner: an indicator here would claim
-// work that is not happening. Each is a plain toggle `<button>` with `aria-pressed`, which
-// is what rule 9 permits (the rule bars a raw button where a primitive COVERS the case —
-// no primitive covers, or should cover, a local toggle).
+// PENDING STATE: this is real navigation (CLAUDE.md §4 rule 1 — whole-tile navigation),
+// so each shortcut uses `PendingCardLink` rather than a plain toggle button.
 //
 // PRESENTATIONAL & controlled: no state of its own, no fetching, no @tennis/mock-data.
 
@@ -108,13 +112,15 @@ function ShortcutGlyph({ id, className }: { id: string, className: string }) {
 }
 
 export interface HomeShortcutsRowProps {
-  /** The committed filter state — the shortcuts read their lit/unlit look from it. */
-  state: CourtFilterState;
-  /** Toggle one shortcut's value in the shared state. */
-  onToggle: (shortcut: HomeShortcut) => void;
+  /**
+   * Home's current free-text query (Task 54) — carried into each shortcut's
+   * `/map?...` link so a visitor who already typed something and then taps a
+   * shortcut lands on Map with BOTH narrowings applied, not just the shortcut's.
+   */
+  queryText?: string;
 }
 
-export function HomeShortcutsRow({ state, onToggle }: HomeShortcutsRowProps) {
+export function HomeShortcutsRow({ queryText = '' }: HomeShortcutsRowProps) {
   return (
     <section className="pt-5 home-categories" id="home-categories">
       <div className="container-page">
@@ -124,35 +130,30 @@ export function HomeShortcutsRow({ state, onToggle }: HomeShortcutsRowProps) {
           aria-label="Filter courts by experience"
         >
           {HOME_SHORTCUTS.map((shortcut) => {
-            const active = isOptionSelected(state, shortcut.option);
+            const href = filterStateToMapHref(
+              toggleFilterValue(
+                { ...EMPTY_COURT_FILTER_STATE, q: queryText },
+                shortcut.option.key,
+                shortcut.option.value,
+              ),
+            );
             return (
-              <button
+              <PendingCardLink
                 key={shortcut.id}
-                type="button"
-                onClick={() => onToggle(shortcut)}
-                aria-pressed={active}
+                href={href}
+                ariaLabel={`${shortcut.label} — view on the map`}
                 className="flex min-w-[64px] shrink-0 flex-col items-center gap-2 py-1"
               >
                 <span
-                  className={[
-                    'flex h-[52px] md:h-[70px] w-[52px] md:w-[70px] items-center justify-center rounded-pill border transition-colors',
-                    active
-                      ? 'border-ink bg-ink text-bone'
-                      : 'border-ink/10 bg-paper text-stone',
-                  ].join(' ')}
-                  style={active ? undefined : { boxShadow: '0 1px 4px rgba(15,15,15,0.08)' }}
+                  className="flex h-[52px] md:h-[70px] w-[52px] md:w-[70px] items-center justify-center rounded-pill border border-ink/10 bg-paper text-stone transition-colors"
+                  style={{ boxShadow: '0 1px 4px rgba(15,15,15,0.08)' }}
                 >
-                  <ShortcutGlyph id={shortcut.id} className={"md:w-[30px] md:h-[30px]"} />
+                  <ShortcutGlyph id={shortcut.id} className="md:w-[30px] md:h-[30px]" />
                 </span>
-                <span
-                  className={[
-                    'text-center text-[11px] md:text-[14px] leading-tight',
-                    active ? 'font-medium text-ink' : 'text-stone',
-                  ].join(' ')}
-                >
+                <span className="text-center text-[11px] md:text-[14px] leading-tight text-stone">
                   {shortcut.label}
                 </span>
-              </button>
+              </PendingCardLink>
             );
           })}
         </div>

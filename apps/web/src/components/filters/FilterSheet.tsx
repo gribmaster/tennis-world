@@ -86,9 +86,22 @@ export interface FilterSheetProps {
   onApply: (next: CourtFilterState) => void;
   /** Dismiss without committing (backdrop, Escape, close control). */
   onClose: () => void;
+  /**
+   * Label for the primary commit button. Defaults to "Show results" (Map's own
+   * in-place apply, unchanged). Home passes "View on map" (Task 54) since
+   * applying there now NAVIGATES to /map instead of narrowing Home's own list in
+   * place — the label should say what will actually happen.
+   */
+  primaryCtaLabel?: string;
 }
 
-export function FilterSheet({ open, state, onApply, onClose }: FilterSheetProps) {
+export function FilterSheet({
+  open,
+  state,
+  onApply,
+  onClose,
+  primaryCtaLabel = 'Show results',
+}: FilterSheetProps) {
   const titleId = useId();
   const sheetRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -244,7 +257,7 @@ export function FilterSheet({ open, state, onApply, onClose }: FilterSheetProps)
         {/* Commit. Full-width 52px primary — the existing `.btn .btn-primary`. */}
         <div className="px-5">
           <button type="button" onClick={handleApply} className="btn btn-primary w-full">
-            Show results
+            {primaryCtaLabel}
           </button>
         </div>
       </div>
