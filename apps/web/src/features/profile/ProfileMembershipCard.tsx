@@ -89,9 +89,6 @@ export function ProfileMembershipCard({
           <div className="body-m text-bone/90">{ACTIVE_SUBHEAD[membership]}</div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="eyebrow inline-flex items-center gap-1 rounded-pill border border-gold px-2.5 py-1 text-gold">
-            ✦ Active
-          </span>
           {/* Existing "manage subscription" mechanism (Feature 67) — the hosted Stripe
               Customer Portal, not a new billing surface. */}
           <ManageBillingButton className="body-s text-stone underline underline-offset-2 transition-colors hover:text-ink">
