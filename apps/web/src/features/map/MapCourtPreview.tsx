@@ -12,9 +12,12 @@ import { haversineDistanceKm } from './geo-distance';
 // MapCourtPreview — the mobile "tap a pin" preview card (Task 27/28/29, Feature 86:
 // `MapScreen`'s `selectPin`/bottom-sheet interaction in
 // `new design/tennis_world_v2_standalone.html`, lines ~837–990). `position: fixed`,
-// docked to the bottom of the SCREEN (just above the mobile tab bar — Task 29), as an
-// ADDITIVE overlay — it does not replace the persistent horizontal CourtCard strip
-// MapCourtList already renders below the canvas on mobile.
+// docked to the very bottom of the SCREEN (above the safe area — TASK_55 removed the
+// mobile tab bar this used to dock above). Rendered by `MapExpandedModal` (TASK_57
+// moved it there along with the rest of the interactive map); because it mounts
+// INSIDE the modal's stacking context (the modal backdrop is itself `position: fixed`
+// with a z-index, which contains its fixed descendants for painting purposes), this
+// still sits above the map canvas without any extra z-index wiring.
 //
 // TWO-STAGE SHEET (Task 28): tapping the compact card (or the drag handle) expands it in
 // place — no navigation. Only "View details"/"Unlock access" and a "More courts nearby"
@@ -210,7 +213,7 @@ export function MapCourtPreview({
   }, [visibleCourts, court]);
 
   return (
-    <div className="fixed inset-x-0 bottom-[calc(56px+env(safe-area-inset-bottom))] z-40 rounded-t-xl bg-paper shadow-card md:hidden">
+    <div className="fixed inset-x-0 bottom-0 z-40 rounded-t-xl bg-paper pb-[env(safe-area-inset-bottom)] shadow-card md:hidden">
       <button
         type="button"
         onClick={onClose}

@@ -46,15 +46,29 @@ export interface MapLocateControlProps {
   error: GeolocationError | null;
   /** Re-run the shared locate → nearest-court → focus flow. */
   onLocate: () => void;
+  /**
+   * Overrides the default `top-3` vertical offset (e.g. `"top-16"`) — TASK_57's
+   * `MapExpandedModal` has a close button at `top-3`/`right-3` that this control would
+   * otherwise collide with. Every other caller is unaffected: omitting this prop keeps
+   * the original `top-3` position exactly as before.
+   */
+  className?: string;
 }
 
-export function MapLocateControl({ pending, error, onLocate }: MapLocateControlProps) {
+export function MapLocateControl({ pending, error, onLocate, className }: MapLocateControlProps) {
   return (
-    // Overlaid on the map canvas at top-RIGHT: Leaflet's zoom control sits top-left and the
-    // attribution bottom-right, so nothing is covered. `z-[1000]` clears Leaflet's control
-    // panes (max 800). The wrapper is `pointer-events-none` so the empty space beside the
-    // button never intercepts a map drag.
-    <div className="pointer-events-none absolute right-3 top-3 z-[1000] flex flex-col items-end gap-2">
+    // Overlaid on the map canvas at top-RIGHT by default: Leaflet's zoom control sits
+    // top-left and the attribution bottom-right, so nothing is covered. `z-[1000]` clears
+    // Leaflet's control panes (max 800). The wrapper is `pointer-events-none` so the empty
+    // space beside the button never intercepts a map drag. The vertical offset is a single
+    // class (defaulting to `top-3`) rather than an always-present `top-3` plus an appended
+    // override, so two conflicting `top-*` utilities of equal specificity never both apply.
+    <div
+      className={[
+        'pointer-events-none absolute right-3 z-[1000] flex flex-col items-end gap-2',
+        className ?? 'top-3',
+      ].join(' ')}
+    >
       <button
         type="button"
         onClick={onLocate}

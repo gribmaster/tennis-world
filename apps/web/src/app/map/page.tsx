@@ -2,11 +2,14 @@ import type { Metadata } from 'next';
 import { AppShell } from '@/components/layout';
 import { parseCourtFilterSearchParams } from '@/components/filters';
 import { MapExplorer } from '@/features/map';
-import { repositories } from '@/lib/repositories';
+import { repositories, AuthRequiredError } from '@/lib/repositories';
+import { getRepositoriesForRequest } from '@/lib/repositories.server';
 import { getViewerAuthState } from '@/lib/session.server';
 
-// Map page (`/map`) — a required Phase-1 screen (Feature 13/14). Resolves the three
-// live CTAs that point here ("Explore the Map", "Unlock Map", "View all courts").
+// Courts screen (`/map`) — a required Phase-1 screen (Feature 13/14), rebuilt as a v3
+// card screen in TASK_57 (route stays `/map`; only the nav label became "Courts" in
+// TASK_55). Resolves the three live CTAs that point here ("Explore the Map", "Unlock
+// Map", "View all courts").
 //
 // This is a SERVER component and the ONLY repository boundary on the screen. It
 // fetches ONCE, unfiltered, and hands the full dataset to the single `'use client'`
@@ -15,22 +18,28 @@ import { getViewerAuthState } from '@/lib/session.server';
 // by the URL-seeded filter state (Feature 76's `?q=`, widened in Task 54 to every chip
 // dimension) — the URL only seeds the client's initial filter state; it is not a
 // server-side filter:
-//   • repositories.courts.list()       → CourtSummaryDTO[] (list panel + filter source)
-//   • repositories.courts.getMapPins() → MapPinDTO[]       (canvas pin positions/state)
+//   • repositories.courts.list()       → CourtSummaryDTO[] (card grid + filter source)
+//   • repositories.courts.getMapPins() → MapPinDTO[]       (map marker positions/state)
 //
 // Feature 74 (engine migrated to Google Maps in Feature 88): markers are plotted on a
 // REAL map from each court's APPROXIMATE geo (`approxLat`/`approxLng`) — exact `lat`/
 // `lng` are not part of these DTOs and never reach the client (Architecture Plan §9
-// Risk #17). No
-// payments here; the `pins` read supplies only pin state.
+// Risk #17). No payments here; the `pins` read supplies only pin state.
 //
-// NEAREST-COURT AUTO-FOCUS: MapExplorer asks the BROWSER for the visitor's position on
-// first load and flies to the nearest court. That is entirely client-side — this page
-// stays a plain server read of the same two court sources, there is no location-aware
-// endpoint, and the visitor's coordinates never reach the server or the database.
+// SAVED-COURT IDS (TASK_57): a PROTECTED read, mirroring the same degrade-on-
+// AuthRequiredError block `app/collections/[slug]/page.tsx` / `app/page.tsx` already
+// use for this public screen — a logged-out visitor in `api` mode degrades to an empty
+// saved set rather than a redirect or a crash. Seeds every card's save-button initial
+// state; `MapExplorer` is the one that lifts it into live state (see its own header).
 //
-// NOT `overHero` — the map screen has no full-bleed hero, so the header uses its
-// standard solid bar + 72px content offset (same as Court Detail).
+// NEAREST-COURT AUTO-FOCUS moved into `MapExpandedModal` in TASK_57 — it now asks the
+// BROWSER for the visitor's position only once that modal is opened, not on this page's
+// load. That remains entirely client-side: this page stays a plain server read of the
+// same two court sources, there is no location-aware endpoint, and the visitor's
+// coordinates never reach the server or the database.
+//
+// NOT `overHero` — the Courts screen has no full-bleed hero, so the header uses its
+// standard solid bar + `--nav-offset` content offset (same as Court Detail).
 
 export const metadata: Metadata = {
   title: 'Map — Tennis World',
@@ -65,13 +74,31 @@ export default async function MapPage({
 
   const initialFilters = parseCourtFilterSearchParams(params);
 
+  // Protected read — degrades for a logged-out visitor on this public page, exactly
+  // like `app/collections/[slug]/page.tsx` / `app/page.tsx`'s own block.
+  let savedCourtIds: string[] = [];
+  if (signedIn) {
+    try {
+      const protectedRepos = await getRepositoriesForRequest();
+      const saved = await protectedRepos.saved.getSavedCourts();
+      savedCourtIds = saved.map((court) => court.id);
+    } catch (err) {
+      if (!(err instanceof AuthRequiredError)) {
+        // A real fault (5xx, network) must surface rather than masquerade as "no saves".
+        throw err;
+      }
+    }
+  }
+
   return (
-    <AppShell unlocked={viewerIsEntitled} signedIn={signedIn}>
+    <AppShell signedIn={signedIn}>
       <MapExplorer
         courts={courts}
         pins={pins}
         initialFilters={initialFilters}
         viewerIsEntitled={viewerIsEntitled}
+        signedIn={signedIn}
+        savedCourtIds={savedCourtIds}
       />
     </AppShell>
   );
