@@ -1,0 +1,1589 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tennis World</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Tennis World — Design v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.29.0/babel.min.js" crossorigin="anonymous"></script>
+<style>
+:root {
+  --ink: #0F0F0F;
+  --graphite: #2A2A2A;
+  --stone: #6B6B6B;
+  --mist: #B8B8B6;
+  --bone: #F5F2EC;
+  --ivory: #FAF8F3;
+  --clay: #B95C3A;
+  --moss: #4A5D3F;
+  --gold: #B89968;
+  --paper: #FFFFFF;
+  --shadow: rgba(15,15,15,0.08);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{background:#E8E4DC;}
+body{font-family:'Inter',-apple-system,sans-serif;color:var(--ink);background:#E8E4DC;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:24px 16px 48px;}
+
+/* Phone shell */
+.phone{width:390px;min-height:844px;background:var(--bone);border-radius:48px;overflow:hidden;position:relative;box-shadow:0 32px 80px rgba(0,0,0,0.32),0 0 0 1px rgba(255,255,255,0.12);flex-shrink:0;}
+.phone-inner{width:100%;min-height:844px;overflow-y:auto;overflow-x:hidden;position:relative;scroll-behavior:smooth;}
+.phone-inner::-webkit-scrollbar{display:none;}
+
+/* Status bar */
+.status-bar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:relative;z-index:10;}
+.status-time{font-size:15px;font-weight:600;color:var(--ink);}
+.status-icons{display:flex;align-items:center;gap:6px;}
+.status-bar.light .status-time,.status-bar.light .status-icons{color:#fff;}
+
+/* Typography */
+.serif{font-family:'Cormorant Garamond',Georgia,serif;}
+.display-xl{font-family:'Cormorant Garamond',serif;font-size:44px;line-height:48px;font-weight:300;letter-spacing:-0.02em;}
+.display-l{font-family:'Cormorant Garamond',serif;font-size:32px;line-height:38px;font-weight:300;letter-spacing:-0.02em;}
+.display-m{font-family:'Cormorant Garamond',serif;font-size:24px;line-height:30px;font-weight:400;letter-spacing:-0.01em;}
+.headline{font-size:20px;line-height:26px;font-weight:500;}
+.body-l{font-size:17px;line-height:26px;font-weight:400;}
+.body-m{font-size:15px;line-height:22px;font-weight:400;}
+.body-s{font-size:13px;line-height:20px;font-weight:400;}
+.caption{font-size:11px;line-height:16px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;}
+
+/* Bottom nav — floating pill */
+.bottom-nav{position:sticky;bottom:18px;margin:0 16px;background:rgba(250,248,243,0.78);backdrop-filter:blur(24px) saturate(1.5);-webkit-backdrop-filter:blur(24px) saturate(1.5);border:1px solid rgba(255,255,255,0.6);border-radius:100px;display:flex;align-items:center;padding:7px;gap:2px;z-index:100;box-shadow:0 16px 40px rgba(15,15,15,0.18),0 2px 10px rgba(15,15,15,0.08);}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;padding:7px 2px;border-radius:100px;transition:background 150ms;}
+.nav-item.active{background:var(--ink);}
+.nav-label{font-size:9.5px;font-weight:500;letter-spacing:0.02em;color:var(--stone);}
+.nav-item.active .nav-label{color:var(--bone);}
+.nav-icon{color:var(--stone);display:flex;align-items:center;justify-content:center;}
+.nav-item.active .nav-icon{color:var(--bone);}
+
+/* Search bar */
+.search-bar{display:flex;align-items:center;gap:10px;background:var(--paper);border-radius:100px;padding:0 16px;height:48px;box-shadow:0 2px 12px rgba(15,15,15,0.1);}
+.search-input{flex:1;border:none;outline:none;font-family:'Inter',sans-serif;font-size:15px;color:var(--ink);background:transparent;}
+.search-input::placeholder{color:var(--stone);}
+
+/* Label chips */
+.label-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:100px;font-size:12px;font-weight:500;white-space:nowrap;border:1px solid transparent;}
+.chip-surface-clay{background:#F0E6E0;color:#8B3A1F;border-color:#D4A090;}
+.chip-surface-hard{background:#E0E8F0;color:#1A4A70;border-color:#90B0C8;}
+.chip-surface-grass{background:#E4EDE0;color:#2A5020;border-color:#90B878;}
+.chip-surface-carpet{background:#EDE8E0;color:#504030;border-color:#B0A888;}
+.chip-exp{background:rgba(15,15,15,0.06);color:var(--graphite);border-color:transparent;}
+.chip-access-private{background:#F5F0E8;color:#6B4A20;border-color:#C8A878;}
+.chip-access-open{background:#E8F5E8;color:#2A5020;border-color:#78B878;}
+.chip-filter{background:var(--paper);color:var(--ink);border-color:rgba(15,15,15,0.15);cursor:pointer;}
+.chip-filter.active{background:var(--ink);color:var(--bone);border-color:var(--ink);}
+
+/* Court cards */
+.court-card-horizontal{display:flex;gap:14px;background:var(--paper);padding:16px;cursor:pointer;}
+.court-card-horizontal img{width:88px;height:88px;object-fit:cover;border-radius:8px;flex-shrink:0;}
+.court-card-v{width:180px;flex-shrink:0;cursor:pointer;}
+.court-card-v img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:12px;display:block;}
+.court-card-full{background:var(--paper);cursor:pointer;}
+.court-card-full img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;}
+
+/* Image overlays */
+.img-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 40%,rgba(0,0,0,0.72) 100%);}
+.img-overlay-top{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.5) 0%,rgba(0,0,0,0) 44%,rgba(0,0,0,0.78) 100%);}
+
+/* Star rating */
+.stars{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--stone);}
+.star-filled{color:#C9963C;}
+
+/* Section header */
+.sec-hdr{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px;}
+.sec-hdr .view-all{font-size:13px;color:var(--stone);cursor:pointer;}
+
+/* Map styles */
+.map-bg{
+  background:
+    linear-gradient(160deg,#C8D4C0 0%,#B8C8B0 50%,#A8B8A0 100%),
+    radial-gradient(ellipse 60% 40% at 60% 45%,#A0B8C8 0%,transparent 60%);
+  position:relative;overflow:hidden;
+}
+.map-pin{position:absolute;display:flex;flex-direction:column;align-items:center;cursor:pointer;}
+.map-pin-circle{background:var(--paper);border:2px solid var(--ink);border-radius:100px;font-size:13px;font-weight:600;color:var(--ink);padding:4px 12px;box-shadow:0 2px 8px rgba(0,0,0,0.2);}
+.map-pin-circle.active{background:var(--ink);color:var(--bone);}
+.map-pin-dot{width:8px;height:8px;border-radius:50%;background:var(--ink);margin-top:2px;}
+.map-pin-img{width:44px;height:44px;border-radius:50%;overflow:hidden;border:2px solid var(--paper);box-shadow:0 2px 8px rgba(0,0,0,0.25);}
+.map-pin-img img{width:100%;height:100%;object-fit:cover;}
+.map-pin-dot-sm{width:6px;height:6px;border-radius:50%;background:var(--ink);margin-top:1px;}
+
+/* Bottom sheet */
+.bottom-sheet{background:var(--paper);border-radius:20px 20px 0 0;box-shadow:0 -4px 40px rgba(15,15,15,0.15);padding:12px 0 0;}
+.sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--mist);margin:0 auto 16px;}
+
+/* Lock overlay */
+.lock-overlay{position:absolute;inset:0;backdrop-filter:blur(16px);background:rgba(245,242,236,0.7);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border-radius:inherit;}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-weight:500;letter-spacing:0.04em;transition:opacity 150ms;}
+.btn:hover{opacity:0.88;}
+.btn:active{opacity:0.75;}
+.btn-primary{background:var(--ink);color:var(--bone);border-radius:4px;height:52px;padding:0 24px;font-size:13px;text-transform:uppercase;letter-spacing:0.1em;}
+.btn-secondary{background:transparent;color:var(--ink);border:1px solid var(--ink);border-radius:4px;height:52px;padding:0 24px;font-size:13px;text-transform:uppercase;letter-spacing:0.1em;}
+.btn-gold{background:var(--gold);color:var(--paper);border-radius:4px;height:52px;padding:0 24px;font-size:13px;text-transform:uppercase;letter-spacing:0.1em;}
+.btn-sm{height:40px;padding:0 16px;font-size:12px;}
+.btn-pill{border-radius:100px;}
+
+/* Icon shortcuts */
+.icon-shortcut{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;min-width:64px;}
+.icon-shortcut-circle{width:52px;height:52px;border-radius:50%;background:var(--paper);border:1px solid rgba(15,15,15,0.1);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px var(--shadow);}
+.icon-shortcut-circle.active{background:var(--ink);border-color:var(--ink);}
+.icon-shortcut-label{font-size:11px;color:var(--stone);text-align:center;font-weight:400;}
+.icon-shortcut.active .icon-shortcut-label{color:var(--ink);}
+
+/* Premium badge */
+.premium-badge{background:linear-gradient(135deg,#C8A860,#B89968);color:var(--paper);padding:3px 10px;border-radius:100px;font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;display:inline-flex;align-items:center;gap:4px;}
+
+/* Divider */
+.divider{height:1px;background:rgba(184,184,182,0.3);margin:0 20px;}
+
+/* Fade in */
+.fade-in{animation:fadeIn 300ms ease both;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* Gallery strip */
+.gallery-strip{display:flex;gap:8px;overflow-x:auto;padding:0 20px 2px;scrollbar-width:none;}
+.gallery-strip::-webkit-scrollbar{display:none;}
+.gallery-thumb{width:90px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0;}
+
+/* Profile stats */
+.profile-stat{text-align:center;}
+
+/* Horizontal scroll row */
+.h-scroll{display:flex;overflow-x:auto;gap:12px;scrollbar-width:none;padding-bottom:2px;}
+.h-scroll::-webkit-scrollbar{display:none;}
+
+/* Multi-phone layout */
+.multi-phone{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;}
+
+/* Country card */
+.country-card{position:relative;border-radius:12px;overflow:hidden;cursor:pointer;}
+.country-card img{width:100%;height:100%;object-fit:cover;display:block;}
+
+/* Nearby court card (small) */
+.nearby-card{width:130px;flex-shrink:0;cursor:pointer;}
+.nearby-card img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;display:block;}
+
+/* Feature icon row */
+.feature-row{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;}
+.feature-icon{width:40px;height:40px;border-radius:50%;background:var(--bone);display:flex;align-items:center;justify-content:center;}
+
+/* Saved card full width */
+.saved-card-full{background:var(--paper);border-radius:12px;overflow:hidden;cursor:pointer;}
+.saved-card-full img{width:100%;height:200px;object-fit:cover;display:block;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="env,react">
+const {useState,useEffect,useRef,useCallback} = React;
+
+// ─── Image helpers ────────────────────────────────────────
+const U = (id,w=800) => `https://images.unsplash.com/${id}?w=${w}&q=80&auto=format&fit=crop`;
+const IMG = {
+  hero1:    'photo-1622279457486-62dcc4a431d6',
+  hero2:    'photo-1554068865-24cecd4e34b8',
+  hero3:    'photo-1622279457486-62dcc4a431d6',
+  court1:   'photo-1599391398131-cd12dfc6c24e',
+  court2:   'photo-1571896349842-33c89424de2d',
+  court3:   'photo-1539020140153-e479b8c5b1bc',
+  court4:   'photo-1505142468610-359e7d316be0',
+  court5:   'photo-1537953773345-d172ccf13cf1',
+  court6:   'photo-1551038247-3d9af20df552',
+  court7:   'photo-1582719508461-905c673771fd',
+  court8:   'photo-1469474968028-56623f02e42e',
+  court9:   'photo-1503899036084-c55cdd92da26',
+  france:   'photo-1502602898657-3e91760cbb34',
+  italy:    'photo-1516483638261-f4dbaf036963',
+  spain:    'photo-1543783207-ec64e4d95325',
+  maldives: 'photo-1573843981267-be1999ff37cd',
+  morocco:  'photo-1539020140153-e479b8c5b1bc',
+  paywall:  'photo-1622279457486-62dcc4a431d6',
+};
+
+// ─── Data ─────────────────────────────────────────────────
+const COURTS = [
+  {id:'epi',name:'Épi Baie de Pampelonne',location:'Saint-Tropez, France',surface:'Clay',labels:['Sea View','Beach Club','Resort','Scenic','Private'],rating:4.6,reviews:128,img:U(IMG.court1),imgs:[U(IMG.court1),U(IMG.court4),U(IMG.court3),U(IMG.hero3)],locked:false,desc:'Iconic clay courts overlooking Pampelonne Bay. A peaceful and exclusive setting at the heart of Saint-Tropez, where tennis meets the Mediterranean.',features:['Stunning sea views','Private beach access','Restaurant on-site','Pro coaching available'],address:'Chemin des Tamaris, 83350 Saint-Tropez, France'},
+  {id:'amanruya',name:'Amanruya Tennis Club',location:'Bodrum, Turkey',surface:'Clay',labels:['Resort','Mountains','Scenic'],rating:4.8,reviews:96,img:U(IMG.court3),imgs:[U(IMG.court3),U(IMG.court1),U(IMG.hero2)],locked:true,desc:'Nestled between the Aegean Sea and Turkish hills, Amanruya offers three impeccably maintained clay courts surrounded by ancient olive groves.',features:['Mountain panorama','Aman spa access','Private villas','Expert instruction'],address:'Demir Mevkii, Bodrum, Turkey'},
+  {id:'monte',name:'Racket Club Monte-Carlo',location:'Roquebrune, France',surface:'Clay',labels:['Historic','Sea View','Private'],rating:4.7,reviews:74,img:U(IMG.hero3),imgs:[U(IMG.hero3),U(IMG.court1),U(IMG.court4)],locked:false,desc:'A legendary club where the clay courts of Roquebrune have hosted champions for over a century. The sea vista from Court One is unmistakable.',features:['Historic pedigree','Sea views','Grass courts available','Exclusive membership'],address:'23 Av. Princesse Grace, Monaco'},
+  {id:'banana',name:'Banana Island Resort',location:'Phuket, Thailand',surface:'Hard',labels:['Sea View','Beach Club','Resort'],rating:4.8,reviews:53,img:U(IMG.court7),imgs:[U(IMG.court7),U(IMG.court5),U(IMG.court1)],locked:true,desc:'Hard courts elevated above the Andaman Sea, flanked by tropical palms. Play as the sun sets behind the horizon for an unmatched experience.',features:['Oceanfront location','Floodlit courts','Beach club','Water sports'],address:'Cape Yamu, Phuket, Thailand'},
+  {id:'como',name:'Como Shambhala Estate',location:'Ubud, Bali',surface:'Hard',labels:['Resort','Scenic','Mountains'],rating:4.9,reviews:41,img:U(IMG.court5),imgs:[U(IMG.court5),U(IMG.court3),U(IMG.hero2)],locked:true,desc:'Hidden in the Ayung river gorge, this single court is reached by stone steps through ancient frangipani. The jungle canopy overhead is part of the experience.',features:['Jungle immersion','Wellness retreat','Yoga & tennis','Ayurvedic spa'],address:'Banjar Begawan, Ubud, Bali'},
+  {id:'nell',name:'The Little Nell',location:'Aspen, Colorado',surface:'Hard',labels:['Mountains','Resort'],rating:4.5,reviews:88,img:U(IMG.court6),imgs:[U(IMG.court6),U(IMG.hero2),U(IMG.court4)],locked:false,desc:'Aspen Mountain rises behind the baseline. Alpine air, pine forests and altitude play tricks on your game — in the best possible way.',features:['Mountain backdrop','Altitude play','Ski-in ski-out','Fine dining'],address:'675 E Durant Ave, Aspen, CO'},
+  {id:'soho',name:'Soho Farmhouse',location:'Cotswolds, UK',surface:'Grass',labels:['Historic','Scenic','Resort'],rating:4.6,reviews:112,img:U(IMG.court8),imgs:[U(IMG.court8),U(IMG.court4),U(IMG.hero1)],locked:false,desc:'Mown grass stripes and the English countryside. Whites are optional, Pimm\'s is not. A summer afternoon here belongs to another century.',features:['Grass courts','Country house','Spa & pool','Organic restaurant'],address:'Great Tew, Chipping Norton OX7 4JS'},
+];
+
+const COLLECTIONS = [
+  {id:'coastal',name:'Coastal Escapes',sub:'Tennis with ocean views.',courts:12,img:U(IMG.court1),desc:'Clay and hard courts set where the court meets the coastline — the Mediterranean, the Andaman Sea, the Aegean. Every match comes with a view.',courtIds:['epi','monte','banana']},
+  {id:'mountain',name:'Mountain Retreats',sub:'Play at high altitude.',courts:9,img:U(IMG.court6),desc:'Alpine air and thinner oxygen change the way the ball moves. These courts sit above the tree line, or close to it.',courtIds:['amanruya','como','nell']},
+  {id:'historic',name:'Historic Courts',sub:'Where tennis meets history.',courts:7,img:U(IMG.court8),desc:'Clubs and courts with a century of matches behind them — where the game\'s pedigree is part of the experience.',courtIds:['monte','soho']},
+  {id:'hidden',name:'Hidden Gems',sub:'Courts only insiders know.',courts:11,img:U(IMG.court5),desc:'No signage, no crowds — just a handful of courts that rarely make the guidebooks, found by word of mouth alone.',courtIds:['como','amanruya']},
+  {id:'luxury',name:'Luxury Resorts',sub:'Five-star on-court service.',courts:15,img:U(IMG.court7),desc:'Ball boys, chilled towels, a concierge for your racquet stringing. These resorts treat tennis as part of the five-star stay.',courtIds:['epi','banana','como','nell']},
+  {id:'italy',name:'Italy Classics',sub:'La dolce vita, with a racquet.',courts:9,img:U(IMG.court3),desc:'The Italian collection is still being curated — in the meantime, here are a few Mediterranean courts in the same spirit.',courtIds:['monte','epi']},
+];
+
+const COUNTRIES = [
+  {name:'France',courts:18,img:U(IMG.france)},
+  {name:'Italy',courts:24,img:U(IMG.italy)},
+  {name:'Spain',courts:32,img:U(IMG.spain)},
+  {name:'Maldives',courts:5,img:U(IMG.maldives)},
+  {name:'Morocco',courts:8,img:U(IMG.morocco)},
+  {name:'Cotswolds',courts:7,img:U(IMG.court8)},
+];
+
+// ─── Icons ────────────────────────────────────────────────
+const Ico = {
+  home:     d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+  apple:    d=><svg viewBox="0 0 384 512" width={d} height={d} fill="currentColor"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141 0 184.8 0 274c0 26.2 4.8 53.3 14.4 81.2 12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-57.6-90-57.7-92.4zM256.8 88.7c26.5-31.5 24.1-60.1 23.4-70.7-23.5 1.4-50.7 16.4-66.5 34.8-17.3 19.5-27.5 43.6-25.3 70.4 25.3 2 48.4-10 68.4-34.5z"/></svg>,
+  google:   d=><svg viewBox="0 0 48 48" width={d} height={d}><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.4 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 15.1 18.9 12 24 12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.4 6.1 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.5 26.7 36 24 36c-5.3 0-9.7-3.1-11.3-7.6l-6.5 5C9.6 39.6 16.3 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.1 5.6l6.2 5.2C40.9 36.6 44 30.9 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>,
+  map:      d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>,
+  heart:    (d,f)=><svg viewBox="0 0 24 24" fill={f?"currentColor":"none"} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
+  save:     d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>,
+  profile:  d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  collect:  d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+  search:   d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  filter:   d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>,
+  list:     d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
+  back:     d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><polyline points="15 18 9 12 15 6"/></svg>,
+  arrow:    d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
+  share:    d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,
+  lock:     d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+  star:     (d,f)=><svg viewBox="0 0 24 24" fill={f?"#C9963C":"none"} stroke={f?"#C9963C":"currentColor"} strokeWidth="1.6" width={d} height={d}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+  check:    d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><polyline points="20 6 9 17 4 12"/></svg>,
+  close:    d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  seaview:  d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width={d} height={d}><path d="M2 12c2-4 6-6 10-4s8 2 10-2M2 18c2-4 6-6 10-4s8 2 10-2"/></svg>,
+  mountain: d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width={d} height={d}><polygon points="3 20 9 6 15 14 18 10 21 20"/></svg>,
+  palm:     d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width={d} height={d}><path d="M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h11z"/><path d="M13 8c0-2.76 2.46-5 5.5-5S24 5.24 24 8H13z"/><path d="M13 8v8"/><path d="M11 16c.34 1 1.62 2 2 4"/></svg>,
+  historic: d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width={d} height={d}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="3" y1="20" x2="21" y2="20"/></svg>,
+  settings: d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+  globe:    d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
+  pin:      d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
+  notify:   d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
+  img:      d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>,
+  plus:     d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={d} height={d}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  court:    d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width={d} height={d}><rect x="2" y="4" width="20" height="16" rx="1"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="6" y1="4" x2="6" y2="20" strokeDasharray="2 2"/><line x1="18" y1="4" x2="18" y2="20" strokeDasharray="2 2"/></svg>,
+};
+
+// ─── Label chip component ──────────────────────────────────
+function Label({type, children, small}){
+  const cl = type==='clay'?'chip-surface-clay':type==='hard'?'chip-surface-hard':type==='grass'?'chip-surface-grass':type==='carpet'?'chip-surface-carpet':type==='private'?'chip-access-private':type==='open'?'chip-access-open':'chip-exp';
+  return <span className={`label-chip ${cl}`} style={{fontSize:small?10:12,padding:small?'3px 8px':'5px 10px'}}>{children}</span>;
+}
+
+function SurfaceLabel({surface,small}){
+  return <Label type={surface.toLowerCase()} small={small}>{surface}</Label>;
+}
+
+function Stars({rating, reviews}){
+  return(
+    <div className="stars">
+      {Ico.star(14,true)}
+      <span style={{color:'#C9963C',fontWeight:500}}>{rating}</span>
+      {reviews && <span style={{color:'var(--stone)'}}>({reviews})</span>}
+    </div>
+  );
+}
+
+// ─── Status bar ───────────────────────────────────────────
+// Browser-style top chrome — this is a website, not a native app, so the
+// top of every screen is a solid, opaque bar (never see-through over imagery),
+// imitating a browser address bar rather than a phone status bar.
+function StatusBar({path, onBack, onMenu}){
+  return(
+    <div style={{position:'relative',height:44,flexShrink:0,background:'var(--paper)',borderBottom:'1px solid rgba(184,184,182,0.3)',display:'flex',alignItems:'center',justifyContent:'center',padding:'0 14px'}}>
+      <div style={{position:'absolute',left:14,display:'flex',alignItems:'center',gap:12}}>
+        {onBack ? (
+          <button onClick={onBack} style={{background:'none',border:'none',cursor:'pointer',color:'var(--ink)',display:'flex',padding:4}}>{Ico.back(16)}</button>
+        ) : (
+          <>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--mist)" strokeWidth="2.6"><polyline points="15 18 9 12 15 6"/></svg>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--mist)" strokeWidth="2.6"><polyline points="9 18 15 12 9 6"/></svg>
+          </>
+        )}
+      </div>
+      <div style={{background:'var(--bone)',borderRadius:100,padding:'5px 14px',display:'flex',alignItems:'center',gap:6,maxWidth:190,overflow:'hidden'}}>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--stone)" strokeWidth="2" style={{flexShrink:0}}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span style={{fontSize:11,color:'var(--stone)',letterSpacing:'0.01em',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>tennisworld.com{path?`/${path}`:''}</span>
+      </div>
+      {onMenu&&(
+        <button onClick={onMenu} style={{position:'absolute',right:14,background:'none',border:'none',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3,padding:4}}>
+          <span style={{width:15,height:1.4,background:'var(--ink)',borderRadius:1}}/>
+          <span style={{width:15,height:1.4,background:'var(--ink)',borderRadius:1}}/>
+          <span style={{width:15,height:1.4,background:'var(--ink)',borderRadius:1}}/>
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Bottom nav variants ──────────────────────────────────
+// ─── Top tabs (floating) ─────────────────────────────────────
+function TopTabs({active, onNav}){
+  const items = [
+    {id:'home', label:'Atlas'},
+    {id:'map', label:'Courts'},
+    {id:'collections', label:'Collections'},
+    {id:'profile', label:'Profile'},
+  ];
+  return(
+    <div style={{position:'sticky',top:12,zIndex:100,margin:'0 16px',background:'rgba(250,248,243,0.82)',backdropFilter:'blur(24px) saturate(1.5)',WebkitBackdropFilter:'blur(24px) saturate(1.5)',border:'1px solid rgba(255,255,255,0.6)',borderRadius:100,display:'flex',alignItems:'center',justifyContent:'space-between',padding:6,boxShadow:'0 16px 40px rgba(15,15,15,0.14),0 2px 10px rgba(15,15,15,0.06)'}}>
+      {items.map(it=>(
+        <div key={it.id} onClick={()=>onNav(it.id)} style={{padding:'9px 14px',borderRadius:100,fontSize:13.5,fontWeight:active===it.id?600:400,color:'var(--ink)',background:active===it.id?'rgba(184,184,182,0.42)':'transparent',cursor:'pointer',whiteSpace:'nowrap',transition:'background 150ms',flex:'0 0 auto'}}>
+          {it.label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Atlas screen (landing: hero, membership, contact) ───────
+function HomeScreen({onNav, onCourtOpen, onPaywall, unlocked}){
+  const heroCourts = [
+    {...COURTS.find(c=>c.id==='monte'), place:'MONACO'},
+    {...COURTS.find(c=>c.id==='epi'),   place:'SAINT-TROPEZ'},
+    {...COURTS.find(c=>c.id==='soho'),  place:'COTSWOLDS'},
+    {...COURTS.find(c=>c.id==='nell'),  place:'ASPEN'},
+  ];
+  const [heroIdx,setHeroIdx] = useState(0);
+  const current = heroCourts[heroIdx];
+  const membershipRef = useRef(null);
+
+  const handleCta = () => {
+    if(unlocked){ onNav('map'); }
+    else { membershipRef.current?.scrollIntoView({behavior:'smooth', block:'start'}); }
+  };
+
+  return(
+    <div style={{background:'var(--ivory)',minHeight:'100%',display:'flex',flexDirection:'column'}}>
+      <StatusBar path="atlas"/>
+      <TopTabs active="home" onNav={onNav}/>
+
+      {/* Section 1 — Hero carousel */}
+      <div style={{margin:'18px 16px 0',borderRadius:28,overflow:'hidden',position:'relative',height:480,cursor:'pointer'}} onClick={()=>onCourtOpen(current)}>
+        <img src={current.imgs[0]} key={heroIdx} className="fade-in" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+        <div className="img-overlay"/>
+
+        {/* Crest mark */}
+        <div style={{position:'absolute',top:26,left:0,right:0,display:'flex',justifyContent:'center'}}>
+          <svg width="32" height="32" viewBox="0 0 40 40" fill="none" stroke="#fff" strokeWidth="1.3">
+            <g transform="rotate(-25 20 20)"><ellipse cx="20" cy="12" rx="8" ry="10"/><line x1="20" y1="22" x2="20" y2="34"/></g>
+            <g transform="rotate(25 20 20)"><ellipse cx="20" cy="12" rx="8" ry="10"/><line x1="20" y1="22" x2="20" y2="34"/></g>
+          </svg>
+        </div>
+
+        {/* Giant title */}
+        <div className="serif" style={{position:'absolute',left:18,right:18,top:'50%',fontSize:60,lineHeight:0.95,color:'#fff',fontWeight:500,letterSpacing:'0.01em'}}>ATLAS</div>
+
+        {/* Pagination + floating label */}
+        <div style={{position:'absolute',left:18,right:18,bottom:18,display:'flex',alignItems:'center',justifyContent:'center',gap:8}} onClick={e=>e.stopPropagation()}>
+          <div style={{display:'flex',gap:5,flex:1,justifyContent:'flex-end'}}>
+            {heroCourts.map((_,i)=>i<heroIdx&&(
+              <div key={i} onClick={()=>setHeroIdx(i)} style={{width:6,height:6,borderRadius:3,background:'rgba(255,255,255,0.85)',cursor:'pointer'}}/>
+            ))}
+          </div>
+          <button onClick={()=>setHeroIdx(i=>(i+1)%heroCourts.length)} style={{background:'rgba(255,255,255,0.2)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',border:'1px solid rgba(255,255,255,0.4)',borderRadius:100,padding:'10px 24px',cursor:'pointer',flexShrink:0}}>
+            <span className="serif" style={{color:'#fff',fontSize:13,letterSpacing:'0.16em'}}>{current.place}</span>
+          </button>
+          <div style={{display:'flex',gap:5,flex:1}}>
+            {heroCourts.map((_,i)=>i>heroIdx&&(
+              <div key={i} onClick={()=>setHeroIdx(i)} style={{width:6,height:6,borderRadius:3,background:'rgba(255,255,255,0.85)',cursor:'pointer'}}/>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Section 2 — Membership */}
+      <div ref={membershipRef} style={{margin:'28px 16px 0'}}>
+        <div style={{background:'var(--paper)',borderRadius:20,padding:'28px 20px',boxShadow:'0 2px 16px rgba(15,15,15,0.06)'}}>
+
+          <div style={{textAlign:'center'}}>
+            <div style={{width:56,height:56,borderRadius:'50%',background:'var(--bone)',border:'1px solid rgba(184,184,182,0.4)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px',color:'var(--ink)'}}>
+              {unlocked ? Ico.check(22) : Ico.lock(20)}
+            </div>
+            <div className="serif" style={{fontSize:24,fontWeight:400}}>{unlocked?'Your collection is unlocked':'100 Beautiful Tennis Courts'}</div>
+            <div style={{fontSize:13,color:'var(--stone)',marginTop:6}}>{unlocked?'European Collection — Unlocked':'One-time payment. No subscription.'}</div>
+          </div>
+
+          <div style={{margin:'20px 0 0',borderRadius:16,overflow:'hidden',height:170}}>
+            <img src={U(IMG.hero3,800)} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+          </div>
+
+          <div style={{padding:'16px 0 0',textAlign:'center'}}>
+            <div className="serif" style={{fontSize:20,fontWeight:400}}>100 Beautiful Tennis Courts</div>
+            <div style={{fontSize:13,color:'var(--stone)',marginTop:4}}>The European Collection</div>
+            <p style={{fontSize:13,color:'var(--graphite)',marginTop:8,lineHeight:1.5}}>{unlocked?'Full access to this collection and its new additions.':'One-time payment. Unlock to access every court, every detail, forever.'}</p>
+          </div>
+
+          <div style={{padding:'18px 0 0',display:'flex',flexDirection:'column',gap:14}}>
+            {[
+              {icon:d=>Ico.pin(d), label:'Full map & court details'},
+              {icon:d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" width={d} height={d}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, label:'Locations & booking contacts'},
+              {icon:d=>Ico.heart(d), label:'Save your favourite courts'},
+              {icon:d=>Ico.plus(d), label:'New additions to this collection'},
+            ].map(f=>(
+              <div key={f.label} style={{display:'flex',alignItems:'center',gap:14}}>
+                <div style={{width:36,height:36,borderRadius:'50%',background:'var(--bone)',border:'1px solid rgba(184,184,182,0.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:'var(--graphite)'}}>
+                  {f.icon(16)}
+                </div>
+                <span style={{fontSize:14,color:'var(--graphite)'}}>{f.label}</span>
+              </div>
+            ))}
+          </div>
+
+        </div>
+      </div>
+
+      {/* Floating CTA */}
+      <div style={{position:'sticky',bottom:18,margin:'28px 16px 0'}}>
+        <button className="btn" style={{width:'100%',height:56,borderRadius:100,background:'var(--ink)',color:'var(--bone)',fontSize:12,letterSpacing:'0.16em',textTransform:'uppercase',fontWeight:500,boxShadow:'0 16px 40px rgba(15,15,15,0.25),0 2px 10px rgba(15,15,15,0.1)'}} onClick={handleCta}>
+          {unlocked?'Explore the Map':'Unlock the Map'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Map screen ───────────────────────────────────────────────
+function MapScreen({onNav, onCourtOpen, unlocked=true, isGuest=false, onPaywall}){
+  const [query,setQuery] = useState('');
+  const [activeFilters,setActiveFilters] = useState(new Set());
+  const [showFilters,setShowFilters] = useState(false);
+  const [mapOpen,setMapOpen] = useState(false);
+  const [selected,setSelected] = useState(null);
+  const [savedCourts,setSavedCourts] = useState(new Set());
+  const openMap = () => { if(!isGuest) setMapOpen(true); };
+
+  const filterOptions = ['Clay','Sea View','Resort'];
+  const toggleFilter = (f) => setActiveFilters(prev=>{const n=new Set(prev); n.has(f)?n.delete(f):n.add(f); return n;});
+  const matchesFilters = (c) => activeFilters.size===0 || [...activeFilters].every(f=>{
+    if(f==='Clay') return c.surface==='Clay';
+    if(f==='Sea View') return c.labels.includes('Sea View');
+    if(f==='Resort') return c.labels.includes('Resort');
+    return true;
+  });
+
+  const searchMatches = query.trim()
+    ? COURTS.filter(c=>c.name.toLowerCase().includes(query.toLowerCase())||c.location.toLowerCase().includes(query.toLowerCase()))
+    : [];
+  const listCourts = COURTS.filter(matchesFilters);
+
+  const pinPositions = [{x:'52%',y:'30%'},{x:'38%',y:'22%'},{x:'64%',y:'46%'},{x:'28%',y:'58%'},{x:'70%',y:'64%'},{x:'46%',y:'70%'},{x:'60%',y:'18%'},{x:'20%',y:'38%'}];
+
+  return(
+    <div style={{background:'var(--ivory)',minHeight:'100%'}}>
+      <StatusBar path="courts"/>
+      <TopTabs active="map" onNav={onNav}/>
+
+      {/* Search */}
+      <div style={{padding:'16px 20px 0'}}>
+        <div className="search-bar">
+          {Ico.search(16)}
+          <input className="search-input" placeholder="Search courts, cities, countries" value={query} onChange={e=>setQuery(e.target.value)}/>
+          {query&&<button onClick={()=>setQuery('')} style={{background:'none',border:'none',cursor:'pointer',color:'var(--stone)',display:'flex',padding:4}}>{Ico.close(14)}</button>}
+          <button onClick={()=>setShowFilters(s=>!s)} style={{background:showFilters?'var(--ink)':'none',border:'none',borderRadius:'50%',width:28,height:28,cursor:'pointer',color:showFilters?'var(--bone)':'var(--stone)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,position:'relative'}}>
+            {Ico.filter(15)}
+            {activeFilters.size>0&&<span style={{position:'absolute',top:2,right:2,width:7,height:7,borderRadius:'50%',background:'var(--clay)',border:'1.5px solid var(--paper)'}}/>}
+          </button>
+        </div>
+        {showFilters&&(
+          <div className="h-scroll" style={{gap:8,marginTop:10}}>
+            {filterOptions.map(f=>(
+              <button key={f} className={`label-chip chip-filter ${activeFilters.has(f)?'active':''}`} onClick={()=>toggleFilter(f)}>{f}</button>
+            ))}
+          </div>
+        )}
+        {query.trim()&&(
+          <div style={{background:'var(--paper)',borderRadius:12,marginTop:8,overflow:'hidden',boxShadow:'0 4px 24px rgba(15,15,15,0.12)'}}>
+            {searchMatches.length===0
+              ? <div style={{padding:16,color:'var(--stone)',fontSize:13}}>No courts found for "{query}"</div>
+              : searchMatches.map(c=>(
+                <div key={c.id} onClick={()=>{onCourtOpen(c);setQuery('');}} style={{display:'flex',gap:12,padding:'12px 16px',borderBottom:'1px solid rgba(184,184,182,0.2)',cursor:'pointer',alignItems:'center'}}>
+                  <img src={c.img} style={{width:44,height:44,objectFit:'cover',borderRadius:8,flexShrink:0}}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:14,fontWeight:500}}>{c.name}</div>
+                    <div style={{fontSize:12,color:'var(--stone)',marginTop:2}}>{c.location}</div>
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+        )}
+      </div>
+
+      {/* Heading + preview */}
+      <div style={{padding:'22px 20px 0',display:'flex',gap:14,alignItems:'flex-start'}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div className="serif" style={{fontSize:30,lineHeight:1.08,fontWeight:400}}>
+            {isGuest ? 'Sign in to view the map' : `${COURTS.length} Courts`}
+          </div>
+          {unlocked ? (
+            <div style={{fontSize:13,color:'var(--stone)',marginTop:8}}>All courts unlocked</div>
+          ) : (
+            <span onClick={isGuest?()=>onNav('profile'):onPaywall} style={{fontSize:13,color:'var(--ink)',textDecoration:'underline',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:4,marginTop:8}}>
+              {isGuest?Ico.lock(10):null}{isGuest?'Sign in to unlock the map →':'Unlock full map access →'}
+            </span>
+          )}
+        </div>
+        <div onClick={openMap} className="map-bg" style={{width:148,height:140,borderRadius:16,flexShrink:0,cursor:isGuest?'default':'pointer',boxShadow:'0 2px 14px rgba(15,15,15,0.12)',position:'relative'}}>
+          {isGuest ? (
+            <div className="lock-overlay" style={{borderRadius:16}}>
+              <div style={{color:'var(--stone)'}}>{Ico.lock(20)}</div>
+              <div style={{fontSize:10,color:'var(--stone)',textAlign:'center',padding:'0 10px'}}>Sign in to unlock</div>
+            </div>
+          ):(
+            pinPositions.slice(0,3).map((p,i)=>(
+              <div key={i} style={{position:'absolute',left:p.x,top:p.y,transform:'translate(-50%,-50%)'}}>
+                <div style={{width:16,height:16,borderRadius:'50%',background:'var(--ink)',border:'2px solid #fff',boxShadow:'0 1px 4px rgba(0,0,0,0.3)'}}/>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* List */}
+      <div style={{padding:'22px 20px 0',display:'flex',flexDirection:'column',gap:12}}>
+        {listCourts.map(c=>(
+          <CourtCard key={c.id} court={c} onClick={()=>onCourtOpen(c)} locked={c.locked&&!unlocked} saved={savedCourts.has(c.id)} onToggleSave={()=>setSavedCourts(s=>{const n=new Set(s);n.has(c.id)?n.delete(c.id):n.add(c.id);return n;})} saveDisabled={isGuest}/>
+        ))}
+      </div>
+
+      {/* Bottom status pill */}
+      <div style={{position:'sticky',bottom:18,margin:'22px 16px 0',background:'rgba(250,248,243,0.85)',backdropFilter:'blur(24px) saturate(1.5)',WebkitBackdropFilter:'blur(24px) saturate(1.5)',border:'1px solid rgba(255,255,255,0.6)',borderRadius:100,padding:'13px 20px',display:'flex',alignItems:'center',justifyContent:'center',gap:8,boxShadow:'0 16px 40px rgba(15,15,15,0.18),0 2px 10px rgba(15,15,15,0.08)'}}>
+        <div style={{width:18,height:18,borderRadius:'50%',background:'var(--ink)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:'var(--bone)'}}>
+          {isGuest?Ico.lock(9):Ico.check(10)}
+        </div>
+        <span style={{fontSize:12,fontWeight:500,color:'var(--ink)'}}>
+          {isGuest?'Sign in to save courts & view the map':unlocked?'Full Map Access — Unlocked':'Free Access — Upgrade for every court'}
+        </span>
+      </div>
+
+      {/* Expanded map modal */}
+      {mapOpen&&(
+        <div style={{position:'fixed',top:0,bottom:0,left:'50%',width:390,maxWidth:'100vw',transform:'translateX(-50%)',zIndex:300,background:'var(--bone)',display:'flex',flexDirection:'column'}}>
+          <div className="map-bg" style={{flex:1,position:'relative',overflow:'hidden'}}>
+            <button onClick={()=>{setMapOpen(false);setSelected(null);}} style={{position:'absolute',top:52,right:16,width:36,height:36,borderRadius:'50%',background:'rgba(255,255,255,0.9)',backdropFilter:'blur(8px)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',zIndex:10,boxShadow:'0 2px 10px rgba(0,0,0,0.15)'}}>
+              {Ico.close(16)}
+            </button>
+            {COURTS.map((c,i)=>{
+              const pos = pinPositions[i%pinPositions.length];
+              return(
+                <div key={c.id} onClick={()=>setSelected(c)} style={{position:'absolute',left:pos.x,top:pos.y,transform:'translate(-50%,-100%)',cursor:'pointer'}}>
+                  <div style={{width:44,height:44,borderRadius:'50%',overflow:'hidden',border:selected&&selected.id===c.id?'2.5px solid var(--ink)':'2.5px solid var(--paper)',boxShadow:'0 2px 10px rgba(0,0,0,0.25)'}}>
+                    <img src={c.img} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {selected&&(
+            <div style={{background:'var(--paper)',borderRadius:'20px 20px 0 0',boxShadow:'0 -4px 32px rgba(15,15,15,0.14)',padding:'12px 20px 24px'}}>
+              <div style={{width:36,height:4,background:'var(--mist)',borderRadius:2,margin:'0 auto 14px'}}/>
+              <div style={{display:'flex',gap:12,alignItems:'center',cursor:'pointer'}} onClick={()=>onCourtOpen(selected)}>
+                <img src={selected.img} style={{width:64,height:64,objectFit:'cover',borderRadius:10,flexShrink:0}}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div className="serif" style={{fontSize:17,fontWeight:500}}>{selected.name.split(',')[0]}</div>
+                  <div style={{fontSize:12,color:'var(--stone)',marginTop:2}}>{selected.location}</div>
+                </div>
+                {Ico.arrow(16)}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Membership screen (Full Access) ─────────────────────────
+function MembershipScreen({onNav, unlocked=true}){
+  const features = [
+    {icon:d=>Ico.pin(d), label:'Full map & court details'},
+    {icon:d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" width={d} height={d}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, label:'Locations & booking contacts'},
+    {icon:d=>Ico.heart(d), label:'Save your favourite courts'},
+    {icon:d=>Ico.plus(d), label:'New additions to this collection'},
+  ];
+  return(
+    <div style={{background:'var(--ivory)',minHeight:'100%'}}>
+      <StatusBar path="membership"/>
+      <TopTabs active="membership" onNav={onNav}/>
+
+      <div style={{padding:'28px 20px 0',textAlign:'center'}}>
+        <div style={{width:56,height:56,borderRadius:'50%',background:'var(--bone)',border:'1px solid rgba(184,184,182,0.4)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px'}}>
+          {Ico.check(22)}
+        </div>
+        <div className="serif" style={{fontSize:26,fontWeight:400}}>Your collection is unlocked</div>
+        <div style={{fontSize:13,color:'var(--stone)',marginTop:6}}>European Collection — Unlocked</div>
+      </div>
+
+      <div style={{margin:'22px 20px 0',borderRadius:16,overflow:'hidden',height:190}}>
+        <img src={U(IMG.hero3,800)} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+      </div>
+
+      <div style={{padding:'18px 20px 0',textAlign:'center'}}>
+        <div className="serif" style={{fontSize:22,fontWeight:400}}>100 Beautiful Tennis Courts</div>
+        <div style={{fontSize:14,color:'var(--stone)',marginTop:4}}>The European Collection</div>
+        <p style={{fontSize:13,color:'var(--graphite)',marginTop:10,lineHeight:1.5}}>Full access to this collection and its new additions.</p>
+      </div>
+
+      <div style={{padding:'20px 20px 0',display:'flex',flexDirection:'column',gap:16}}>
+        {features.map(f=>(
+          <div key={f.label} style={{display:'flex',alignItems:'center',gap:14}}>
+            <div style={{width:36,height:36,borderRadius:'50%',background:'var(--bone)',border:'1px solid rgba(184,184,182,0.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:'var(--graphite)'}}>
+              {f.icon(16)}
+            </div>
+            <span style={{fontSize:14,color:'var(--graphite)'}}>{f.label}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="divider" style={{margin:'24px 20px'}}/>
+
+      <div style={{padding:'0 20px'}}>
+        <button className="btn" style={{width:'100%',height:56,borderRadius:100,background:'var(--ink)',color:'var(--bone)',fontSize:12,letterSpacing:'0.16em',textTransform:'uppercase',fontWeight:500}} onClick={()=>onNav('map')}>
+          Explore the Map
+        </button>
+        <div style={{textAlign:'center',marginTop:14}}>
+          <span onClick={()=>onNav('profile')} style={{fontSize:13,color:'var(--stone)',textDecoration:'underline',cursor:'pointer'}}>View in Profile</span>
+        </div>
+      </div>
+
+      <div style={{height:40}}/>
+    </div>
+  );
+}
+
+// ─── Court detail ─────────────────────────────────────────
+function CourtDetailScreen({court, onBack, onNav, unlocked=false, onPaywall}){
+  const [imgIdx,setImgIdx]=useState(0);
+  const [saved,setSaved]=useState(false);
+  const [expanded,setExpanded]=useState(false);
+  const [burgerOpen,setBurgerOpen]=useState(false);
+  const isLocked = court.locked && !unlocked;
+  const jumpTo = (screen) => { setBurgerOpen(false); onNav(screen); };
+
+  const slug = court.name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+
+  return(
+    <div style={{background:'var(--bone)',minHeight:'100%'}}>
+      {/* Solid browser chrome — opaque, not see-through over the photo */}
+      <StatusBar path={`courts/${slug}`} onBack={onBack} onMenu={()=>setBurgerOpen(true)}/>
+
+      {/* Hero gallery */}
+      <div style={{position:'relative',height:290}}>
+        <img src={court.imgs[imgIdx]||court.img} key={imgIdx} className="fade-in" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+        <div className="img-overlay-top"/>
+        {/* Gallery counter & button */}
+        <div style={{position:'absolute',bottom:12,left:16,display:'flex',alignItems:'center',gap:8}}>
+          <div style={{background:'rgba(15,15,15,0.5)',backdropFilter:'blur(8px)',borderRadius:100,padding:'4px 10px',display:'flex',gap:4,alignItems:'center'}}>
+            {Ico.img(12)}
+            <span style={{color:'#fff',fontSize:11,fontWeight:500}}>{imgIdx+1} / {court.imgs.length}</span>
+          </div>
+        </div>
+        <button style={{position:'absolute',bottom:12,right:16,background:'rgba(15,15,15,0.5)',backdropFilter:'blur(8px)',border:'none',borderRadius:100,padding:'4px 10px',color:'#fff',fontSize:10,fontWeight:500,cursor:'pointer',display:'flex',gap:5,alignItems:'center'}}>
+          {Ico.img(11)}All photos
+        </button>
+        {/* Dot navigation */}
+        <div style={{position:'absolute',bottom:50,left:0,right:0,display:'flex',justifyContent:'center',gap:5}}>
+          {court.imgs.map((_,i)=>(
+            <div key={i} onClick={()=>setImgIdx(i)} style={{width:i===imgIdx?20:6,height:6,borderRadius:3,background:'rgba(255,255,255,0.9)',cursor:'pointer',transition:'width 200ms'}}/>
+          ))}
+        </div>
+      </div>
+
+      {/* White card content */}
+      <div style={{background:'var(--paper)',borderRadius:'20px 20px 0 0',marginTop:-16,position:'relative',paddingBottom:112}}>
+        <div style={{padding:'20px 20px 0'}}>
+          <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12}}>
+            <h1 className="serif" style={{fontSize:28,fontWeight:400,lineHeight:1.15,flex:1}}>{isLocked?'Unlock to reveal court name':court.name}</h1>
+          </div>
+          <div style={{display:'flex',gap:8,alignItems:'center',marginTop:8,flexWrap:'wrap'}}>
+            <span style={{display:'flex',alignItems:'center',gap:4,fontSize:13,color:'var(--stone)'}}>{Ico.pin(12)} {isLocked?'Location hidden — Premium only':court.location}</span>
+            <SurfaceLabel surface={court.surface} small/>
+          </div>
+        </div>
+
+        {/* Labels — compact chip slider so it scales with many tags */}
+        <div style={{padding:'14px 0 0'}}>
+          <div className="h-scroll" style={{padding:'0 20px',gap:8}}>
+            {court.labels.map(l=>(
+              <Label key={l} type="exp">{l}</Label>
+            ))}
+          </div>
+        </div>
+
+        {/* Description */}
+        <div style={{padding:'16px 20px 0'}}>
+          {isLocked?(
+            <div style={{position:'relative'}}>
+              <p className="body-m" style={{color:'var(--graphite)',lineHeight:1.6,filter:'blur(5px)',userSelect:'none'}}>
+                {court.desc}
+              </p>
+            </div>
+          ):(
+            <div>
+              <p className="body-m" style={{color:'var(--graphite)',lineHeight:1.6}}>
+                {expanded?court.desc:court.desc.slice(0,110)+'…'}
+              </p>
+              <button onClick={()=>setExpanded(e=>!e)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--clay)',fontSize:13,fontWeight:500,marginTop:6,display:'flex',alignItems:'center',gap:4}}>
+                {expanded?'Read less ↑':'Read more ↓'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="divider" style={{margin:'20px 0'}}/>
+
+        {/* Location */}
+        <div style={{padding:'0 20px'}}>
+          <h2 style={{fontSize:16,fontWeight:600,marginBottom:12}}>Location</h2>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+            <div style={{borderRadius:10,overflow:'hidden',position:'relative',height:100}}>
+              <div className="map-bg" style={{width:'100%',height:'100%'}}>
+                {!isLocked&&<div style={{position:'absolute',left:'50%',top:'50%',transform:'translate(-50%,-50%)'}}>{Ico.pin(24)}</div>}
+                {isLocked&&<div className="lock-overlay" style={{borderRadius:10}}><div style={{color:'var(--stone)'}}>{Ico.lock(20)}</div><div style={{fontSize:10,color:'var(--stone)'}}>Unlock to reveal</div></div>}
+              </div>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',justifyContent:'space-between'}}>
+              <div>
+                <div style={{fontSize:11,color:'var(--stone)',display:'flex',alignItems:'flex-start',gap:4}}>
+                  {Ico.pin(12)}<span style={{lineHeight:1.4}}>{isLocked?'Address hidden':court.address}</span>
+                </div>
+              </div>
+              <button className="btn btn-primary btn-sm" style={{width:'100%',fontSize:11,marginTop:8,gap:5}} disabled={isLocked}>
+                {Ico.pin(11)}{isLocked?'Unlock location':'Open in Maps'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Gallery */}
+        <div style={{padding:'20px 0 0'}}>
+          <h2 style={{fontSize:16,fontWeight:600,marginBottom:12,padding:'0 20px'}}>Gallery</h2>
+          <div className="gallery-strip">
+            {court.imgs.map((src,i)=>(
+              <img key={i} src={src} className="gallery-thumb" onClick={()=>setImgIdx(i)} style={{opacity:i===imgIdx?1:0.75,border:i===imgIdx?'2px solid var(--ink)':'2px solid transparent'}}/>
+            ))}
+          </div>
+        </div>
+
+        {/* Nearby courts — same card style as the expanded map preview */}
+        <div style={{padding:'20px 0 0'}}>
+          <div className="sec-hdr" style={{padding:'0 20px',marginBottom:12}}>
+            <span style={{fontSize:16,fontWeight:600}}>Nearby courts</span>
+            <span className="view-all">View all</span>
+          </div>
+          <div className="h-scroll" style={{padding:'0 20px',gap:12}}>
+            {COURTS.filter(c=>c.id!==court.id).slice(0,4).map((c,i)=>(
+              <div key={c.id} style={{width:120,flexShrink:0,cursor:'pointer'}}>
+                <div style={{position:'relative',borderRadius:8,overflow:'hidden',height:90}}>
+                  <img src={c.img} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+                  {c.locked&&(
+                    <div style={{position:'absolute',inset:0,background:'rgba(15,15,15,0.3)',display:'flex',alignItems:'flex-start',padding:6}}>
+                      <span className="premium-badge" style={{fontSize:9}}>{Ico.lock(9)} Premium</span>
+                    </div>
+                  )}
+                </div>
+                <div style={{marginTop:6}}>
+                  <div style={{fontSize:12,fontWeight:500,lineHeight:1.2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                    {c.locked?'Premium Court':c.name.split(',')[0]}
+                  </div>
+                  <div style={{fontSize:11,color:'var(--stone)',marginTop:2}}>{[3,12,28,45][i]||'—'} km</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Leave a review — ratings hidden until there are enough of them */}
+        {!isLocked&&(
+          <div style={{margin:'20px',background:'var(--ivory)',borderRadius:12,padding:'16px',display:'flex',alignItems:'center',gap:12,border:'1px solid rgba(184,184,182,0.3)'}}>
+            <div style={{width:40,height:40,borderRadius:'50%',background:'var(--paper)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,border:'1px solid rgba(184,184,182,0.3)'}}>
+              {Ico.star(18,true)}
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,fontWeight:600,color:'var(--ink)'}}>Played here?</div>
+              <div style={{fontSize:11,color:'var(--stone)',marginTop:2,lineHeight:1.4}}>Leave a review — we'll start showing ratings once we have enough.</div>
+            </div>
+            <button className="btn btn-secondary btn-sm" style={{fontSize:11,flexShrink:0}}>Review</button>
+          </div>
+        )}
+
+        {/* Lock CTA */}
+        {isLocked&&(
+          <div style={{margin:'20px',background:'var(--ink)',borderRadius:12,padding:'20px',textAlign:'center'}}>
+            <div style={{color:'rgba(245,242,236,0.6)',fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:6}}>Premium Content</div>
+            <div className="serif" style={{fontSize:22,color:'var(--bone)',fontWeight:300,marginBottom:8}}>Unlock the full atlas</div>
+            <p style={{fontSize:13,color:'rgba(245,242,236,0.7)',marginBottom:16,lineHeight:1.5}}>Get exact location, full description, directions and booking contacts.</p>
+            <button className="btn btn-gold" style={{width:'100%'}} onClick={onPaywall}>Unlock access — $29</button>
+          </div>
+        )}
+      </div>
+
+      {/* Floating bottom action bar */}
+      <div style={{position:'sticky',bottom:18,margin:'0 16px',background:'rgba(250,248,243,0.85)',backdropFilter:'blur(24px) saturate(1.5)',WebkitBackdropFilter:'blur(24px) saturate(1.5)',border:'1px solid rgba(255,255,255,0.6)',borderRadius:100,padding:7,display:'flex',gap:8,alignItems:'center',boxShadow:'0 16px 40px rgba(15,15,15,0.18),0 2px 10px rgba(15,15,15,0.08)',zIndex:100}}>
+        <button className="btn btn-primary" style={{flex:1,borderRadius:100,height:48}} onClick={isLocked?onPaywall:undefined}>
+          {isLocked?'Unlock to get directions':'Get directions'}
+        </button>
+        <button style={{width:48,height:48,borderRadius:'50%',background:'rgba(15,15,15,0.05)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:'var(--ink)'}}>
+          {Ico.share(18)}
+        </button>
+        <button onClick={()=>{setSaved(s=>!s)}} style={{width:48,height:48,borderRadius:'50%',background:'rgba(15,15,15,0.05)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:saved?'#E85D4A':'var(--ink)'}}>
+          {Ico.heart(18,saved)}
+        </button>
+      </div>
+
+      {/* Burger sheet — quick jump to primary destinations */}
+      {burgerOpen&&(
+        <div style={{position:'fixed',top:0,bottom:0,left:'50%',width:390,maxWidth:'100vw',transform:'translateX(-50%)',zIndex:300,display:'flex',flexDirection:'column',justifyContent:'flex-end'}}>
+          <div style={{position:'absolute',inset:0,background:'rgba(15,15,15,0.4)'}} onClick={()=>setBurgerOpen(false)}/>
+          <div style={{position:'relative',background:'var(--paper)',borderRadius:'20px 20px 0 0',padding:'12px 0 28px'}}>
+            <div style={{width:36,height:4,background:'var(--mist)',borderRadius:2,margin:'0 auto 16px'}}/>
+            {[
+              {id:'home', label:'Atlas'},
+              {id:'map', label:'Courts'},
+              {id:'collections', label:'Collections'},
+              {id:'profile', label:'Profile'},
+            ].map(it=>(
+              <div key={it.id} onClick={()=>jumpTo(it.id)} style={{padding:'15px 24px',fontSize:16,fontFamily:"'Cormorant Garamond',serif",borderBottom:'1px solid rgba(184,184,182,0.25)',cursor:'pointer'}}>
+                {it.label}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Sign-in / sign-up gate — shown wherever a guest has no account yet ───
+function AuthGateScreen({onNav, active, onSignIn}){
+  const [email,setEmail] = useState('');
+  return(
+    <div style={{background:'var(--ivory)',minHeight:'100%',display:'flex',flexDirection:'column'}}>
+      {/* Standalone auth chrome — no browser bar, no nav pill */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'22px 24px 0'}}>
+        <span className="serif" style={{fontSize:15,letterSpacing:'0.14em',textTransform:'uppercase'}}>Tennis · World</span>
+        <span onClick={()=>onNav('home')} style={{fontSize:10,fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--stone)',cursor:'pointer'}}>Continue exploring</span>
+      </div>
+
+      <div style={{flex:1,padding:'44px 28px 0',display:'flex',flexDirection:'column',alignItems:'center',textAlign:'center'}}>
+        <div style={{fontSize:11,fontWeight:600,letterSpacing:'0.14em',color:'var(--stone)',textTransform:'uppercase',marginBottom:10}}>Welcome back</div>
+        <div className="serif" style={{fontSize:28,fontWeight:400}}>Sign in to your account</div>
+        <p style={{fontSize:13,color:'var(--stone)',marginTop:10,lineHeight:1.5,maxWidth:260}}>Access your saved courts, collections, and membership.</p>
+
+        <button onClick={onSignIn} style={{width:'100%',height:48,borderRadius:8,border:'1px solid rgba(15,15,15,0.5)',background:'none',display:'flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:12,fontWeight:600,letterSpacing:'0.06em',textTransform:'uppercase',color:'var(--ink)',cursor:'pointer',marginTop:28}}>
+          {Ico.apple(15)} Continue with Apple
+        </button>
+        <button onClick={onSignIn} style={{width:'100%',height:48,borderRadius:8,border:'1px solid rgba(15,15,15,0.5)',background:'none',display:'flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:12,fontWeight:600,letterSpacing:'0.06em',textTransform:'uppercase',color:'var(--ink)',cursor:'pointer',marginTop:10}}>
+          {Ico.google(15)} Continue with Google
+        </button>
+
+        <div style={{display:'flex',alignItems:'center',gap:12,width:'100%',margin:'22px 0'}}>
+          <div style={{flex:1,height:1,background:'rgba(184,184,182,0.4)'}}/>
+          <span style={{fontSize:10,color:'var(--stone)',letterSpacing:'0.1em'}}>OR</span>
+          <div style={{flex:1,height:1,background:'rgba(184,184,182,0.4)'}}/>
+        </div>
+
+        <div style={{width:'100%',textAlign:'left'}}>
+          <label style={{fontSize:10,fontWeight:600,letterSpacing:'0.08em',color:'var(--stone)',textTransform:'uppercase'}}>Email</label>
+          <div style={{display:'flex',alignItems:'center',gap:8,marginTop:6,border:'1px solid rgba(184,184,182,0.4)',borderRadius:8,padding:'0 14px',height:48,background:'var(--paper)'}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--stone)" strokeWidth="1.6"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+            <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" style={{flex:1,border:'none',outline:'none',background:'none',fontSize:14,fontFamily:"'Inter',sans-serif",color:'var(--ink)'}}/>
+          </div>
+        </div>
+
+        <button onClick={onSignIn} className="btn" style={{width:'100%',height:50,borderRadius:100,background:'var(--ink)',color:'var(--bone)',fontSize:12,letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:500,marginTop:14}}>Send Magic Link →</button>
+        <p style={{fontSize:11,color:'var(--stone)',marginTop:10}}>No password needed — we'll email you a secure sign-in link.</p>
+
+        <div style={{width:'100%',height:1,background:'rgba(184,184,182,0.3)',margin:'24px 0'}}/>
+        <div style={{fontSize:13,color:'var(--stone)'}}>New to Tennis World? <span onClick={onSignIn} style={{color:'var(--ink)',textDecoration:'underline',cursor:'pointer'}}>Create an account</span></div>
+      </div>
+
+      <div style={{textAlign:'center',padding:'20px 24px 24px',fontSize:10,color:'var(--mist)'}}>
+        By continuing, you agree to our <span style={{textDecoration:'underline'}}>Terms</span> and <span style={{textDecoration:'underline'}}>Privacy Policy</span>.
+      </div>
+    </div>
+  );
+}
+
+// ─── Court card — the one true full horizontal court card, reused everywhere ───
+function CourtCard({court, onClick, locked, saved, onToggleSave, saveDisabled}){
+  const [tipOpen,setTipOpen] = useState(false);
+  return(
+    <div onClick={onClick} style={{position:'relative',borderRadius:14,overflow:'hidden',cursor:'pointer',height:170}}>
+      <img src={court.img} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+      <div className="img-overlay"/>
+      <div style={{position:'absolute',top:10,left:10,display:'flex',gap:6}}>
+        {locked
+          ? <span className="premium-badge" style={{fontSize:9}}>{Ico.lock(9)} Premium</span>
+          : <SurfaceLabel surface={court.surface} small/>
+        }
+      </div>
+      {onToggleSave&&(
+        <div style={{position:'absolute',top:10,right:10}}>
+          <button onClick={e=>{e.stopPropagation(); if(saveDisabled){ setTipOpen(o=>!o); return; } onToggleSave();}} style={{width:32,height:32,borderRadius:'50%',background:'rgba(15,15,15,0.45)',backdropFilter:'blur(8px)',border:'none',cursor:saveDisabled?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:saveDisabled?'rgba(245,242,236,0.5)':(saved?'#E85D4A':'var(--bone)')}}>
+            {Ico.save(14)}
+          </button>
+          {saveDisabled&&tipOpen&&(
+            <div style={{position:'absolute',top:'115%',right:0,background:'var(--ink)',color:'var(--bone)',fontSize:11,fontWeight:500,padding:'6px 10px',borderRadius:6,whiteSpace:'nowrap',boxShadow:'0 6px 16px rgba(0,0,0,0.25)',zIndex:20}}>
+              Sign in to save
+            </div>
+          )}
+        </div>
+      )}
+      <div style={{position:'absolute',bottom:0,left:0,right:0,padding:'16px 14px 14px'}}>
+        <div className="serif" style={{fontSize:19,fontWeight:400,color:'#fff',lineHeight:1.2,marginBottom:4}}>{locked?'Premium Court':court.name}</div>
+        <div style={{display:'flex',gap:5,alignItems:'center',marginBottom:8,color:'rgba(255,255,255,0.85)'}}>
+          {Ico.pin(11)}<span style={{fontSize:12}}>{locked?'Unlock to reveal location':court.location}</span>
+        </div>
+        {!locked&&(
+          <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+            {court.labels.slice(0,3).map(l=>(
+              <span key={l} style={{background:'rgba(245,242,236,0.22)',backdropFilter:'blur(8px)',border:'1px solid rgba(255,255,255,0.35)',color:'#fff',padding:'3px 9px',borderRadius:100,fontSize:11,fontWeight:500}}>{l}</span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Saved screen ─────────────────────────────────────────
+function SavedScreen({onNav, onCourtOpen, isGuest, onSignIn}){
+  const [tab,setTab]=useState('courts');
+  const [saved,setSaved]=useState(new Set(['epi','soho','monte','nell']));
+  const [savedCollections,setSavedCollections]=useState(new Set(COLLECTIONS.map(c=>c.id)));
+  const savedCourts = COURTS.filter(c=>saved.has(c.id));
+  const savedCollectionList = COLLECTIONS.filter(c=>savedCollections.has(c.id));
+
+  if(isGuest){
+    return <AuthGateScreen onNav={onNav} active="saved" onSignIn={onSignIn}/>;
+  }
+
+  return(
+    <div style={{background:'var(--bone)',minHeight:'100%'}}>
+      <StatusBar path="profile/saved"/>
+      <TopTabs active="profile" onNav={onNav}/>
+      <div style={{padding:'20px 20px 0'}}>
+        <div className="serif display-l">Saved</div>
+        <p style={{fontSize:13,color:'var(--stone)',marginTop:4}}>All your favourite tennis destinations in one place.</p>
+        <div style={{display:'flex',gap:10,marginTop:16}}>
+          {[['courts','Courts',Ico.court],['collections','Collections',Ico.collect]].map(([id,label,icon])=>(
+            <button key={id} onClick={()=>setTab(id)} className={`label-chip chip-filter ${tab===id?'active':''}`} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:14,fontWeight:600,padding:'12px 0'}}>
+              {icon(18)} {label}
+            </button>
+          ))}
+        </div>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:16,marginBottom:12}}>
+          <span style={{fontSize:13,fontWeight:500}}>{tab==='courts'?saved.size:savedCollectionList.length} saved</span>
+          {tab==='courts'&&(
+            <button style={{background:'none',border:'none',cursor:'pointer',fontSize:12,color:'var(--stone)',display:'flex',gap:4,alignItems:'center'}}>Recently added ↓</button>
+          )}
+        </div>
+      </div>
+
+      {/* Courts tab — full-bleed image cards, text & labels over the image */}
+      {tab==='courts'&&(
+        <div style={{padding:'0 20px',display:'flex',flexDirection:'column',gap:12}}>
+          {savedCourts.map(c=>(
+            <CourtCard key={c.id} court={c} onClick={()=>onCourtOpen(c)} saved={true} onToggleSave={()=>setSaved(s=>{const n=new Set(s);n.has(c.id)?n.delete(c.id):n.add(c.id);return n;})}/>
+          ))}
+
+          {/* Dream list CTA */}
+          <div style={{background:'var(--ivory)',borderRadius:12,padding:'16px',display:'flex',gap:12,alignItems:'center',border:'1px solid rgba(184,184,182,0.3)'}}>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12,color:'var(--gold)',fontWeight:600,marginBottom:4}}>Create your</div>
+              <div className="serif" style={{fontSize:22,fontWeight:400,lineHeight:1.1}}>Dream List</div>
+              <p style={{fontSize:12,color:'var(--stone)',marginTop:4,lineHeight:1.4}}>Save more courts and start planning your next trip.</p>
+              <button className="btn btn-primary btn-sm" style={{marginTop:10,fontSize:11}} onClick={()=>onNav('collections')}>Explore collections</button>
+            </div>
+            <div style={{position:'relative',width:70,height:80,flexShrink:0}}>
+              <img src={U(IMG.court1,200)} style={{width:60,height:70,objectFit:'cover',borderRadius:8,position:'absolute',right:0,top:0,transform:'rotate(5deg)'}}/>
+              <img src={U(IMG.court6,200)} style={{width:55,height:65,objectFit:'cover',borderRadius:8,position:'absolute',left:0,bottom:0,transform:'rotate(-4deg)'}}/>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Collections tab — its own card design, distinct from court cards */}
+      {tab==='collections'&&(
+        <div style={{padding:'0 20px',display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+          {savedCollectionList.map(c=>(
+            <div key={c.id} onClick={()=>onNav('collections')} style={{position:'relative',borderRadius:12,overflow:'hidden',cursor:'pointer',height:150}}>
+              <img src={c.img} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+              <div className="img-overlay"/>
+              <div style={{position:'absolute',top:8,left:8}}>
+                <span style={{background:'rgba(15,15,15,0.5)',backdropFilter:'blur(8px)',padding:'3px 9px',borderRadius:100,fontSize:9,color:'#fff',fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase'}}>{c.courts} COURTS</span>
+              </div>
+              <button onClick={e=>{e.stopPropagation();setSavedCollections(s=>{const n=new Set(s);n.has(c.id)?n.delete(c.id):n.add(c.id);return n;})}} style={{position:'absolute',top:8,right:8,width:28,height:28,borderRadius:'50%',background:'rgba(15,15,15,0.45)',backdropFilter:'blur(8px)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--bone)'}}>
+                {Ico.save(13)}
+              </button>
+              <div style={{position:'absolute',bottom:0,left:0,right:0,padding:'10px 12px'}}>
+                <div className="serif" style={{fontSize:17,fontWeight:400,color:'#fff',lineHeight:1.2}}>{c.name}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{height:40}}/>
+    </div>
+  );
+}
+
+// ─── Collections screen ───────────────────────────────────
+function CollectionsScreen({onNav, onCollectionOpen}){
+  return(
+    <div style={{background:'var(--bone)',minHeight:'100%'}}>
+      <StatusBar path="collections"/>
+      <TopTabs active="collections" onNav={onNav}/>
+      <div style={{padding:'20px 20px 0',display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+        <div className="serif display-l">Collections</div>
+        <div style={{display:'flex',gap:12,paddingTop:6}}>
+          {Ico.search(20)}
+          {Ico.filter(20)}
+        </div>
+      </div>
+      <p style={{fontSize:13,color:'var(--stone)',padding:'4px 20px 0'}}>Curated tennis destinations around the world.</p>
+
+      {/* Featured collections */}
+      <div style={{padding:'24px 0 0'}}>
+        <div style={{padding:'0 20px',marginBottom:12}}>
+          <span style={{fontSize:16,fontWeight:600}}>Featured Collections</span>
+        </div>
+        <div className="h-scroll" style={{padding:'0 20px',gap:12}}>
+          {COLLECTIONS.slice(0,3).map(c=>(
+            <div key={c.id} onClick={()=>onCollectionOpen(c)} style={{width:200,height:240,flexShrink:0,position:'relative',borderRadius:12,overflow:'hidden',cursor:'pointer'}}>
+              <img src={c.img} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+              <div className="img-overlay"/>
+              <div style={{position:'absolute',top:10,left:10}}>
+                <span style={{background:'rgba(15,15,15,0.5)',backdropFilter:'blur(8px)',padding:'3px 10px',borderRadius:100,fontSize:9,color:'#fff',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase'}}>{c.courts} COURTS</span>
+              </div>
+              <div style={{position:'absolute',bottom:0,left:0,right:0,padding:'16px 14px',display:'flex',justifyContent:'space-between',alignItems:'flex-end'}}>
+                <div>
+                  <div className="serif" style={{fontSize:22,fontWeight:400,color:'#fff',lineHeight:1.15}}>{c.name}</div>
+                  <div style={{fontSize:11,color:'rgba(255,255,255,0.7)',marginTop:4}}>{c.sub}</div>
+                </div>
+                <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(255,255,255,0.2)',border:'1px solid rgba(255,255,255,0.5)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+                  {Ico.arrow(14)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* By Country */}
+      <div style={{padding:'28px 0 0'}}>
+        <div style={{padding:'0 20px',marginBottom:12}}>
+          <span style={{fontSize:16,fontWeight:600}}>By Country</span>
+        </div>
+        <div className="h-scroll" style={{padding:'0 20px',gap:10}}>
+          {COUNTRIES.map(c=>(
+            <div key={c.name} style={{width:90,flexShrink:0,cursor:'pointer',textAlign:'center'}}>
+              <div style={{width:72,height:72,borderRadius:'50%',overflow:'hidden',margin:'0 auto',border:'1px solid rgba(184,184,182,0.3)'}}>
+                <img src={c.img} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+              </div>
+              <div style={{fontSize:12,fontWeight:500,marginTop:6}}>{c.name}</div>
+              <div style={{fontSize:10,color:'var(--stone)',marginTop:2}}>{c.courts} courts</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Curated for you */}
+      <div style={{padding:'28px 20px 0'}}>
+        <div style={{marginBottom:12}}>
+          <span style={{fontSize:16,fontWeight:600}}>Curated for You</span>
+        </div>
+        <div style={{display:'flex',flexDirection:'column',gap:10}}>
+          {COLLECTIONS.map(c=>(
+            <div key={c.id} onClick={()=>onCollectionOpen(c)} style={{background:'var(--paper)',borderRadius:12,display:'flex',gap:14,padding:'12px',cursor:'pointer',alignItems:'center'}}>
+              <img src={c.img} style={{width:96,height:80,objectFit:'cover',borderRadius:10,flexShrink:0}}/>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:500,fontSize:15,lineHeight:1.2}}>{c.name}</div>
+                <div style={{fontSize:12,color:'var(--stone)',marginTop:3,lineHeight:1.35}}>{c.sub}</div>
+                <div style={{fontSize:11,color:'var(--stone)',marginTop:6}}>{c.courts} courts</div>
+              </div>
+              <button onClick={e=>e.stopPropagation()} style={{background:'var(--bone)',border:'none',width:32,height:32,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0}}>
+                {Ico.save(14)}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{height:40}}/>
+    </div>
+  );
+}
+
+// ─── Single collection ──────────────────────────────────────
+function CollectionDetailScreen({collection, onBack, onNav, onCourtOpen, unlocked=false, onPaywall}){
+  const [saved,setSaved] = useState(false);
+  const [savedCourts,setSavedCourts] = useState(new Set());
+  const [burgerOpen,setBurgerOpen] = useState(false);
+  const jumpTo = (screen) => { setBurgerOpen(false); onNav(screen); };
+  const slug = collection.name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+  const courts = (collection.courtIds||[]).map(id=>COURTS.find(c=>c.id===id)).filter(Boolean);
+
+  return(
+    <div style={{background:'var(--bone)',minHeight:'100%'}}>
+      {/* Solid browser chrome — same top pattern as a single court */}
+      <StatusBar path={`collections/${slug}`} onBack={onBack} onMenu={()=>setBurgerOpen(true)}/>
+
+      {/* Hero */}
+      <div style={{position:'relative',height:230}}>
+        <img src={collection.img} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+        <div className="img-overlay-top"/>
+        <div style={{position:'absolute',bottom:16,left:20,right:20}}>
+          <span style={{background:'rgba(15,15,15,0.5)',backdropFilter:'blur(8px)',padding:'3px 10px',borderRadius:100,fontSize:9,color:'#fff',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase'}}>{collection.courts} COURTS</span>
+          <div className="serif" style={{fontSize:30,fontWeight:400,color:'#fff',lineHeight:1.1,marginTop:8}}>{collection.name}</div>
+        </div>
+      </div>
+
+      {/* White card content */}
+      <div style={{background:'var(--paper)',borderRadius:'20px 20px 0 0',marginTop:-16,position:'relative',paddingBottom:112}}>
+        <div style={{padding:'20px 20px 0'}}>
+          <div style={{fontSize:13,color:'var(--stone)'}}>{collection.sub}</div>
+          <p className="body-m" style={{color:'var(--graphite)',lineHeight:1.6,marginTop:12}}>{collection.desc}</p>
+        </div>
+
+        <div className="divider" style={{margin:'20px 0'}}/>
+
+        {/* Courts in this collection */}
+        <div style={{padding:'0 20px'}}>
+          <div className="sec-hdr" style={{marginBottom:12}}>
+            <span style={{fontSize:16,fontWeight:600}}>Courts in this collection</span>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            {courts.map(c=>(
+              <CourtCard key={c.id} court={c} onClick={()=>onCourtOpen(c)} locked={c.locked&&!unlocked} saved={savedCourts.has(c.id)} onToggleSave={()=>setSavedCourts(s=>{const n=new Set(s);n.has(c.id)?n.delete(c.id):n.add(c.id);return n;})}/>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Floating bottom action bar */}
+      <div style={{position:'sticky',bottom:18,margin:'0 16px',background:'rgba(250,248,243,0.85)',backdropFilter:'blur(24px) saturate(1.5)',WebkitBackdropFilter:'blur(24px) saturate(1.5)',border:'1px solid rgba(255,255,255,0.6)',borderRadius:100,padding:7,display:'flex',gap:8,alignItems:'center',boxShadow:'0 16px 40px rgba(15,15,15,0.18),0 2px 10px rgba(15,15,15,0.08)',zIndex:100}}>
+        <button className="btn btn-primary" style={{flex:1,borderRadius:100,height:48}} onClick={unlocked?()=>onNav('map'):onPaywall}>
+          {unlocked?'Show the map':'Unlock the map'}
+        </button>
+        <button style={{width:48,height:48,borderRadius:'50%',background:'rgba(15,15,15,0.05)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:'var(--ink)'}}>
+          {Ico.share(18)}
+        </button>
+        <button onClick={()=>{setSaved(s=>!s)}} style={{width:48,height:48,borderRadius:'50%',background:'rgba(15,15,15,0.05)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:saved?'#E85D4A':'var(--ink)'}}>
+          {Ico.heart(18,saved)}
+        </button>
+      </div>
+
+      {/* Burger sheet — quick jump to primary destinations */}
+      {burgerOpen&&(
+        <div style={{position:'fixed',top:0,bottom:0,left:'50%',width:390,maxWidth:'100vw',transform:'translateX(-50%)',zIndex:300,display:'flex',flexDirection:'column',justifyContent:'flex-end'}}>
+          <div style={{position:'absolute',inset:0,background:'rgba(15,15,15,0.4)'}} onClick={()=>setBurgerOpen(false)}/>
+          <div style={{position:'relative',background:'var(--paper)',borderRadius:'20px 20px 0 0',padding:'12px 0 28px'}}>
+            <div style={{width:36,height:4,background:'var(--mist)',borderRadius:2,margin:'0 auto 16px'}}/>
+            {[
+              {id:'home', label:'Atlas'},
+              {id:'map', label:'Courts'},
+              {id:'collections', label:'Collections'},
+              {id:'profile', label:'Profile'},
+            ].map(it=>(
+              <div key={it.id} onClick={()=>jumpTo(it.id)} style={{padding:'15px 24px',fontSize:16,fontFamily:"'Cormorant Garamond',serif",borderBottom:'1px solid rgba(184,184,182,0.25)',cursor:'pointer'}}>
+                {it.label}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Profile screen ───────────────────────────────────────
+function ProfileScreen({onNav, unlocked, isGuest, onSignIn}){
+  const stats=[
+    {icon:Ico.court,n:'67',label:'Courts saved',active:true},
+    {icon:Ico.map,n:'',label:'Courts visited',active:false},
+    {icon:Ico.heart,n:'',label:'Courts liked',active:false},
+  ];
+  const AVATARS=[U(IMG.hero1,200),U(IMG.hero2,200)];
+  const [name,setName]=useState('Janet Sée');
+  const [email,setEmail]=useState('janet@example.com');
+  const [avatar,setAvatar]=useState(AVATARS[0]);
+  const [editOpen,setEditOpen]=useState(false);
+  const [draftName,setDraftName]=useState(name);
+  const [draftEmail,setDraftEmail]=useState(email);
+  const [draftAvatar,setDraftAvatar]=useState(avatar);
+  const openEdit=()=>{setDraftName(name);setDraftEmail(email);setDraftAvatar(avatar);setEditOpen(true);};
+  const saveEdit=()=>{setName(draftName);setEmail(draftEmail);setAvatar(draftAvatar);setEditOpen(false);};
+
+  if(isGuest){
+    return <AuthGateScreen onNav={onNav} active="profile" onSignIn={onSignIn}/>;
+  }
+
+  return(
+    <div style={{background:'var(--bone)',minHeight:'100%'}}>
+      <StatusBar path="profile"/>
+      <TopTabs active="profile" onNav={onNav}/>
+      {/* Settings — sits just under the nav pill, out of its way */}
+      <div style={{display:'flex',justifyContent:'flex-end',padding:'12px 20px 0'}}>
+        <button onClick={()=>onNav('settings')} style={{width:36,height:36,borderRadius:'50%',background:'var(--paper)',border:'1px solid rgba(184,184,182,0.4)',cursor:'pointer',color:'var(--graphite)',display:'flex',alignItems:'center',justifyContent:'center'}}>{Ico.settings(16)}</button>
+      </div>
+      {/* Profile header */}
+      <div style={{padding:'20px 20px 0'}}>
+        <div style={{display:'flex',gap:16,alignItems:'flex-start'}}>
+          <div style={{width:80,height:80,borderRadius:'50%',overflow:'hidden',border:'3px solid var(--paper)',boxShadow:'0 2px 12px rgba(15,15,15,0.15)',flexShrink:0}}>
+            <img src={avatar} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+          </div>
+          <div style={{flex:1}}>
+            <div className="serif" style={{fontSize:26,fontWeight:400,lineHeight:1.1}}>{name}</div>
+            <button onClick={openEdit} className="btn btn-secondary btn-sm btn-pill" style={{marginTop:10,fontSize:11,gap:6}}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Edit profile
+            </button>
+          </div>
+        </div>
+        {/* Stats */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:0,marginTop:20,background:'var(--paper)',borderRadius:12,padding:'16px 0'}}>
+          {stats.map((s,i)=>(
+            <div key={s.label} onClick={s.active?()=>onNav('saved'):undefined} style={{display:'flex',flexDirection:'column',alignItems:'center',height:74,borderRight:i<stats.length-1?'1px solid rgba(184,184,182,0.3)':'none',opacity:s.active?1:0.45,cursor:s.active?'pointer':'default'}}>
+              <div style={{color:'var(--ink)'}}>{s.icon(14)}</div>
+              <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                {s.active
+                  ? <span style={{fontSize:22,fontWeight:700}}>{s.n}</span>
+                  : <span style={{fontSize:9,fontWeight:600,letterSpacing:'0.05em',textTransform:'uppercase',color:'var(--stone)',whiteSpace:'nowrap'}}>Coming soon</span>
+                }
+              </div>
+              <div style={{fontSize:10,color:'var(--stone)'}}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Membership */}
+      {!unlocked&&(
+        <div style={{margin:'20px 20px 0',background:'var(--ink)',borderRadius:12,padding:'18px 16px',display:'flex',gap:12,alignItems:'center'}}>
+          <div style={{flex:1}}>
+            <div style={{fontSize:10,color:' var(--gold)',fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:4}}>Membership</div>
+            <div className="serif" style={{fontSize:20,color:'var(--bone)',fontWeight:300}}>The world, unlocked.</div>
+            <div style={{fontSize:12,color:'rgba(245,242,236,0.6)',marginTop:4}}>One-time · Lifetime · $29</div>
+          </div>
+          <button className="btn btn-gold btn-sm">Unlock →</button>
+        </div>
+      )}
+      {unlocked&&(
+        <div style={{margin:'20px 20px 0',background:'linear-gradient(135deg,#1A1A1A,#2A2A2A)',borderRadius:12,padding:'14px 16px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div>
+            <div style={{fontSize:10,color:'var(--gold)',fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase'}}>Lifetime Member</div>
+            <div style={{fontSize:13,color:'var(--bone)',marginTop:2}}>Full atlas access · Since 2024</div>
+          </div>
+          <span className="premium-badge">✦ Active</span>
+        </div>
+      )}
+
+      {/* My collections — saved items, grouped (opens the Saved page) */}
+      <div style={{padding:'24px 0 0'}}>
+        <div className="sec-hdr" style={{padding:'0 20px',marginBottom:12,cursor:'pointer'}} onClick={()=>onNav('saved')}>
+          <span style={{fontSize:16,fontWeight:600}}>My collections</span>
+          <span className="view-all">View all →</span>
+        </div>
+        <div className="h-scroll" style={{padding:'0 20px',gap:12}}>
+          {COLLECTIONS.slice(0,4).map(c=>(
+            <div key={c.id} onClick={()=>onNav('saved')} style={{width:200,height:240,flexShrink:0,position:'relative',borderRadius:12,overflow:'hidden',cursor:'pointer'}}>
+              <img src={c.img} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+              <div className="img-overlay"/>
+              <div style={{position:'absolute',top:10,left:10}}>
+                <span style={{background:'rgba(15,15,15,0.5)',backdropFilter:'blur(8px)',padding:'3px 10px',borderRadius:100,fontSize:9,color:'#fff',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase'}}>{c.courts} COURTS</span>
+              </div>
+              <div style={{position:'absolute',bottom:0,left:0,right:0,padding:'16px 14px',display:'flex',justifyContent:'space-between',alignItems:'flex-end'}}>
+                <div>
+                  <div className="serif" style={{fontSize:22,fontWeight:400,color:'#fff',lineHeight:1.15}}>{c.name}</div>
+                  <div style={{fontSize:11,color:'rgba(255,255,255,0.7)',marginTop:4}}>{c.sub}</div>
+                </div>
+                <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(255,255,255,0.2)',border:'1px solid rgba(255,255,255,0.5)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+                  {Ico.arrow(14)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{height:40}}/>
+
+      {/* Edit profile — modal (photo, name, email) */}
+      {editOpen&&(
+        <div style={{position:'fixed',top:0,bottom:0,left:'50%',width:390,maxWidth:'100vw',transform:'translateX(-50%)',zIndex:200,display:'flex',flexDirection:'column',justifyContent:'flex-end'}}>
+          <div style={{position:'absolute',inset:0,background:'rgba(15,15,15,0.4)'}} onClick={()=>setEditOpen(false)}/>
+          <div style={{position:'relative',background:'var(--paper)',borderRadius:'20px 20px 0 0',padding:'20px 20px 32px',maxHeight:'85vh',overflowY:'auto'}}>
+            <div style={{width:36,height:4,background:'var(--mist)',borderRadius:2,margin:'0 auto 20px'}}/>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
+              <span style={{fontSize:17,fontWeight:600}}>Edit profile</span>
+              <button onClick={()=>setEditOpen(false)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--stone)'}}>{Ico.close(18)}</button>
+            </div>
+
+            {/* Photo */}
+            <div style={{display:'flex',justifyContent:'center',marginBottom:24}}>
+              <div style={{position:'relative'}}>
+                <div style={{width:88,height:88,borderRadius:'50%',overflow:'hidden',border:'3px solid var(--bone)',boxShadow:'0 2px 12px rgba(15,15,15,0.15)'}}>
+                  <img src={draftAvatar} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                </div>
+                <button onClick={()=>setDraftAvatar(a=>AVATARS[(AVATARS.indexOf(a)+1)%AVATARS.length])} style={{position:'absolute',bottom:-2,right:-2,width:28,height:28,borderRadius:'50%',background:'var(--ink)',border:'2px solid var(--paper)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--bone)'}}>
+                  {Ico.img(13)}
+                </button>
+              </div>
+            </div>
+
+            {/* Name */}
+            <div style={{marginBottom:16}}>
+              <label style={{fontSize:11,fontWeight:600,letterSpacing:'0.06em',color:'var(--stone)',textTransform:'uppercase',display:'block',marginBottom:6}}>Name</label>
+              <input value={draftName} onChange={e=>setDraftName(e.target.value)} style={{width:'100%',height:48,padding:'0 14px',borderRadius:8,border:'1px solid rgba(184,184,182,0.4)',fontSize:15,fontFamily:"'Inter',sans-serif",color:'var(--ink)',outline:'none',background:'var(--bone)'}}/>
+            </div>
+
+            {/* Email */}
+            <div style={{marginBottom:24}}>
+              <label style={{fontSize:11,fontWeight:600,letterSpacing:'0.06em',color:'var(--stone)',textTransform:'uppercase',display:'block',marginBottom:6}}>Email</label>
+              <input type="email" value={draftEmail} onChange={e=>setDraftEmail(e.target.value)} style={{width:'100%',height:48,padding:'0 14px',borderRadius:8,border:'1px solid rgba(184,184,182,0.4)',fontSize:15,fontFamily:"'Inter',sans-serif",color:'var(--ink)',outline:'none',background:'var(--bone)'}}/>
+            </div>
+
+            <button className="btn btn-primary" style={{width:'100%'}} onClick={saveEdit}>Save changes</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Settings ───────────────────────────────────────────────
+function SettingsScreen({onBack, unlocked}){
+  return(
+    <div style={{background:'var(--bone)',minHeight:'100%'}}>
+      <div style={{padding:'48px 20px 0',display:'flex',alignItems:'center',gap:14}}>
+        <button onClick={onBack} style={{background:'none',border:'none',cursor:'pointer',color:'var(--ink)',display:'flex'}}>{Ico.back(20)}</button>
+        <div className="serif display-m">Settings</div>
+      </div>
+
+      <div style={{padding:'24px 20px 0'}}>
+        <div style={{background:'var(--paper)',borderRadius:12,overflow:'hidden'}}>
+          {[
+            {label:'Subscription & Access',sub:unlocked?'Lifetime member — active':'Free plan'},
+            {label:'Account settings',sub:null},
+            {label:'Contact us',sub:null},
+          ].map((item,i,arr)=>(
+            <div key={item.label}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 16px',cursor:'pointer'}}>
+                <div>
+                  <div style={{fontSize:14,fontWeight:400}}>{item.label}</div>
+                  {item.sub&&<div style={{fontSize:11,color:'var(--stone)',marginTop:1}}>{item.sub}</div>}
+                </div>
+                <span style={{color:'var(--stone)'}}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg></span>
+              </div>
+              {i<arr.length-1&&<div className="divider"/>}
+            </div>
+          ))}
+        </div>
+        <div style={{display:'flex',gap:16,marginTop:16,justifyContent:'center'}}>
+          {['Privacy Policy','Terms of Service'].map(l=>(
+            <span key={l} style={{fontSize:11,color:'var(--stone)',cursor:'pointer',textDecoration:'underline'}}>{l}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Purchase Success ──────────────────────────────────────
+function PurchaseSuccessScreen({onBack, returnTo}){
+  return(
+    <div style={{background:'var(--bone)',minHeight:'100%',display:'flex',flexDirection:'column'}}>
+      <StatusBar/>
+      {/* Hero image */}
+      <div style={{position:'relative',height:280}}>
+        <img src={U(IMG.paywall,800)} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+        <div style={{position:'absolute',inset:0,background:'linear-gradient(180deg,rgba(0,0,0,0.1) 0%,rgba(245,242,236,1) 100%)'}}/>
+      </div>
+      <div style={{flex:1,padding:'0 28px 40px',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',marginTop:-20}}>
+        {/* Check circle */}
+        <div style={{width:56,height:56,borderRadius:'50%',border:'1.5px solid var(--gold)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--gold)',marginBottom:20}}>
+          {Ico.check(24)}
+        </div>
+        <div style={{fontSize:11,fontWeight:600,letterSpacing:'0.12em',color:'var(--gold)',textTransform:'uppercase',marginBottom:10}}>WELCOME TO</div>
+        <div className="serif" style={{fontSize:44,fontWeight:300,lineHeight:1.05}}>Tennis World</div>
+        <p style={{fontSize:15,color:'var(--graphite)',marginTop:12,marginBottom:8,lineHeight:1.5}}>Your membership is now active.</p>
+        <p style={{fontSize:13,color:'var(--stone)',lineHeight:1.6,maxWidth:280}}>You now have full access to exact court locations, the complete atlas, and all curated collections across Tennis World.</p>
+
+        {/* Stats row */}
+        <div style={{display:'flex',justifyContent:'center',gap:24,marginTop:24,marginBottom:32}}>
+          {[['120+','Countries'],[Ico.court,'1800+ Courts'],['','Exact\nLocations'],['','Curated\nCollections']].map((s,i)=>(
+            <div key={i} style={{textAlign:'center'}}>
+              <div style={{color:'var(--gold)',marginBottom:4,display:'flex',justifyContent:'center'}}>
+                {i===0&&<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#B89968" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>}
+                {i===1&&Ico.court(22)}
+                {i===2&&<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#B89968" strokeWidth="1.5"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>}
+                {i===3&&Ico.save(22)}
+              </div>
+              <div style={{fontSize:11,fontWeight:600,color:'var(--gold)',display:'flex',flexDirection:'column',alignItems:'center'}}>
+                {i===0&&<><span style={{fontSize:18,color:'var(--ink)'}}>120+</span><span style={{fontSize:10,color:'var(--stone)'}}>Countries</span></>}
+                {i===1&&<><span style={{fontSize:18,color:'var(--ink)'}}>1800+</span><span style={{fontSize:10,color:'var(--stone)'}}>Courts</span></>}
+                {i===2&&<><span style={{fontSize:18,color:'var(--ink)'}}>Exact</span><span style={{fontSize:10,color:'var(--stone)'}}>Locations</span></>}
+                {i===3&&<><span style={{fontSize:18,color:'var(--ink)'}}>Curated</span><span style={{fontSize:10,color:'var(--stone)'}}>Collections</span></>}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button className="btn btn-primary" style={{width:'100%',marginBottom:12}} onClick={onBack}>EXPLORE THE MAP →</button>
+        <div style={{display:'flex',gap:12,width:'100%'}}>
+          <button className="btn btn-secondary" style={{flex:1,fontSize:11,gap:5}}>{Ico.heart(12)} VIEW SAVED COURTS</button>
+          <button className="btn btn-secondary" style={{flex:1,fontSize:11,gap:5}}>{Ico.profile(12)} GO TO PROFILE</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Purchase Failed ───────────────────────────────────────
+function PurchaseFailedScreen({onBack, onRetry}){
+  return(
+    <div style={{background:'var(--bone)',minHeight:'100%',display:'flex',flexDirection:'column'}}>
+      <StatusBar/>
+      <div style={{position:'relative',height:200}}>
+        <img src={U(IMG.court3,800)} style={{width:'100%',height:'100%',objectFit:'cover',filter:'grayscale(0.5) brightness(0.7)'}}/>
+        <div style={{position:'absolute',inset:0,background:'linear-gradient(180deg,rgba(0,0,0,0.2) 0%,rgba(245,242,236,1) 100%)'}}/>
+      </div>
+      <div style={{flex:1,padding:'0 28px 48px',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',marginTop:-20}}>
+        <div style={{width:56,height:56,borderRadius:'50%',border:'1.5px solid #B95C3A',display:'flex',alignItems:'center',justifyContent:'center',color:'#B95C3A',marginBottom:20}}>
+          {Ico.close(24)}
+        </div>
+        <div className="serif" style={{fontSize:32,fontWeight:300}}>Payment unsuccessful</div>
+        <p style={{fontSize:14,color:'var(--stone)',marginTop:12,lineHeight:1.6,maxWidth:280}}>Something went wrong with your payment. Your card hasn't been charged. Please try again or use a different payment method.</p>
+        <div style={{background:'var(--paper)',borderRadius:10,padding:'16px',width:'100%',marginTop:24,marginBottom:28,border:'1px solid rgba(184,184,182,0.3)'}}>
+          {['Card details','Your courts','Your progress'].map((item,i)=>(
+            <div key={item} style={{display:'flex',gap:10,alignItems:'center',padding:'8px 0',borderBottom:i<2?'1px solid rgba(184,184,182,0.2)':'none'}}>
+              <div style={{width:20,height:20,borderRadius:'50%',background:'#E8F5E8',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                {Ico.check(12)}
+              </div>
+              <span style={{fontSize:12,color:'var(--graphite)'}}>{item} {i===0?'not charged':i===1?'still saved':'not affected'}</span>
+            </div>
+          ))}
+        </div>
+        <button className="btn btn-primary" style={{width:'100%',marginBottom:12}} onClick={onRetry}>Try again</button>
+        <button className="btn btn-secondary" style={{width:'100%',marginBottom:20}} onClick={onBack}>Go back</button>
+        <div style={{fontSize:12,color:'var(--stone)',lineHeight:1.5}}>
+          Need help? <span style={{color:'var(--clay)',fontWeight:500,cursor:'pointer'}}>Contact support →</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Root app ─────────────────────────────────────────────
+function App(){
+  const [screen,setScreen]=useState('home');
+  const [prevScreen,setPrevScreen]=useState(null);
+  const [openCourt,setOpenCourt]=useState(null);
+  const [openCollection,setOpenCollection]=useState(null);
+  const [accessState,setAccessState]=useState('guest'); // 'guest' | 'free' | 'full'
+  const unlocked = accessState==='full';
+  const isGuest = accessState==='guest';
+
+  const navigate = (to) => {
+    setPrevScreen(screen);
+    setScreen(to);
+  };
+
+  const openCrt = (c) => {
+    setOpenCourt(c);
+    setPrevScreen(screen);
+    setScreen('court');
+  };
+
+  const openCol = (c) => {
+    setOpenCollection(c);
+    setPrevScreen(screen);
+    setScreen('collection');
+  };
+
+  const handleBack = () => {
+    setScreen(prevScreen||'home');
+    setOpenCourt(null);
+    setOpenCollection(null);
+  };
+
+  const handlePaywall = () => {
+    setPrevScreen(screen);
+    setScreen('paywall-fail');
+  };
+
+  const handleUnlock = () => {
+    setAccessState('full');
+    setScreen('paywall-success');
+  };
+
+  // Demo stand-in for a real auth flow — simulates a guest signing in/up
+  const handleSignIn = () => {
+    setAccessState('free');
+  };
+
+  return(
+    <div>
+      {/* Top label */}
+      <div style={{textAlign:'center',marginBottom:20}}>
+        <span style={{fontSize:13,color:'#6B6B6B',background:'rgba(255,255,255,0.5)',padding:'4px 16px',borderRadius:100,border:'1px solid rgba(184,184,182,0.4)'}}>
+          Tennis World — Mobile Design
+        </span>
+      </div>
+
+      {/* Access-state switcher — persistent across every screen tab */}
+      <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:14}}>
+        {[['guest','Guest'],['free','Free User'],['full','Full Access']].map(([id,label])=>(
+          <button key={id} onClick={()=>setAccessState(id)} style={{padding:'7px 18px',borderRadius:100,fontSize:12,fontWeight:accessState===id?600:400,background:accessState===id?'var(--clay)':'rgba(255,255,255,0.7)',color:accessState===id?'#fff':'#444',border:'1px solid rgba(184,184,182,0.5)',cursor:'pointer'}}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Screen tabs */}
+      <div style={{display:'flex',flexWrap:'wrap',gap:8,justifyContent:'center',marginBottom:24}}>
+        {[
+          ['home','Atlas'],['map','Courts'],['collections','Collections'],['collection','Collection Detail'],['court','Court Detail'],['court-locked','Court Detail (Locked)'],
+          ['saved','Saved'],['profile','Profile'],['settings','Settings'],
+          ['paywall-success','Payment ✓'],['paywall-fail','Payment ✗'],
+        ].map(([id,label])=>(
+          <button key={id} onClick={()=>{setScreen(id);if(id==='court')setOpenCourt(COURTS.find(c=>!c.locked)||COURTS[0]);if(id==='court-locked')setOpenCourt(COURTS.find(c=>c.locked)||COURTS[1]);if(id==='collection'&&!openCollection)setOpenCollection(COLLECTIONS[0]);}} style={{padding:'6px 14px',borderRadius:100,fontSize:12,fontWeight:screen===id?600:400,background:screen===id?'#0F0F0F':'rgba(255,255,255,0.7)',color:screen===id?'#F5F2EC':'#444',border:'1px solid rgba(184,184,182,0.5)',cursor:'pointer'}}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{display:'flex',justifyContent:'center'}}>
+        <div className="phone">
+          <div className="phone-inner">
+            {screen==='home'&&<HomeScreen onNav={navigate} onCourtOpen={openCrt} onPaywall={handlePaywall} unlocked={unlocked}/>}
+            {screen==='map'&&<MapScreen onNav={navigate} onCourtOpen={openCrt} unlocked={unlocked} isGuest={isGuest} onPaywall={handlePaywall}/>}
+            {(screen==='court'||screen==='court-locked')&&<CourtDetailScreen court={openCourt||COURTS[0]} onBack={handleBack} onNav={navigate} unlocked={unlocked} onPaywall={handlePaywall}/>}
+            {screen==='collections'&&<CollectionsScreen onNav={navigate} onCollectionOpen={openCol}/>}
+            {screen==='collection'&&<CollectionDetailScreen collection={openCollection||COLLECTIONS[0]} onBack={handleBack} onNav={navigate} onCourtOpen={openCrt} unlocked={unlocked} onPaywall={handlePaywall}/>}
+            {screen==='saved'&&<SavedScreen onNav={navigate} onCourtOpen={openCrt} isGuest={isGuest} onSignIn={handleSignIn}/>}
+            {screen==='profile'&&<ProfileScreen onNav={navigate} unlocked={unlocked} isGuest={isGuest} onSignIn={handleSignIn}/>}
+            {screen==='settings'&&<SettingsScreen onBack={handleBack} unlocked={unlocked}/>}
+            {screen==='paywall-success'&&<PurchaseSuccessScreen onBack={()=>setScreen(prevScreen||'home')} returnTo={prevScreen}/>}
+            {screen==='paywall-fail'&&<PurchaseFailedScreen onBack={()=>setScreen(prevScreen||'home')} onRetry={handleUnlock}/>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
