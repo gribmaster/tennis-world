@@ -124,6 +124,11 @@ async function main(): Promise<void> {
   console.log('Map audit — nearest-court auto-focus on /map\n');
 
   const mapExplorer = readSrc('features/map/MapExplorer.tsx');
+  // TASK_57: the nearest-court auto-focus (and every other piece of the interactive,
+  // full-size map) moved from MapExplorer into MapExpandedModal — see that file's own
+  // header. Every check below that used to assert on MapExplorer's geolocation/focus
+  // internals was RE-POINTED at this file; none were deleted.
+  const mapExpandedModal = readSrc('features/map/MapExpandedModal.tsx');
   // Feature 88: renamed from LeafletMapInner.tsx / LeafletMap.tsx.
   const courtMapInner = readSrc('features/map/CourtMapInner.tsx');
   const courtMapWrapper = readSrc('features/map/CourtMap.tsx');
@@ -207,10 +212,10 @@ async function main(): Promise<void> {
     })(),
   );
   expectTrue(
-    'MapExplorer picks the nearest court via findNearestPoint (no city/region/string compare)',
-    /findNearestPoint\(/.test(mapExplorer) &&
+    'MapExpandedModal picks the nearest court via findNearestPoint (no city/region/string compare) — TASK_57: moved from MapExplorer',
+    /findNearestPoint\(/.test(mapExpandedModal) &&
       !/\.(country|region|city|setting)\b/.test(
-        stripComments(mapExplorer).split('focusNearestCourt')[1] ?? '',
+        stripComments(mapExpandedModal).split('focusNearestCourt')[1] ?? '',
       ),
   );
   expectTrue(
@@ -276,17 +281,18 @@ async function main(): Promise<void> {
     findNearestPoint(BROKEN, IN_LONDON) === null,
   );
   expectTrue(
-    'MapExplorer bails out on a null nearest court, leaving the view untouched',
-    /const nearest = findNearestPoint\([\s\S]{0,120}?\n\s*if \(!nearest\) return;/.test(mapExplorer),
+    'MapExpandedModal bails out on a null nearest court, leaving the view untouched — TASK_57: moved from MapExplorer',
+    /const nearest = findNearestPoint\([\s\S]{0,120}?\n\s*if \(!nearest\) return;/.test(mapExpandedModal),
   );
 
   // ── Requirement 1 & 10: geolocation is requested ONCE, Strict Mode included ──────────
   console.log('\nReq 1 & 10: geolocation is requested exactly once (Strict Mode safe)');
   expectTrue(
-    'MapExplorer guards the automatic request with a ref flag set BEFORE the async call ' +
-      '(so Strict Mode\'s double-invoked effect cannot fire a second request)',
+    'MapExpandedModal guards the automatic request with a ref flag set BEFORE the async ' +
+      'call (so Strict Mode\'s double-invoked effect cannot fire a second request) — ' +
+      'TASK_57: it now guards once per MODAL MOUNT rather than once per page load',
     /if \(autoFocusStartedRef\.current\) return;\s*\n\s*autoFocusStartedRef\.current = true;/.test(
-      mapExplorer,
+      mapExpandedModal,
     ),
   );
   expectTrue(
@@ -294,7 +300,7 @@ async function main(): Promise<void> {
       'when a filter or query changes)',
     (() => {
       const effect = /void focusNearestCourt\(\{ automatic: true \}\);\s*\n\s*\}, \[([^\]]*)\]\)/.exec(
-        mapExplorer,
+        mapExpandedModal,
       );
       const deps = effect?.[1] ?? 'MISSING';
       return deps.trim() === 'focusNearestCourt';
@@ -321,11 +327,12 @@ async function main(): Promise<void> {
   );
   expectTrue(
     'there is exactly ONE navigator.geolocation call site in the whole web app (auto-focus ' +
-      'and the manual control share one implementation)',
+      'and the manual control share one implementation) — TASK_57: MapExplorer no longer ' +
+      'imports useGeolocation at all; MapExpandedModal is the one caller now',
     (() => {
       const inHook = (stripComments(useGeolocation).match(/navigator\.geolocation/g) ?? []).length;
       // The hook touches it twice: the support probe and the request itself.
-      const elsewhere = [mapExplorer, locateControl, courtMapInner, courtMapWrapper, mapPage]
+      const elsewhere = [mapExpandedModal, locateControl, courtMapInner, courtMapWrapper, mapPage]
         .map((s) => (stripComments(s).match(/navigator\.geolocation|getCurrentPosition/g) ?? []).length)
         .reduce((a, b) => a + b, 0);
       return inHook > 0 && elsewhere === 0;
@@ -333,21 +340,22 @@ async function main(): Promise<void> {
   );
   expectTrue(
     'the manual control receives the SHARED hook state as props (it does not call ' +
-      'useGeolocation a second time — it imports only the error TYPE)',
-    /useGeolocation\(\)/.test(mapExplorer) &&
+      'useGeolocation a second time — it imports only the error TYPE) — TASK_57: the ' +
+      'control now lives in MapExpandedModal alongside the hook',
+    /useGeolocation\(\)/.test(mapExpandedModal) &&
       !/useGeolocation\(/.test(stripComments(locateControl)) &&
       /import type \{ GeolocationError \} from '\.\/useGeolocation';/.test(locateControl) &&
-      /pending=\{locating\}/.test(mapExplorer) &&
-      /onLocate=\{handleLocateClick\}/.test(mapExplorer),
+      /pending=\{locating\}/.test(mapExpandedModal) &&
+      /onLocate=\{handleLocateClick\}/.test(mapExpandedModal),
   );
 
   // ── Requirement 3 & 4: centre on that court at zoom ≈ 17 ─────────────────────────────
   console.log('\nReq 3 & 4: the map centres on the nearest court at zoom ≈ 17');
   expectTrue(
     'the focus request carries the NEAREST COURT\'s own coordinates',
-    /setFocus\(\{\s*lat: nearest\.lat,\s*lng: nearest\.lng,/.test(mapExplorer),
+    /setFocus\(\{\s*lat: nearest\.lat,\s*lng: nearest\.lng,/.test(mapExpandedModal),
   );
-  expectTrue('the target zoom is 17', /const NEAREST_COURT_ZOOM = 17;/.test(mapExplorer));
+  expectTrue('the target zoom is 17', /const NEAREST_COURT_ZOOM = 17;/.test(mapExpandedModal));
   expectTrue(
     'the zoom is clamped to the map\'s real supported range (nearest valid zoom if 17 is ' +
       'out of range) — Feature 88: the Maps JS API has no getMinZoom/getMaxZoom query ' +
@@ -380,10 +388,13 @@ async function main(): Promise<void> {
   expectTrue(
     'the auto-focus does NOT navigate anywhere (no router call in the focus path — the ' +
       'court detail page is never opened automatically, and /map is never left). ' +
-      'Marker CLICK navigation is untouched and stays outside this path.',
+      'Marker CLICK navigation is untouched and stays outside this path. TASK_57: the ' +
+      'orchestrator is now MapExpandedModal (it also owns marker-click navigation, moved ' +
+      'unchanged from MapExplorer, so this top-level router check keeps the same shape it ' +
+      'had before the move).',
     (() => {
-      // MapExplorer orchestrates the focus and must not route at all.
-      if (/useRouter|router\.(push|replace)/.test(stripComments(mapExplorer))) return false;
+      // MapExpandedModal orchestrates the focus and must not route at all.
+      if (/useRouter|router\.(push|replace)/.test(stripComments(mapExpandedModal))) return false;
       // Isolate the focus effect in the map layer and assert it only moves the view.
       const focusEffect = /\/\/ ── Apply a one-shot focus request[\s\S]*?\n  \}, \[focus, beginProgrammaticMove\]\);/.exec(
         courtMapInner,
@@ -422,13 +433,13 @@ async function main(): Promise<void> {
   );
   expectTrue(
     'a failed lookup returns BEFORE any setFocus, so the default centre and zoom survive',
-    /const coords = await locate\(\);\s*\n(?:\s*\/\/.*\n)*\s*if \(!coords\) return;/.test(mapExplorer),
+    /const coords = await locate\(\);\s*\n(?:\s*\/\/.*\n)*\s*if \(!coords\) return;/.test(mapExpandedModal),
   );
   expectTrue(
     'no retry loop: nothing re-invokes locate() on failure (only an explicit user click does)',
     !/setTimeout\([^)]*locate/.test(stripComments(useGeolocation)) &&
       !/setInterval/.test(stripComments(useGeolocation)) &&
-      !/setInterval|setTimeout/.test(stripComments(mapExplorer)),
+      !/setInterval|setTimeout/.test(stripComments(mapExpandedModal)),
   );
   expectTrue(
     'the failure message is small and local to the control (no blocking dialog/alert)',
@@ -438,14 +449,14 @@ async function main(): Promise<void> {
   // ── Requirement 11: a user who moves the map first keeps control ─────────────────────
   console.log('\nReq 11: manual interaction before the fix resolves cancels the auto-recentre');
   expectTrue(
-    'MapExplorer tracks user control in a ref and skips the AUTOMATIC recentre when set',
-    /userTookControlRef\.current = true;/.test(mapExplorer) &&
-      /if \(automatic && userTookControlRef\.current\) return;/.test(mapExplorer),
+    'MapExpandedModal tracks user control in a ref and skips the AUTOMATIC recentre when set — TASK_57: moved from MapExplorer',
+    /userTookControlRef\.current = true;/.test(mapExpandedModal) &&
+      /if \(automatic && userTookControlRef\.current\) return;/.test(mapExpandedModal),
   );
   expectTrue(
     'the check happens AFTER awaiting the position (covers a pan DURING the request)',
     (() => {
-      const body = mapExplorer.split('const focusNearestCourt')[1] ?? '';
+      const body = mapExpandedModal.split('const focusNearestCourt')[1] ?? '';
       const awaitAt = body.indexOf('await locate()');
       const guardAt = body.indexOf('if (automatic && userTookControlRef.current) return;');
       return awaitAt >= 0 && guardAt > awaitAt;
@@ -453,14 +464,14 @@ async function main(): Promise<void> {
   );
   expectTrue(
     'the manual control is exempt (an explicit click still works after the user has panned)',
-    /focusNearestCourt\(\{ automatic: false \}\)/.test(mapExplorer),
+    /focusNearestCourt\(\{ automatic: false \}\)/.test(mapExpandedModal),
   );
   expectTrue(
     'CourtMapInner reports genuine user gestures (drag/zoom) upward — Feature 88: Google\'s ' +
       'zoom_changed replaces Leaflet\'s zoomstart as the (suppressible) zoom-gesture signal',
     /map\.addListener\('dragstart', reportUserInteraction\)/.test(courtMapInner) &&
       /map\.addListener\('zoom_changed', reportIfNotProgrammatic\)/.test(courtMapInner) &&
-      /onUserInteraction=\{handleUserInteraction\}/.test(mapExplorer),
+      /onUserInteraction=\{handleUserInteraction\}/.test(mapExpandedModal),
   );
   expectTrue(
     'the map\'s OWN moves (fitBounds/the camera animation) are suppressed so they are not ' +
@@ -506,6 +517,11 @@ async function main(): Promise<void> {
 
   // ── Requirement 12: local pending indicator, never a full-page loader ────────────────
   console.log('\nReq 12: a small local pending indicator — no full-page blocking loader');
+  // MapExpandedModal is deliberately excluded here: it is a real dialog (the brief's
+  // own spec, like FilterSheet before it, which this same convention already excludes
+  // from the equivalent loop in verify-ux-pending-states.ts) and legitimately uses
+  // `fixed inset-0` for its backdrop — that is not the "full-page loader" this check
+  // guards against.
   for (const [label, src] of [
     ['MapLocateControl', locateControl],
     ['MapExplorer', mapExplorer],
@@ -533,8 +549,11 @@ async function main(): Promise<void> {
       /\{pending \? <InlineSpinner[^}]*\/> : <LocateGlyph \/>\}/.test(locateControl),
   );
   expectTrue(
-    'the map keeps its own dimensions (the control is an overlay; no size/height prop changed)',
-    /className="h-full w-full"/.test(mapExplorer) && /map-canvas-wrap/.test(mapExplorer),
+    'the map keeps its own dimensions (the control is an overlay; no size/height prop ' +
+      'changed) — TASK_57: `.map-canvas-wrap` is gone with the old full-height layout; ' +
+      'the interactive map now fills MapExpandedModal\'s own explicitly-sized dialog box',
+    /className="h-full w-full"/.test(mapExpandedModal) &&
+      /md:h-\[82%\]/.test(mapExpandedModal),
   );
   expectTrue(
     'the CourtMap chunk loader is unchanged (still the quiet in-frame placeholder)',
@@ -549,10 +568,11 @@ async function main(): Promise<void> {
     (() => {
       const code = stripComments(locateControl);
       // Exactly one real `disabled` attribute (its `aria-disabled` mirror doesn't count),
-      // and the explorer disables nothing at all.
+      // and the orchestrator composing it (MapExpandedModal, TASK_57 — moved from
+      // MapExplorer) disables nothing of its own.
       return (
         (code.match(/(?<!aria-)\bdisabled=/g) ?? []).length === 1 &&
-        !/\bdisabled=/.test(stripComments(mapExplorer))
+        !/\bdisabled=/.test(stripComments(mapExpandedModal))
       );
     })(),
   );
@@ -575,8 +595,10 @@ async function main(): Promise<void> {
     /zoomControl: interactive,/.test(courtMapInner),
   );
   expectTrue(
-    'the filter chips / search / list panel are untouched by the focus logic',
-    /<MapFilterBar/.test(mapExplorer) && /<MapCourtList/.test(mapExplorer),
+    'the search bar / court grid are untouched by the focus logic — TASK_57: ' +
+      'MapFilterBar/MapCourtList were replaced by MapSearchBar/MapCourtGrid, but ' +
+      'MapExplorer still composes them exactly the same way regardless of the map modal',
+    /<MapSearchBar/.test(mapExplorer) && /<MapCourtGrid/.test(mapExplorer),
   );
 
   // ── Privacy: coordinates are in-memory only ─────────────────────────────────────────
@@ -584,6 +606,7 @@ async function main(): Promise<void> {
   for (const [label, src] of [
     ['useGeolocation', useGeolocation],
     ['MapExplorer', mapExplorer],
+    ['MapExpandedModal', mapExpandedModal],
     ['MapLocateControl', locateControl],
     ['geo-distance', geoDistance],
     ['CourtMapInner', courtMapInner],
@@ -598,6 +621,7 @@ async function main(): Promise<void> {
     'no repository / API call was added to the map screen for this feature (the nearest ' +
       'court is computed from the court data already loaded)',
     !/repositories|repository/i.test(stripComments(mapExplorer)) &&
+      !/repositories|repository/i.test(stripComments(mapExpandedModal)) &&
       /repositories\.courts\.list\(\)/.test(mapPage),
   );
   expectTrue(
@@ -622,7 +646,25 @@ async function main(): Promise<void> {
   );
   expectTrue(
     'the nearest-court search runs over those same markers (no exact-coordinate source)',
-    /findNearestPoint\(markersRef\.current, coords\)/.test(mapExplorer),
+    /findNearestPoint\(markersRef\.current, coords\)/.test(mapExpandedModal),
+  );
+
+  // ── TASK_57: Courts screen card grid + map panel, guest map gate ────────────────────
+  console.log('\nTASK_57: guest map gate — no CourtMap/Maps load for a signed-out visitor');
+  const mapPreviewPanel = readSrc('features/map/MapPreviewPanel.tsx');
+  expectTrue(
+    'MapExplorer no longer imports useGeolocation at all (the nearest-court auto-focus ' +
+      'moved into MapExpandedModal, which mounts only once a signed-in visitor opens it)',
+    !/useGeolocation/.test(stripComments(mapExplorer)),
+  );
+  expectTrue(
+    'the guest branch of MapPreviewPanel contains no <CourtMap> — a signed-out visitor ' +
+      'gets a static, non-Google placeholder (no Maps script load, no coordinate in the DOM)',
+    (() => {
+      const code = stripComments(mapPreviewPanel);
+      const guestBranch = /!signedIn \? \(([\s\S]*?)\) : \(/.exec(code)?.[1] ?? '';
+      return guestBranch.length > 0 && !/<CourtMap\b/.test(guestBranch);
+    })(),
   );
 
   // ── Feature 88: Google Maps engine (no Leaflet-era equivalent) ───────────────────────

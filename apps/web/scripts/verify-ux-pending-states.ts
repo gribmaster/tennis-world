@@ -123,17 +123,27 @@ async function main(): Promise<void> {
   const collectionCard = readSrc('features/collections/CollectionCard.tsx');
   const articleCard = readSrc('features/journal/ArticleCard.tsx');
   const savedCollectionRow = readSrc('features/saved/SavedCollectionRow.tsx');
-  const mapCourtRow = readSrc('features/map/MapCourtRow.tsx');
+  // TASK_57 deleted MapCourtRow (and MapCourtList/MapFilterBar) — the Courts screen is
+  // now a grid of the shared CourtCard above, which is already covered by this loop.
   for (const [label, src] of [
     ['CourtCard', courtCard],
     ['CollectionCard', collectionCard],
     ['ArticleCard', articleCard],
     ['SavedCollectionRow', savedCollectionRow],
-    ['MapCourtRow', mapCourtRow],
   ] as const) {
     expectTrue(`${label} uses PendingCardLink for its whole-card navigation`, /PendingCardLink/.test(src));
     expectTrue(`${label} no longer imports next/link directly`, !/from 'next\/link'/.test(src));
   }
+
+  // ── TASK_57: the Courts screen's guest sign-in link uses PendingLink ────────────────
+  console.log("\nTASK_57: the Courts screen's guest sign-in link uses PendingLink");
+  const mapExplorerSrc = readSrc('features/map/MapExplorer.tsx');
+  expectTrue(
+    'MapExplorer renders the guest "Sign in to unlock the map" link via PendingLink to /signin?redirectTo=/map',
+    /<PendingLink\s+href="\/signin\?redirectTo=\/map"[\s\S]{0,200}Sign in to unlock the map/.test(
+      mapExplorerSrc,
+    ),
+  );
 
   // ── Scenario 4: async action buttons show a disabled + spinner state ────────────────
   console.log('\nScenario 4: async action buttons disable + show an inline spinner while pending');
@@ -141,7 +151,7 @@ async function main(): Promise<void> {
   const saveToCollectionMenu = readSrc('features/court-detail/SaveToCollectionMenu.tsx');
   const createCollectionModal = readSrc('features/user-collections/CreateCollectionModal.tsx');
   const userCollectionRename = readSrc('features/user-collection-detail/UserCollectionRename.tsx');
-  const savedCourtsGrid = readSrc('features/saved/SavedCourtsGrid.tsx');
+  const courtCardSaveButton = readSrc('components/court/CourtCardSaveButton.tsx');
   const signOutButton = readSrc('features/auth/SignOutButton.tsx');
   const manageBillingButton = readSrc('features/billing/ManageBillingButton.tsx');
   const paywallCheckoutButton = readSrc('features/billing/PaywallCheckoutButton.tsx');
@@ -153,7 +163,7 @@ async function main(): Promise<void> {
     ['SaveToCollectionMenu (add/remove from collection)', saveToCollectionMenu],
     ['CreateCollectionModal (create collection)', createCollectionModal],
     ['UserCollectionRename (rename collection)', userCollectionRename],
-    ['SavedCourtsGrid (unsave)', savedCourtsGrid],
+    ['CourtCardSaveButton (save/unsave)', courtCardSaveButton],
     ['SignOutButton (logout)', signOutButton],
     ['ManageBillingButton (portal)', manageBillingButton],
     ['PaywallCheckoutButton (checkout)', paywallCheckoutButton],
@@ -189,8 +199,8 @@ async function main(): Promise<void> {
     /finally\s*\{\s*setPending\(false\)/.test(userCollectionRename) && /catch/.test(userCollectionRename),
   );
   expectTrue(
-    'SavedCourtsGrid restores the removed court on a failed unsave (rollback, not a stuck state)',
-    /\.catch\(\(err: unknown\) => \{[\s\S]*?setItems/.test(savedCourtsGrid),
+    'CourtCardSaveButton rolls back saved state (and tells its onSavedChange listener) on a failed write — the shared card save button owns this now, not SavedCourtsGrid',
+    /\.catch\(\(err: unknown\) => \{[\s\S]*?onSavedChange\?\.\(!next\)/.test(courtCardSaveButton),
   );
 
   // ── Scenario 6: navigational pending clears when the ROUTE actually changes ─────────

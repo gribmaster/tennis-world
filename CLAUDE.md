@@ -213,7 +213,7 @@ timeout in each primitive.
 10. Modal open/close toggles, purely local UI controls (filters, tabs, disclosure),
     external links, and decorative controls need NO API/navigation loading behavior.
 
-`verify:ux-pending-states` (92 checks) asserts these invariants against the source. Run it
+`verify:ux-pending-states` (91 checks) asserts these invariants against the source. Run it
 after any change in this area.
 
 **Real usage from the current code**
@@ -259,13 +259,23 @@ after any change in this area.
   history for this tab (a `sessionStorage` counter keyed off `usePathname`); otherwise it
   navigates to the required explicit `fallbackHref`.
 - Current fallbacks — keep them:
-  - Court detail (`app/courts/[slug]/page.tsx`): `fallbackHref="/map"` label `Courts`
-    (there is no `/courts` list route).
-  - Collection detail (`CollectionDetailHero`): `/collections`.
-  - User collection detail (`UserCollectionHero`): `/saved`.
+  - Court detail (`app/courts/[slug]/page.tsx`): `fallbackHref="/map"` (there is no
+    `/courts` list route). TASK_59 (v3) renders TWO `BackButton` instances here — the
+    mobile pill overlay, label `Courts`, `md:hidden`, and a desktop plain-text link above
+    the grid, label `Back to Courts`, `hidden md:inline-flex`. Same `fallbackHref` both.
+  - Collection detail (`CollectionDetailHero`): `fallbackHref="/collections"`. TASK_60
+    (v3) renders TWO `BackButton` instances here — the mobile pill overlay, label
+    `Collections`, `md:hidden`, and a desktop plain-text link above the hero frame,
+    label `Back to Collections`, `hidden md:inline-flex`. Same `fallbackHref` both.
+  - User collection detail (`UserCollectionHero`), `fallbackHref="/saved"`, label
+    `Back to Saved`. TASK_61 (v3): ONE `BackButton` instance (no photo hero to split a
+    mobile pill from), visible at every size.
   - Article detail (`ArticleHero`): `/journal`.
   - Billing return (`BillingReturn`): `/profile`.
-  - Settings (`app/profile/settings/page.tsx`): `/profile`.
+  - Settings (`app/profile/settings/page.tsx`), `fallbackHref="/profile"`. TASK_61 (v3)
+    renders TWO `BackButton` instances here — a mobile icon back inside the header row,
+    `md:hidden`, and a desktop plain-text link above the heading, label `Back to Profile`,
+    `hidden md:inline-flex`. Same `fallbackHref` both.
 - **MUST NOT** add a Back button to top-level navigation pages (`/`, `/map`,
   `/collections`, `/journal`, `/saved`, `/profile` — see `components/layout/nav-items.ts`).
   `/profile/settings` is NESTED, not top-level: it keeps its Back button, and
@@ -305,6 +315,10 @@ after any change in this area.
   disabled in production** unless explicitly requested. It is off by default, never
   enabled by `NODE_ENV`, grants no entitlement, and its secret is server-only (client
   mutations route through the server actions in `lib/saved-actions.ts`).
+- The auth pages (`/signin`, `/signup`, `/verify`) render the floating pill nav
+  (`AppHeader`) at md+ only, via `AuthLayout` — mobile keeps the standalone `AuthTopBar`
+  instead (`hidden md:block` / `md:hidden`, never both). There is no Apple sign-in
+  control anywhere in the app (removed in TASK_62 — the API has no Apple sign-in).
 
 ---
 
