@@ -45,6 +45,15 @@ export interface CourtDisplay {
    * above are gated by viewer entitlement.
    */
   readonly locked: boolean;
+  /**
+   * Whether this court is masked FOR THIS VIEWER (`court.isLocked && !viewerIsEntitled`,
+   * Task 56 — v3's `CourtCard`). Unlike `locked` above, this DOES fold in
+   * `viewerIsEntitled`: it answers "should this card show the Premium badge / placeholder
+   * text / no chips," not "is this premium content." Drive all per-viewer masking
+   * decisions (badge vs. surface chip, placeholder copy, whether chips render) off this
+   * field, never off `locked` directly.
+   */
+  readonly masked: boolean;
 }
 
 /** The unmasked "Country · Region" line — the location format every surface uses. */
@@ -67,6 +76,7 @@ export function courtDisplay(court: CourtSummaryDTO, viewerIsEntitled = false): 
     name: mask ? 'Premium Court' : court.name,
     location: mask ? 'Unlock to reveal location' : courtLocation(court),
     locked: court.isLocked,
+    masked: mask,
   };
 }
 
@@ -80,4 +90,14 @@ export function courtDisplay(court: CourtSummaryDTO, viewerIsEntitled = false): 
  */
 export function courtCategoryTags(court: CourtSummaryDTO): string[] {
   return court.tags[0] ? [court.tags[0]] : [];
+}
+
+/**
+ * Card chip labels for the shared v3 `CourtCard` (Task 56): experience tags, then
+ * access, then "Scenic" — the card renders `.slice(0, 3)` of this. NEVER masked (see the
+ * file header): tags/access/scenic are always-public descriptive metadata, distinct from
+ * `courtCategoryTags`, which stays in place for Home's existing callers.
+ */
+export function courtCardLabels(court: CourtSummaryDTO): string[] {
+  return [...court.tags, court.access, ...(court.isScenic ? ['Scenic'] : [])];
 }

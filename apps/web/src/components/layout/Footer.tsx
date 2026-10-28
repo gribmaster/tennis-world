@@ -18,7 +18,7 @@ import { PendingLink } from '@/components/navigation';
 // PRESENTATIONAL only (Phase 1). It owns layout/typography + local chrome copy; it
 // does NOT fetch, hold state beyond the mobile expand/collapse toggle, or import
 // `@tennis/mock-data`. The link labels are page chrome (same latitude
-// HomePaywallBand / MapFilterBar take for local copy).
+// HomePaywallBand / MapSearchBar take for local copy).
 //
 // LINK STATUS:
 //   • "Explore" links point at REAL Phase-1 routes (/map, /collections, /journal).

@@ -1,187 +1,147 @@
-'use client';
-
-import type { ReactNode } from 'react';
+import Image from 'next/image';
 import type { CourtSummaryDTO } from '@tennis/contracts';
-import { Badge } from '@/components/ui';
 import { PendingCardLink } from '@/components/navigation';
-import { CourtImage } from './CourtImage';
-import { courtDisplay } from './court-display';
+import { courtCardLabels, courtDisplay } from './court-display';
+import { CourtCardSaveButton } from './CourtCardSaveButton';
+import { SurfaceChip } from './SurfaceChip';
+import { PremiumBadge } from './PremiumBadge';
 
-// CourtCard — the reusable court tile used in every list/grid/carousel (Home's
-// featured destinations, Map's list panel, Saved's grid, Court Detail's related
-// strip). It is the single source of court-card layout; screens compose it, they
-// never re-implement it.
+// CourtCard — the ONE shared court tile (v3 "Card reuse: one CourtCard, everywhere" rule
+// — see docs/TASK_56_V3_SHARED_COURT_CARD.md and tennis_world_design_decisions.md). Every
+// screen that lists courts (Collection Detail, a personal folder, Saved) composes THIS
+// component with different props. There is deliberately no second near-duplicate card —
+// the "one heart/card per screen" convention from Tasks 47/48 is superseded by v3.
 //
-// Strictly data-driven & presentational (Phase 1 §4):
+// Ported from both v3 prototypes' `CourtCard` (identical apart from the sizes below):
+//   • mobile:  tennis_world_v17_standalone.html ~line 916
+//   • desktop: tennis_world_desktop_standalone4.html ~line 212
+//
+// Strictly data-driven & presentational apart from the save button:
 //   • Receives a `CourtSummaryDTO` via the `court` prop — it does NOT import
 //     @tennis/mock-data, does NOT import any repository, and does NOT fetch.
-//   • Renders only from fields on that DTO (name, country/region, surface, access,
-//     setting, isScenic, isFeatured, isLocked, heroImageUrl).
-//   • No save interaction, no paywall, no navigation side effects of its own — the
-//     optional `href` wraps the card in a <Link> for future /courts/[slug] routing,
-//     and `saved` is a visual-only state (a future feature wires the real toggle).
+//   • The whole card is a `PendingCardLink` to `/courts/{slug}`; the save button is a
+//     SIBLING of that link (never nested inside it — a <button> inside an <a> would also
+//     be invalid HTML), positioned over its top-right corner.
 //
-// The visual is ported from the prototypes' `CourtCard`: full-bleed cover photo,
-// bottom-up gradient, eyebrow (country · region) + serif name overlaid at the
-// bottom, a top-left "Locked"/"Featured" badge, an optional top-right scenic badge,
-// and an optional save heart shown purely as state.
+// MASKING (Task 56): driven entirely off `courtDisplay(...).masked` — see that module's
+// doc comment. A masked court shows the gold `PremiumBadge` (not the surface chip),
+// "Premium Court" / "Unlock to reveal location", and renders no label chips.
+//
+// SIZE: fixed height (170px below md, 340px at md+), NOT an aspect ratio — this is what
+// v3 does, so a narrow grid column doesn't stretch the photo tall.
 
-/** Minimal inline lock glyph — avoids pulling in an icon library (hard rule). */
-function LockGlyph() {
+export interface CourtCardProps {
+  court: CourtSummaryDTO;
+  /** Whether THIS viewer carries an active (non-free) membership (Task 26). */
+  viewerIsEntitled?: boolean;
+  /** Omit to render no save button at all. */
+  save?: {
+    initialSaved: boolean;
+    signedIn: boolean;
+    onSavedChange?: (saved: boolean) => void;
+  };
+  /** next/image `sizes`; default matches a 3-up/1-up responsive grid. */
+  imageSizes?: string;
+  /** next/image priority for the first card in a list. */
+  priority?: boolean;
+  className?: string;
+}
+
+/** The prototype's `Ico.pin(11)` beside the location line. */
+function PinGlyph() {
   return (
     <svg
-      width="10"
-      height="10"
+      width="11"
+      height="11"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.6"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden
     >
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
     </svg>
   );
-}
-
-/** Minimal inline heart glyph — `filled` toggles the saved visual. */
-function HeartGlyph({ filled }: { filled: boolean }) {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill={filled ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
-  );
-}
-
-export interface CourtCardProps {
-  /** The court to render. The single source of all displayed content. */
-  court: CourtSummaryDTO;
-  /**
-   * `large` uses a wider 3:2 frame (hero/featured rows); `default` uses the 4:5
-   * portrait tile used in grids and carousels.
-   */
-  variant?: 'default' | 'large';
-  /**
-   * When set, the whole card becomes a link to this href (intended for
-   * `/courts/[slug]`). When omitted, the card renders as a plain article.
-   */
-  href?: string;
-  /**
-   * Visual-only saved state. Shows a filled heart when true. There is NO save
-   * interaction in this feature — a later feature wires `userRepository.toggleSavedCourt`.
-   */
-  saved?: boolean;
-  /**
-   * Whether to render the (non-interactive) save heart at all. Off by default so
-   * cards in non-savable contexts stay clean.
-   */
-  showSaved?: boolean;
-  /** Prioritize image loading (use for above-the-fold cards only). */
-  priority?: boolean;
-  className?: string;
-  /**
-   * Whether THIS viewer carries an active (non-free) membership (Task 26). Unmasks a
-   * locked court's name/location for them. Defaults to `false` — the safe/masked default
-   * for a caller that hasn't resolved viewer entitlement.
-   */
-  viewerIsEntitled?: boolean;
 }
 
 export function CourtCard({
   court,
-  variant = 'default',
-  href,
-  saved = false,
-  showSaved = false,
+  viewerIsEntitled = false,
+  save,
+  imageSizes = '(max-width: 768px) 100vw, 33vw',
   priority = false,
   className,
-  viewerIsEntitled = false,
 }: CourtCardProps) {
-  const aspect = variant === 'large' ? 'aspect-[3/2]' : 'aspect-[4/5]';
   const display = courtDisplay(court, viewerIsEntitled);
+  const labels = display.masked ? [] : courtCardLabels(court).slice(0, 3);
 
-  const card = (
-    <article
-      className={['court-card group relative block', className ?? '']
-        .filter(Boolean)
-        .join(' ')}
-    >
-      <CourtImage
-        src={court.heroImageUrl}
-        alt=""
-        aspectClassName={aspect}
-        priority={priority}
+  return (
+    <div className={['relative', className ?? ''].filter(Boolean).join(' ')}>
+      <PendingCardLink
+        href={`/courts/${court.slug}`}
+        ariaLabel={display.name}
+        className="relative block h-[170px] overflow-hidden rounded-[14px] md:h-[340px]"
       >
-        {/* Top-left status: locked takes precedence over featured. */}
-        {court.isLocked ? (
-          <Badge tone="locked" className="absolute left-3 top-3">
-            <LockGlyph />
-            Locked
-          </Badge>
-        ) : court.isFeatured ? (
-          <Badge tone="gold" className="absolute left-3 top-3 bg-black/35 backdrop-blur-sm">
-            Featured
-          </Badge>
-        ) : null}
+        <Image
+          src={court.heroImageUrl}
+          alt=""
+          fill
+          priority={priority}
+          sizes={imageSizes}
+          className="object-cover"
+        />
 
-        {/* Top-right scenic flag (visual only). */}
-        {court.isScenic ? (
-          <Badge
-            tone="neutral"
-            className="absolute right-3 top-3 border-paper/70 bg-black/40 text-white backdrop-blur-sm"
-          >
-            Scenic
-          </Badge>
-        ) : null}
+        {/* `.img-overlay` — transparent to 40%, then to 72% black. */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: 'linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.72) 100%)',
+          }}
+        />
 
-        {/* Saved heart — VISUAL STATE ONLY, no onClick. A later feature adds the
-            real toggle via the user repository. Rendered only when showSaved. */}
-        {showSaved ? (
-          <span
-            className={[
-              'absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-pill backdrop-blur-sm',
-              saved ? 'bg-black/35 text-clay' : 'bg-black/28 text-paper',
-            ].join(' ')}
-            aria-label={saved ? 'Saved' : 'Not saved'}
-          >
-            <HeartGlyph filled={saved} />
-          </span>
-        ) : null}
+        {/* Top-left: Premium badge when masked, else the surface chip. */}
+        <span className="absolute left-2.5 top-2.5 md:left-3 md:top-3">
+          {display.masked ? <PremiumBadge /> : <SurfaceChip surface={court.surface} size="sm" />}
+        </span>
 
-        {/* Title block, bottom-left over the gradient. */}
-        <div className="absolute inset-x-4 bottom-4 text-paper">
-          <p className="eyebrow text-paper/80">{display.location}</p>
-          <h3 className="serif mt-1 text-[clamp(18px,1.6vw,24px)] font-medium leading-tight">
+        <span className="absolute inset-x-0 bottom-0 block px-3.5 pb-3.5 pt-4 md:px-4 md:pb-4 md:pt-[18px]">
+          <span className="serif mb-1 block text-[19px] font-normal leading-[1.2] text-paper md:mb-[5px] md:text-[21px]">
             {display.name}
-          </h3>
-        </div>
-      </CourtImage>
-    </article>
-  );
+          </span>
+          <span className="mb-2 flex items-center gap-[5px] text-paper/85 md:mb-[9px]">
+            <PinGlyph />
+            <span className="text-[12px]">{display.location}</span>
+          </span>
 
-  // `href` wraps the card for /courts/[slug] linking. PendingCardLink keeps the whole tile
-  // clickable while staying a no-op when no href is provided, and — per the element-level
-  // loading requirement — shows a pending overlay ONLY on the exact card that was clicked,
-  // without resizing it or affecting any other card in the same grid/carousel.
-  if (href) {
-    return (
-      <PendingCardLink href={href} className="block" ariaLabel={display.name}>
-        {card}
+          {labels.length > 0 ? (
+            <span className="flex flex-wrap gap-1.5">
+              {labels.map((label) => (
+                <span
+                  key={label}
+                  className="inline-flex items-center rounded-pill border border-paper/35 bg-bone/20 px-2.5 py-[3px] text-[11px] font-medium text-paper backdrop-blur-sm"
+                >
+                  {label}
+                </span>
+              ))}
+            </span>
+          ) : null}
+        </span>
       </PendingCardLink>
-    );
-  }
 
-  return card as ReactNode;
+      {save ? (
+        <CourtCardSaveButton
+          courtId={court.id}
+          courtSlug={court.slug}
+          courtLabel={display.name}
+          initialSaved={save.initialSaved}
+          signedIn={save.signedIn}
+          onSavedChange={save.onSavedChange}
+        />
+      ) : null}
+    </div>
+  );
 }

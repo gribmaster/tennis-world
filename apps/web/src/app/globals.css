@@ -14,6 +14,16 @@
 @layer base {
   :root {
     color-scheme: light;
+    /* Space non-hero pages reserve under the floating pill nav (TASK_55) — the pill's
+       own top offset plus its height, so content never sits under it. Used by
+       AppShell's <main> top padding. */
+    --nav-offset: 72px;
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --nav-offset: 88px;
+    }
   }
 
   html {
@@ -176,6 +186,25 @@
     font-weight: 600;
   }
 
+  /* ── Floating pill nav (TASK_55) ────────────────────────────────────────── */
+  /* `.glass-surface` is the shared frosted-glass recipe (ivory @ 82%, blurred,
+     hairline-white border) the floating nav pill and TASK_57's mobile status pill both
+     need — split out once so the second caller doesn't retype it. `.nav-pill` adds
+     only what is specific to the nav (the pill radius + its 6px item padding); a
+     caller that wants the glass look WITHOUT that padding (TASK_57's status pill,
+     which sets its own `px-5 py-[13px]`) uses `.glass-surface` directly. */
+  .glass-surface,
+  .nav-pill {
+    background: rgba(250, 248, 243, 0.82); /* ivory @ 82% */
+    backdrop-filter: blur(24px) saturate(1.5);
+    -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+  }
+  .nav-pill {
+    border-radius: theme('borderRadius.pill');
+    padding: 6px;
+  }
+
   /* ── Inline spinner (element-level pending state) ─────────────────────── */
   /* Small CSS-only spinner used inside buttons/cards/menu items while a click's
      navigation or mutation is pending. Inherits `color` (currentColor) so it always
@@ -250,26 +279,6 @@
     background-color: theme('colors.ink');
     color: theme('colors.bone');
     border-color: theme('colors.ink');
-  }
-  /* Count badge inside a chip (e.g. "Filters 3"). Inverts with its host so it stays
-     legible whether the chip is selected or not — no second palette. */
-  .filter-pill-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 18px;
-    height: 18px;
-    padding-inline: 4px;
-    border-radius: theme('borderRadius.pill');
-    background-color: theme('colors.ink');
-    color: theme('colors.bone');
-    font-size: 10px;
-    font-weight: 600;
-    line-height: 1;
-  }
-  .filter-pill.is-active .filter-pill-badge {
-    background-color: theme('colors.bone');
-    color: theme('colors.ink');
   }
   /* Metadata chip for surface/setting/access/indoor-outdoor (court cards/detail). */
   .meta-chip {
@@ -416,78 +425,6 @@
      just a background tint) risks reading as obscuring it. See
      docs/MAP_PROVIDER_DECISION.md §0. */
 
-  /* ── Map layout (map screen) ───────────────────────────────────────────── */
-  /* Stacked on mobile (canvas over list), side-by-side on desktop. Ported from
-     `.map-layout` in files/map.html but sized against the REAL app chrome: the
-     72px AppHeader, the sticky filter bar, and the mobile BottomNavigation
-     (56px + safe-area). `--map-chrome` collapses the bottom-nav term at md+ where
-     the tab bar is hidden. */
-  .map-layout {
-    --map-header: 72px;
-    --map-filterbar: 69px;
-    --map-bottom-nav: calc(56px + env(safe-area-inset-bottom));
-    display: flex;
-    flex-direction: column;
-    height: calc(100dvh - var(--map-header) - var(--map-filterbar) - var(--map-bottom-nav));
-  }
-  .map-canvas-wrap {
-    position: relative;
-    flex: 0 0 55%;
-    min-height: 0;
-    overflow: hidden;
-    z-index: 0;
-  }
-  .map-list-panel {
-    flex: 1 1 auto;
-    min-height: 0;
-    background: theme('colors.bone');
-    border-top: 1px solid theme('colors.hairline');
-    overflow-y: hidden;
-  }
-  @media (min-width: 768px) {
-    .map-layout {
-      --map-bottom-nav: 0px;
-      flex-direction: row;
-      /* Every other screen caps its content at `.container-page`'s width and centers
-         it (see courts/[slug]/page.tsx's own comment on matching that gutter) — the
-         map was the one screen left full-bleed, so on a wide desktop monitor the
-         canvas stretched edge to edge while the list panel stayed a fixed 380px,
-         reading as disproportionate next to the rest of the app. Reusing the same
-         `container` token + gutter here both caps the canvas at a sane width AND
-         lines its edges up with MapFilterBar's own `max-w-container` row directly
-         above it (apps/web/src/features/map/MapFilterBar.tsx), which already caps
-         and centers itself the same way. Mobile is untouched — this block only
-         applies at md+. */
-      width: 100%;
-      max-width: theme('maxWidth.container');
-      margin-inline: auto;
-      padding-inline: clamp(20px, 4vw, 64px);
-    }
-    .map-canvas-wrap {
-      flex: 1 1 auto;
-    }
-    .map-list-panel {
-      flex: 0 0 380px;
-      border-top: none;
-      border-left: 1px solid theme('colors.hairline');
-      overflow-y: auto;
-    }
-  }
-  @media (max-width: 767px) {
-
-    .map-layout {
-      display: block;
-      height: auto;
-    }
-    .map-canvas-wrap {
-      position: relative;
-      height: 500px;
-      z-index: 9;
-    }
-    .filter-container-fix {
-      padding: 0;
-    }
-  }
 }
 
 @layer utilities {

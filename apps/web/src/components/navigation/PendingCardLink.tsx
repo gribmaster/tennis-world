@@ -7,7 +7,7 @@ import { InlineSpinner } from '@/components/ui';
 import { useNavigationPendingRegistry } from './NavigationPendingProvider';
 
 // PendingCardLink — the whole-card navigation wrapper for CourtCard / CollectionCard /
-// ArticleCard / SavedCollectionRow / MapCourtRow, i.e. any "the whole tile is a link"
+// ArticleCard / SavedCollectionRow, i.e. any "the whole tile is a link"
 // pattern. Same click-tracking model as PendingLink (single shared pending id, cleared on
 // route change or a safety-net timeout), but renders an unobtrusive absolute-positioned
 // overlay + slight content dimming INSIDE the card instead of an inline spinner, so:

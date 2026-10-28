@@ -7,11 +7,19 @@
 export { CourtCard } from './CourtCard';
 export type { CourtCardProps } from './CourtCard';
 
+export { CourtCardSaveButton, BookmarkGlyph } from './CourtCardSaveButton';
+export type { CourtCardSaveButtonProps } from './CourtCardSaveButton';
+
+export { SurfaceChip } from './SurfaceChip';
+export type { SurfaceChipProps } from './SurfaceChip';
+
+export { PremiumBadge } from './PremiumBadge';
+
 export { CourtMeta } from './CourtMeta';
 export type { CourtMetaProps } from './CourtMeta';
 
 export { CourtImage } from './CourtImage';
 export type { CourtImageProps } from './CourtImage';
 
-export { courtDisplay, courtLocation, courtCategoryTags } from './court-display';
+export { courtDisplay, courtLocation, courtCategoryTags, courtCardLabels } from './court-display';
 export type { CourtDisplay } from './court-display';

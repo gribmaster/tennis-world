@@ -1,266 +1,62 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { PRIMARY_NAV, TAB_NAV, isActiveRoute } from './nav-items';
+import { PRIMARY_NAV, isActiveRoute } from './nav-items';
 import { PendingLink } from '@/components/navigation';
-import { InlineSpinner, UserAvatar } from '@/components/ui';
 
-// AppHeader — fixed top bar, ported from the prototypes' `Nav` component
-// (home.html / map.html). Behavior:
-//   • On a hero page (transparent over a full-bleed hero) it starts transparent
-//     with light text, then fades to a blurred bone background once scrolled.
-//   • On non-hero pages it's always the blurred bone bar.
-// Desktop shows the primary nav + saved/profile icons + an optional "Unlock Map"
-// CTA; mobile collapses to a hamburger dropdown. The bottom tab bar
-// (BottomNavigation) carries primary navigation on mobile instead.
+// AppHeader — the v3 floating "pill" nav (TASK_55; `docs/REDESIGN_V3_PLAN.md`). One
+// translucent, blurred, fully-rounded pill float at the top of every screen: no
+// wordmark, no icons, no "Unlock Map" CTA, no hamburger — just the four text items
+// (Atlas · Courts · Collections · Profile). It floats (stays `fixed`, never docks)
+// so the page scrolls underneath it and it reads the same over a hero image or a
+// plain background; v2's transparent-over-hero / scrolled-solid states are gone, the
+// pill is always the same blurred ivory (`.nav-pill` in globals.css).
 //
-// All copy/labels come from the shared nav config — no hardcoded route lists here.
-
-const WORDMARK = 'TENNIS · WORLD';
+// Mobile and desktop share one markup; only spacing/width change at `md:` (see the
+// task's mobile/desktop table) — there is no separate desktop-only nav or mobile
+// dropdown/hamburger/bottom tab bar.
 
 export interface AppHeaderProps {
   /**
-   * Whether this page renders a full-bleed hero behind the header. When true the
-   * header is transparent-over-hero until scrolled. Defaults to false.
-   */
-  overHero?: boolean;
-  /**
-   * Whether the user has unlocked full access. When false, the "Unlock Map" CTA
-   * shows. Phase 1 has no real entitlement system, so the shell defaults to
-   * locked; a real value flows in from the user repository in a later feature.
-   */
-  unlocked?: boolean;
-  /**
-   * Whether the visitor has an active session (Feature 57). Decides where the user icon
-   * points: `/profile` when signed in, `/signin` when not. Defaults to false (logged-out)
-   * — public pages render the logged-out header unless a page derives + passes the real
-   * value (the private Profile/Saved pages do, since they only render when authenticated).
-   * Deriving it on every public page would add a `GET /v1/me` per render; that broader
-   * wiring is a documented follow-on.
+   * Whether the visitor has an active session (Feature 57). Decides where the
+   * Profile item points: `/profile` when signed in, `/signin` when not. Defaults to
+   * false (logged-out) — public pages render the logged-out header unless a page
+   * derives + passes the real value (the private Profile/Saved pages do, since they
+   * only render when authenticated).
    */
   signedIn?: boolean;
-  /**
-   * The signed-in user's avatar fields (only passed by pages that already loaded
-   * `getCurrentUser()` for their own content — see `AppShellProps.headerUser`).
-   * When present and `signedIn`, the account icon shows the user's photo/initials
-   * instead of the generic glyph.
-   */
-  headerUser?: { name: string; initials: string; avatarUrl?: string | null };
 }
 
-export function AppHeader({
-  overHero = false,
-  unlocked = false,
-  signedIn = false,
-  headerUser,
-}: AppHeaderProps) {
-  const profileHref = signedIn ? '/profile' : '/signin';
+export function AppHeader({ signedIn = false }: AppHeaderProps) {
   const pathname = usePathname();
-  const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  // Close the mobile menu whenever the route changes.
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [pathname]);
-
-  // "navOver" = the transparent, light-text state shown only over a hero before
-  // the user scrolls.
-  const navOver = overHero && !scrolled;
-  const solid = !navOver;
-
-  const headerClass = [
-    'fixed inset-x-0 top-0 z-40 transition-all duration-300',
-    solid ? 'bg-bone/95 shadow-[0_1px_0_theme(colors.hairline)] backdrop-blur-xl' : 'bg-transparent',
-  ].join(' ');
-
-  const linkColor = (active: boolean) =>
-    navOver
-      ? active
-        ? 'text-bone'
-        : 'text-bone/80 hover:text-bone'
-      : active
-        ? 'text-ink'
-        : 'text-stone hover:text-ink';
-
-  const iconColor = navOver ? 'text-bone/85 hover:text-bone' : 'text-stone hover:text-ink';
 
   return (
-    <header className={headerClass}>
-      <div className="container-page flex h-[72px] items-center justify-between gap-8">
-        {/* Wordmark */}
-        <Link
-          href="/"
-          aria-label="Tennis World — home"
-          className={`serif text-[18px] font-normal tracking-wordmark ${navOver ? 'text-bone' : 'text-ink'}`}
-        >
-          {WORDMARK}
-        </Link>
-
-        {/* Desktop primary nav */}
-        <nav aria-label="Primary" className="hidden items-center gap-8 md:flex">
-          {PRIMARY_NAV.map((item) => {
-            const active = isActiveRoute(item.href, pathname);
-            return (
-              <PendingLink
-                key={item.href}
-                href={item.href}
-                aria-current={active ? 'page' : undefined}
-                className={`eyebrow transition-colors ${linkColor(active)} ${
-                  active && !navOver ? 'border-b border-current pb-px' : ''
-                }`}
-              >
-                {item.label}
-              </PendingLink>
-            );
-          })}
-        </nav>
-
-        {/* Desktop right cluster: saved / profile icons + Unlock CTA */}
-        <div className="hidden items-center gap-3 md:flex">
-          <HeaderIconLink href="/saved" label="Saved" iconColor={iconColor}>
-            <BookmarkIcon />
-          </HeaderIconLink>
-          <HeaderIconLink
-            href={profileHref}
-            label={signedIn ? 'Profile' : 'Sign in'}
-            iconColor={iconColor}
-          >
-            {signedIn && headerUser ? (
-              <UserAvatar
-                name={headerUser.name}
-                initials={headerUser.initials}
-                avatarUrl={headerUser.avatarUrl}
-                size="sm"
-                decorative
-              />
-            ) : (
-              <UserIcon />
-            )}
-          </HeaderIconLink>
-          {!unlocked ? (
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-40 flex justify-center px-4 pt-3 md:px-0 md:pt-5">
+      <nav
+        aria-label="Primary"
+        className="nav-pill pointer-events-auto flex w-full items-center justify-between shadow-nav md:w-auto md:justify-start"
+      >
+        {PRIMARY_NAV.map((item) => {
+          const href = item.href === '/profile' && !signedIn ? '/signin' : item.href;
+          const active = isActiveRoute(item.href, pathname);
+          return (
             <PendingLink
-              href="/map"
+              key={item.href}
+              href={href}
+              spinnerPosition="none"
+              pendingLabel={`Loading ${item.label}…`}
+              aria-current={active ? 'page' : undefined}
               className={[
-                'btn',
-                navOver ? 'btn-over-image' : 'btn-primary',
-                '!h-10 !px-5 !text-[11px] !tracking-[0.1em]',
+                'flex-none whitespace-nowrap rounded-pill px-[14px] py-[9px] text-[13.5px] text-ink transition-colors duration-150 md:px-[22px] md:py-[11px]',
+                active ? 'bg-[rgba(184,184,182,0.42)] font-semibold' : 'font-normal',
+                'aria-busy:opacity-60',
               ].join(' ')}
             >
-              Unlock Map
+              {item.label}
             </PendingLink>
-          ) : null}
-        </div>
-
-        {/* Mobile hamburger */}
-        <button
-          type="button"
-          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((open) => !open)}
-          className={`hidden p-2 transition-colors md:hidden ${navOver ? 'text-bone' : 'text-ink'}`}
-        >
-          {menuOpen ? <CloseIcon /> : <MenuIcon />}
-        </button>
-      </div>
-
-      {/* Mobile dropdown — full nav (primary + saved/profile) for parity with the
-          prototype's mobile menu. */}
-      {menuOpen ? (
-        <div className="border-t border-hairline bg-bone px-6 pb-6 pt-4 md:hidden">
-          {TAB_NAV.map((item) => {
-            const active = isActiveRoute(item.href, pathname);
-            return (
-              <PendingLink
-                key={item.href}
-                href={item.href}
-                aria-current={active ? 'page' : undefined}
-                className={`body-l block border-b border-hairline py-3.5 ${
-                  active ? 'text-ink' : 'text-graphite'
-                }`}
-              >
-                {item.label}
-              </PendingLink>
-            );
-          })}
-          {!unlocked ? (
-            <PendingLink href="/map" className="btn btn-primary mt-5 w-full">
-              Unlock Full Access
-            </PendingLink>
-          ) : null}
-        </div>
-      ) : null}
-    </header>
-  );
-}
-
-/**
- * One icon-only header link (Saved / Profile). Swaps its icon for a small spinner while
- * pending, keeping the same `p-2` box (no layout shift) and accessible name.
- */
-function HeaderIconLink({
-  href,
-  label,
-  iconColor,
-  children,
-}: {
-  href: string;
-  label: string;
-  iconColor: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <PendingLink
-      href={href}
-      aria-label={label}
-      pendingLabel={`Loading ${label}…`}
-      replaceContent
-      className={`p-2 transition-colors ${iconColor}`}
-    >
-      {children}
-    </PendingLink>
-  );
-}
-
-// ── Inline icons (no icon-library dependency; stroke = currentColor) ─────────
-function BookmarkIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-      <path d="M6 4h12v16l-6-4-6 4z" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function UserIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 20c0-4 4-6 8-6s8 2 8 6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function MenuIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-      <path d="M3 6h18M3 12h18M3 18h18" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-      <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
-    </svg>
+          );
+        })}
+      </nav>
+    </div>
   );
 }

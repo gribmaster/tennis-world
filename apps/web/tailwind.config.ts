@@ -31,6 +31,8 @@ const config: Config = {
         paper: '#FFFFFF', // pure white reserved for media overlays
         // Hairline divider over the bone background (from the prototypes).
         hairline: '#E0DCCC',
+        // v3 shared CourtCard (TASK_56) — the bookmark glyph's "saved" fill.
+        saved: '#E85D4A',
       },
       // Fonts are loaded via next/font (Cormorant Garamond + Inter) in the root
       // layout and exposed as CSS variables, so we self-host them — no external
@@ -75,6 +77,8 @@ const config: Config = {
       // floating elements like the map bottom sheet.
       boxShadow: {
         card: '0 4px 24px rgba(15, 15, 15, 0.08)',
+        // v3 floating pill nav (TASK_55) — the one new elevation the redesign adds.
+        nav: '0 16px 40px rgba(15, 15, 15, 0.14), 0 2px 10px rgba(15, 15, 15, 0.06)',
       },
       maxWidth: {
         container: '1280px',
