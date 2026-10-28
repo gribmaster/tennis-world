@@ -219,20 +219,31 @@ after any change in this area.
 **Real usage from the current code**
 
 ```tsx
-// apps/web/src/components/court/CourtCard.tsx — whole-card navigation
-<PendingCardLink href={href} className="block" ariaLabel={court.name}>
-  {card}
+// apps/web/src/components/court/CourtCard.tsx — card image wrapped in a navigating link
+<PendingCardLink
+  href={`/courts/${court.slug}`}
+  ariaLabel={display.name}
+  className="relative block h-[170px] overflow-hidden rounded-[14px] md:h-[340px]"
+>
+  <Image src={court.heroImageUrl} alt="" fill priority={priority} sizes={imageSizes} className="object-cover" />
+  …
 </PendingCardLink>
 
-// apps/web/src/features/home/HomeHero.tsx — CTA link
-<PendingLink href={primaryCta.href} className="btn btn-over-image gap-2.5">
-  {primaryCta.label}
-  <ArrowGlyph />
+// apps/web/src/features/saved/SavedEmptyState.tsx — CTA link
+<PendingLink href={cta.href} className="btn btn-primary mt-6 h-10 px-5 text-[11px]">
+  {cta.label}
 </PendingLink>
 
-// apps/web/src/features/profile/ProfileMenuRow.tsx — row that renders its own spinner
-<PendingLink href={href} pendingId={pendingId} className={rowClass} spinnerPosition="none">
-  {rowContent}
+// apps/web/src/components/layout/AppHeader.tsx — nav pill item, renders its own spinner
+<PendingLink
+  key={item.href}
+  href={href}
+  spinnerPosition="none"
+  pendingLabel={`Loading ${item.label}…`}
+  aria-current={active ? 'page' : undefined}
+  className={...}
+>
+  {item.label}
 </PendingLink>
 
 // The button primitive for new async actions
@@ -277,14 +288,18 @@ after any change in this area.
     `md:hidden`, and a desktop plain-text link above the heading, label `Back to Profile`,
     `hidden md:inline-flex`. Same `fallbackHref` both.
 - **MUST NOT** add a Back button to top-level navigation pages (`/`, `/map`,
-  `/collections`, `/journal`, `/saved`, `/profile` — see `components/layout/nav-items.ts`).
-  `/profile/settings` is NESTED, not top-level: it keeps its Back button, and
-  `isActiveRoute`'s prefix match correctly lights the Profile tab while it is open.
-- `nav-items.ts` is the single source for both navs, and the two sets differ on purpose:
-  mobile `TAB_NAV` is **five** tabs (Home · Map · Collections · Saved · Profile) while
-  desktop `PRIMARY_NAV` is **four** (Home · Map · Collections · Journal). Journal left the
-  MOBILE TAB BAR only — it is still a desktop nav destination and a Home section, so do not
-  "restore" it to `TAB_NAV` or drop it from `PRIMARY_NAV`.
+  `/collections`, `/profile` — the four `PRIMARY_NAV` routes — plus `/saved` and
+  `/journal`, which are still top-level even though they are not in the nav; see
+  `components/layout/nav-items.ts`). `/profile/settings` is NESTED, not top-level: it
+  keeps its Back button, and `isActiveRoute`'s prefix match correctly lights the Profile
+  tab while it is open.
+- `nav-items.ts` is the single source for the nav: one `PRIMARY_NAV` of four items (Atlas
+  `/` · Courts `/map` · Collections `/collections` · Profile `/profile`), rendered by the
+  single floating pill (`AppHeader`) at every width — there is no separate mobile tab bar
+  or desktop-only list. Saved is not in the nav and lights the Profile item (as do
+  `/signin`, `/signup`, `/verify`); Courts also lights for `/courts/*`. Journal is not in
+  the nav either and stays reachable from the Footer. **MUST NOT** add a second nav or a
+  bottom tab bar — `AppShell` mounts the one pill.
 - Use App Router utilities only: `next/link`, `useRouter`/`router.push`/`router.back`,
   `usePathname` from `next/navigation`.
 - **MUST NOT** use `javascript:history.back()` or a bare `history.back()`, and **MUST NOT**
@@ -353,6 +368,31 @@ after any change in this area.
   boot crash.
 - Billing endpoints are rate-limited in memory per user (checkout 5, portal 10 per window);
   keep the guard ordering (after `AuthGuard`, per-method).
+- `DEV_FORCE_MEMBERSHIP` (`apps/api/.env`; unset by default) force-overrides the
+  *effective* entitlement to `free` or `subscribed` for every signed-in user — a
+  local-dev-only shortcut for looking at both states without the Stripe CLI (§ below).
+  It lives in **exactly one place**, `EntitlementsService.getEffectiveEntitlement`
+  (`apps/api/src/entitlements/dev-membership-override.ts` parses it) — **MUST NOT** be
+  read anywhere else (not a controller, guard, or the web app). The API **refuses to
+  boot** if it's set to anything but `free`/`subscribed`, if `NODE_ENV=production`, or if
+  `STRIPE_SECRET_KEY` is a live key.
+
+### Local development: Stripe webhooks
+
+- A completed test payment that leaves `/billing/return` stuck on "processing" locally is
+  expected: entitlement is granted only by the webhook (§7), and Stripe cannot reach
+  `127.0.0.1`. Fix: `stripe login` once, then in a separate terminal run
+  `stripe listen --forward-to http://127.0.0.1:18001/v1/webhooks/stripe` and copy the
+  printed `whsec_…` into `apps/api/.env` `STRIPE_WEBHOOK_SECRET`, restarting the API.
+- Pay with test card `4242 4242 4242 4242` while `stripe listen` is running; expect
+  `checkout.session.completed → 200` in its output. A payment made before `listen` was
+  started is never replayed — pay again.
+- `stripe trigger` sends events with no `userId` metadata, so it **cannot** test
+  fulfilment end-to-end (`could not resolve a User` in the API log is the tell).
+- To look at the `free`/`subscribed` states without any of the above, set
+  `DEV_FORCE_MEMBERSHIP` instead (above) and restart the API — no CLI, no payment.
+- A `400` from the webhook means the wrong secret is set (likely the Dashboard endpoint
+  secret, not the CLI's) or the API wasn't restarted after updating it.
 
 ---
 

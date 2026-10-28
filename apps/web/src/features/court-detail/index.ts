@@ -18,20 +18,12 @@ export type {
 export { CourtDetailGalleryLightbox } from './CourtDetailGalleryLightbox';
 export type { CourtDetailGalleryLightboxProps } from './CourtDetailGalleryLightbox';
 
-// NO LONGER RENDERED (Feature 79). CourtDetailFramedGallery, CourtDetailCtaPanel and
-// CourtDetailLocationPreview's `variant="rail"` were the PRE-v2 locked page's pieces.
-// Feature 78 moved the unlocked page off them and Feature 79 moved the locked page off
-// them too, so nothing in the app imports these three any more. They are left in place
-// deliberately: deleting them is not this feature's job (CLAUDE.md §9 — touch only what
-// the task requires). A follow-up may remove them once no one wants the old reading back.
-export { CourtDetailFramedGallery } from './CourtDetailFramedGallery';
-export type { CourtDetailFramedGalleryProps } from './CourtDetailFramedGallery';
-
+// NO LONGER RENDERED (Feature 79). CourtDetailLocationPreview's `variant="rail"` was
+// part of the PRE-v2 locked page; CourtDetailFramedGallery and CourtDetailCtaPanel were
+// the rest of it and were deleted in TASK_63 (zero importers). CourtDetailLocationPreview
+// itself stays — it's still used elsewhere — only its unused `rail` variant is dead.
 export { CourtDetailLocationPreview } from './CourtDetailLocationPreview';
 export type { CourtDetailLocationPreviewProps } from './CourtDetailLocationPreview';
-
-export { CourtDetailCtaPanel } from './CourtDetailCtaPanel';
-export type { CourtDetailCtaPanelProps } from './CourtDetailCtaPanel';
 
 export { SaveToCollectionMenu } from './SaveToCollectionMenu';
 export type { SaveToCollectionMenuProps } from './SaveToCollectionMenu';

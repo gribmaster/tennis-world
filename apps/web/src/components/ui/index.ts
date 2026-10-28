@@ -3,9 +3,6 @@
 export { Button } from './Button';
 export type { ButtonProps, ButtonVariant } from './Button';
 
-export { SectionHeader } from './SectionHeader';
-export type { SectionHeaderProps } from './SectionHeader';
-
 export { Badge } from './Badge';
 export type { BadgeProps, BadgeTone } from './Badge';
 

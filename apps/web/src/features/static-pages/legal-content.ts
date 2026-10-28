@@ -47,10 +47,10 @@ export const privacyContent: LegalContent = {
     {
       h: '1. Information We Collect',
       p: [
-        'Account information: name, email address, and authentication identifiers when you create an account or sign in via Apple, Google, or magic link.',
+        'Account information: name, email address, and authentication identifiers when you create an account or sign in via Google or magic link.',
         'Usage data: courts viewed, saved, and searched; collections created; pages visited; and general interaction patterns within the Service.',
         'Device and technical data: IP address, browser type, device identifiers, and approximate location derived from IP address (used to personalize map defaults and currency, not to track precise location).',
-        'Payment information: subscription and one-time purchase records are processed by our payment provider (e.g. RevenueCat/App Store/Play Store); we do not store full card numbers.',
+        'Payment information: subscription and one-time purchase records are processed by our payment provider (Stripe); we do not store full card numbers.',
         'Consultation requests: information you submit through our concierge form, including travel preferences, skill level, and contact details.',
       ],
     },

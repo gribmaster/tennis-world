@@ -170,7 +170,7 @@ export interface CourtSaveButtonProps {
    * The court name AS DISPLAYED by the host page (Feature 79). When supplied, the icon
    * presentation's accessible name names the court — "Save Sunset Club" — using the
    * DISPLAYED string, which on the locked page is the masked placeholder. That keeps the
-   * mask out of the accessibility tree, the same rule `HomeCourtSaveHeart` follows.
+   * mask out of the accessibility tree, the same rule `CollectionSaveHeart` follows.
    * Omitted ⇒ the original generic "Save Court" / "Saved" label, unchanged.
    */
   courtLabel?: string;

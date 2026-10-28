@@ -321,10 +321,12 @@ render correctly with exactly one visible `<h1>`; `verify:web-billing` 13/13 and
   sites were never swept. This is **marketing copy, not a code defect**, so Feature 87 left it
   alone rather than silently rewriting the product's pricing pitch — but it should be an
   explicit editorial decision, not an oversight. See §11.
-- **`legal-content.ts` names the wrong payment provider.** The Privacy Policy says payments are
-  processed by "RevenueCat/App Store/Play Store"; the app uses **Stripe**. The file is
-  self-labelled placeholder copy pending counsel review, so this is pre-existing and outside the
-  redesign's scope — but it is wrong today.
+- **`legal-content.ts` named the wrong payment provider and still listed Apple sign-in.**
+  Fixed in TASK_63: the Privacy Policy's payment paragraph now says "Stripe" (was
+  "RevenueCat/App Store/Play Store"), and the account-info paragraph no longer lists "Apple"
+  among sign-in methods (TASK_62 removed the control; the API has no Apple sign-in). The file
+  remains self-labelled placeholder copy pending counsel review — only these two factual
+  corrections were made.
 - **The "Continue with Apple" button was removed in TASK_62** (no Apple OAuth exists on the
   API). In `mock` mode the Google button is still inert (in `api` mode Google is a real OAuth
   navigation) — a documented placeholder, not a regression.
@@ -349,8 +351,10 @@ render correctly with exactly one visible `<h1>`; `verify:web-billing` 13/13 and
    decision.
 5. **The "120+ / 50" scale copy** (§10) — an editorial call: use real numbers, drop the figures,
    or keep aspirational copy knowingly.
-6. **`legal-content.ts`'s payment-provider paragraph** — correct to Stripe when the legal copy
-   goes to counsel.
+6. ~~**`legal-content.ts`'s payment-provider paragraph** — correct to Stripe when the legal copy
+   goes to counsel.~~ Resolved in TASK_63 (see §10) — payment provider corrected to Stripe and
+   the stale Apple sign-in mention removed. Counsel review of the placeholder copy is still
+   outstanding.
 7. ~~**Apple sign-in** — either implement it or make its inert state visible.~~ Resolved in
    TASK_62: the control was removed (no Apple OAuth exists on the API).
 8. **Rate limiting is still per-instance in-memory** (billing and now reviews). Redis remains

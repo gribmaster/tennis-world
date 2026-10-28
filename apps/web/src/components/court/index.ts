@@ -15,9 +15,6 @@ export type { SurfaceChipProps } from './SurfaceChip';
 
 export { PremiumBadge } from './PremiumBadge';
 
-export { CourtMeta } from './CourtMeta';
-export type { CourtMetaProps } from './CourtMeta';
-
 export { CourtImage } from './CourtImage';
 export type { CourtImageProps } from './CourtImage';
 

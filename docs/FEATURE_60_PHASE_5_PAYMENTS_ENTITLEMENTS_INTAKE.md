@@ -420,8 +420,8 @@ or be a thinner `{ directionsUrl }` — kept as one DTO unless the UI needs them
 
 ### 5.4 Local dev + test mode
 
-- **Stripe CLI** (`stripe listen --forward-to localhost:3001/v1/webhooks/stripe`) for local webhook
-  delivery + `stripe trigger` for synthetic events.
+- **Stripe CLI** (`stripe listen --forward-to http://127.0.0.1:18001/v1/webhooks/stripe`) for local
+  webhook delivery + `stripe trigger` for synthetic events.
 - **Test mode only first** — `sk_test_…` keys; no live keys in the repo or CI.
 - **Env vars (server-only, never `NEXT_PUBLIC_*`):** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
   `STRIPE_PRICE_LIFETIME`, `STRIPE_PRICE_SUBSCRIPTION` (optional), `STRIPE_SUCCESS_URL`,
@@ -732,8 +732,8 @@ verification + CI + docs only.
     **real `STRIPE_WEBHOOK_SECRET`**, and POSTs it to the real `POST /v1/webhooks/stripe`. This is a
     **HYBRID: real Stripe checkout objects + a signed synthetic delivery**, NOT full Stripe-CLI event
     delivery. For a true end-to-end delivery run `stripe listen --forward-to
-    localhost:3001/v1/webhooks/stripe` + `stripe trigger checkout.session.completed` (needs the CLI
-    binary — hard to automate in CI, documented as the manual path).
+    http://127.0.0.1:18001/v1/webhooks/stripe` + `stripe trigger checkout.session.completed` (needs
+    the CLI binary — hard to automate in CI, documented as the manual path).
 - **Downstream product coverage (all real):** after the signed fulfillment → one **active lifetime
   Entitlement** anchored on the (real) payment intent, idempotent on redelivery; `/v1/me` flips
   `free → lifetime`; the protected **exact-location** endpoint unlocks (200) for a real seeded court;

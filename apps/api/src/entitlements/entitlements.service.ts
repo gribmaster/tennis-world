@@ -1,10 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   type EffectiveEntitlement,
   NOT_ENTITLED,
 } from './entitlements.types';
+import {
+  buildOverrideEntitlement,
+  DEV_MEMBERSHIP_OVERRIDE,
+  type DevMembershipOverride,
+} from './dev-membership-override';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EntitlementsService — the ONE place "is this user currently premium?" is decided
@@ -25,7 +30,22 @@ import {
 
 @Injectable()
 export class EntitlementsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(EntitlementsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(DEV_MEMBERSHIP_OVERRIDE)
+    private readonly devMembershipOverride: DevMembershipOverride,
+  ) {
+    // One boot-time line when the override is active — never per-request (Task 65).
+    if (this.devMembershipOverride !== null) {
+      this.logger.warn(
+        `[DEV] DEV_FORCE_MEMBERSHIP=${this.devMembershipOverride} — every user is ` +
+          'treated as ' +
+          `${this.devMembershipOverride}; real entitlements are ignored`,
+      );
+    }
+  }
 
   /**
    * Collapse the user's `Entitlement` rows into the single effective answer.
@@ -44,8 +64,18 @@ export class EntitlementsService {
    * manual_grant) → 'lifetime'. If effective rows of both kinds exist, the "strongest"
    * pick above already prefers a non-expiring (lifetime-shaped) row, so lifetime takes
    * precedence over subscription when both are present.
+   *
+   * DEV OVERRIDE (Task 65): when `DEV_FORCE_MEMBERSHIP` is set, this short-circuits
+   * BEFORE the Prisma query — no DB read at all, and no real entitlement row (even an
+   * active one) can change the answer. This is the ONLY place the override is applied;
+   * every caller (`isEntitled`, `auth.service.ts`, `me.service.ts`,
+   * `exact-location.service.ts`) already goes through this method or `isEntitled`.
    */
   async getEffectiveEntitlement(userId: string): Promise<EffectiveEntitlement> {
+    if (this.devMembershipOverride !== null) {
+      return buildOverrideEntitlement(this.devMembershipOverride);
+    }
+
     const now = new Date();
 
     // One indexed read (covered by @@index([userId, status])). We deliberately filter

@@ -107,7 +107,7 @@ export function HomeHero({ slides }: HomeHeroProps) {
         <PendingCardLink
           href={`/courts/${current.slug}`}
           ariaLabel={current.alt}
-          className="absolute inset-0 block"
+          className="absolute inset-0 block h-full"
         >
           {slides.map((slide, i) => (
             <Image

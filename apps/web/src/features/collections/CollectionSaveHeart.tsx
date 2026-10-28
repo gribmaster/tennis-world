@@ -8,8 +8,8 @@ import { InlineSpinner } from '@/components/ui';
 import { BookmarkGlyph } from '@/components/court/CourtCardSaveButton';
 
 // CollectionSaveHeart — the circular save/unsave control overlaid on an editorial
-// collection card or row (Task 42), mirroring `HomeCourtSaveHeart.tsx` line-for-line,
-// adapted for a `Collection` instead of a `Court`.
+// collection card or row (Task 42), mirroring the now-deleted `HomeCourtSaveHeart.tsx`
+// line-for-line at the time, adapted for a `Collection` instead of a `Court`.
 //
 // TASK_60 (v3): the mutation logic below is BYTE-FOR-BYTE unchanged — the optimistic
 // flip, the `AuthRequiredError` rollback/redirect, the `.finally()` reset, the guest
@@ -34,10 +34,10 @@ import { BookmarkGlyph } from '@/components/court/CourtCardSaveButton';
 // NESTED INSIDE A CARD LINK: it is NOT. Rendered as a SIBLING of the card's
 // `PendingCardLink`, at each call site's wrapping `<li>`.
 //
-// REPOSITORY: `getMutationSavedRepository()` — the same accessor `HomeCourtSaveHeart`
-// uses, since `SavedRepository` carries both court and collection mutation methods.
+// REPOSITORY: `getMutationSavedRepository()` — the same accessor `CourtSaveButton` uses,
+// since `SavedRepository` carries both court and collection mutation methods.
 
-/** Heart glyph — same path/visual language as HomeCourtSaveHeart's. `size` added (TASK_60) so the Collection Detail hero/bar (18px) and every pre-existing 16px call site share one glyph. */
+/** Heart glyph — same path/visual language as the original `HomeCourtSaveHeart` (now deleted). `size` added (TASK_60) so the Collection Detail hero/bar (18px) and every pre-existing 16px call site share one glyph. */
 function HeartGlyph({ filled, size = 16 }: { filled: boolean; size?: number }) {
   return (
     <svg
@@ -137,7 +137,7 @@ export interface CollectionSaveHeartProps {
   collectionSlug: string;
   /**
    * Accessible name for the control — the DISPLAYED name (editorial collections
-   * aren't masked today, but this mirrors `HomeCourtSaveHeart`'s `courtLabel` for
+   * aren't masked today, but this mirrors `CourtSaveButton`'s `courtLabel` for
    * consistency and future-proofing).
    */
   collectionLabel: string;

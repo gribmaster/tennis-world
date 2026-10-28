@@ -266,7 +266,7 @@ export function CourtDetailShell({
           {desktopBackControl}
         </div>
 
-        <div className="mx-auto w-full max-w-[1240px] md:grid md:grid-cols-[1.1fr_1fr] md:items-start md:gap-x-12 md:px-14 md:pb-20">
+        <div className="mx-auto w-full max-w-[1240px] md:grid md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] md:items-start md:gap-x-12 md:px-14 md:pb-20">
           <CourtDetailGalleryHero backControl={backControl} />
 
           {/* The "white card" — a real box at mobile (background/rounded top/negative

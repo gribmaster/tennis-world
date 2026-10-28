@@ -28,6 +28,13 @@
 // Plus invariants on EVERY response: no provider id (cus_/sub_/pi_), no `email`, no
 // exact `lat`/`lng`, and verify-vs-/v1/me membership AGREE.
 //
+// Task 65 adds two more sections (no HTTP, no new preflight requirement):
+//   - `loadDevMembershipOverride` parser/validator — pure function, no DB/Nest needed.
+//   - `EntitlementsService` with an INJECTED override (constructed directly, bypassing
+//     Nest DI) — proves `subscribed` and `free` override the REAL rows (short-circuiting
+//     before the Prisma query), while the 136 scenarios above (run with `null`, i.e. no
+//     override) prove the override leaves the real rule untouched.
+//
 // ── How to run ─────────────────────────────────────────────────────────────────────
 //   pnpm db:up
 //   pnpm --filter @tennis/api prisma:migrate:deploy   # (or migrate reset) + db:seed
@@ -42,6 +49,7 @@
 // SAME Prisma client + DATABASE_URL the API uses, so the rows it writes are the rows the
 // API reads.
 
+import 'reflect-metadata';
 import { createHash, randomBytes } from 'node:crypto';
 import {
   PrismaClient,
@@ -49,6 +57,9 @@ import {
   type EntitlementSource,
   type EntitlementStatus,
 } from '@prisma/client';
+import { EntitlementsService } from '../src/entitlements/entitlements.service';
+import { loadDevMembershipOverride } from '../src/entitlements/dev-membership-override';
+import type { PrismaService } from '../src/prisma/prisma.service';
 
 const prisma = new PrismaClient();
 
@@ -541,8 +552,160 @@ async function main(): Promise<void> {
     `got ${JSON.stringify(body14.activeUntil)}`,
   );
 
+  console.log('\nDev membership override (Task 65) — parser');
+  verifyDevMembershipOverrideParser();
+
+  console.log('\nDev membership override (Task 65) — EntitlementsService');
+  await verifyDevMembershipOverrideService();
+
   await cleanup();
   summarize();
+}
+
+// ── Task 65: DEV_FORCE_MEMBERSHIP parser (pure — no DB, no HTTP) ───────────────────
+
+function expectThrows(name: string, fn: () => unknown): void {
+  try {
+    const got = fn();
+    expectTrue(name, false, `expected to throw, got: ${JSON.stringify(got)}`);
+  } catch {
+    expectTrue(name, true);
+  }
+}
+
+function verifyDevMembershipOverrideParser(): void {
+  expectTrue(
+    'parser: unset → null',
+    loadDevMembershipOverride({}) === null,
+  );
+  expectTrue(
+    'parser: empty string → null',
+    loadDevMembershipOverride({ DEV_FORCE_MEMBERSHIP: '' }) === null,
+  );
+  expectTrue(
+    'parser: "free" → "free"',
+    loadDevMembershipOverride({ DEV_FORCE_MEMBERSHIP: 'free' }) === 'free',
+  );
+  expectTrue(
+    'parser: "subscribed" → "subscribed"',
+    loadDevMembershipOverride({ DEV_FORCE_MEMBERSHIP: 'subscribed' }) === 'subscribed',
+  );
+  expectTrue(
+    'parser: "Subscribed " (case-insensitive, trimmed) → "subscribed"',
+    loadDevMembershipOverride({ DEV_FORCE_MEMBERSHIP: 'Subscribed ' }) === 'subscribed',
+  );
+  expectThrows('parser: "premium" throws', () =>
+    loadDevMembershipOverride({ DEV_FORCE_MEMBERSHIP: 'premium' }),
+  );
+  expectThrows('parser: "true" throws', () =>
+    loadDevMembershipOverride({ DEV_FORCE_MEMBERSHIP: 'true' }),
+  );
+  expectThrows('parser: "1" throws', () =>
+    loadDevMembershipOverride({ DEV_FORCE_MEMBERSHIP: '1' }),
+  );
+  expectThrows('parser: set + NODE_ENV=production throws', () =>
+    loadDevMembershipOverride({
+      DEV_FORCE_MEMBERSHIP: 'subscribed',
+      NODE_ENV: 'production',
+    }),
+  );
+  expectThrows('parser: set + live Stripe key throws', () =>
+    loadDevMembershipOverride({
+      DEV_FORCE_MEMBERSHIP: 'subscribed',
+      STRIPE_SECRET_KEY: 'sk_live_abc123',
+    }),
+  );
+  expectTrue(
+    'parser: unset + NODE_ENV=production → null (fine)',
+    loadDevMembershipOverride({ NODE_ENV: 'production' }) === null,
+  );
+}
+
+// ── Task 65: EntitlementsService with an injected override (direct construction,
+//    bypassing Nest DI — same technique as the parser being a plain function) ──────
+
+async function verifyDevMembershipOverrideService(): Promise<void> {
+  // `subscribed`: a user with NO entitlement rows at all still reads as an active
+  // subscriber — the override short-circuits before the Prisma query.
+  const subscribedService = new EntitlementsService(
+    prisma as unknown as PrismaService,
+    'subscribed',
+  );
+  const subscribedEmail = `${EMAIL_PREFIX}devoverride-subscribed${EMAIL_DOMAIN}`;
+  const subscribedUser = await prisma.user.upsert({
+    where: { email: subscribedEmail },
+    create: { email: subscribedEmail, authProvider: 'magic' },
+    update: {},
+    select: { id: true },
+  });
+  const subscribedResult = await subscribedService.getEffectiveEntitlement(
+    subscribedUser.id,
+  );
+  expectTrue(
+    'service override "subscribed": isEntitled === true (no rows)',
+    subscribedResult.isEntitled === true,
+  );
+  expectTrue(
+    'service override "subscribed": membership === "subscription"',
+    subscribedResult.membership === 'subscription',
+    `got '${subscribedResult.membership}'`,
+  );
+  expectTrue(
+    'service override "subscribed": source === "stripe_web"',
+    subscribedResult.source === 'stripe_web',
+    `got '${subscribedResult.source}'`,
+  );
+  expectTrue(
+    'service override "subscribed": cancelAtPeriodEnd === false',
+    subscribedResult.cancelAtPeriodEnd === false,
+  );
+  expectTrue(
+    'service override "subscribed": activeUntil is in the future',
+    subscribedResult.activeUntil !== null &&
+      new Date(subscribedResult.activeUntil).getTime() > Date.now(),
+    `got ${JSON.stringify(subscribedResult.activeUntil)}`,
+  );
+
+  // `free`: a user with a REAL active (non-expiring) entitlement row still reads as
+  // free — the override ignores real rows, not just the absence of them.
+  const freeEmail = `${EMAIL_PREFIX}devoverride-free${EMAIL_DOMAIN}`;
+  const freeUser = await prisma.user.upsert({
+    where: { email: freeEmail },
+    create: { email: freeEmail, authProvider: 'magic' },
+    update: {},
+    select: { id: true },
+  });
+  await prisma.entitlement.create({
+    data: {
+      userId: freeUser.id,
+      kind: 'lifetime_unlock',
+      status: 'active',
+      source: 'stripe_web',
+      expiresAt: null,
+    },
+  });
+  const freeService = new EntitlementsService(prisma as unknown as PrismaService, 'free');
+  const freeResult = await freeService.getEffectiveEntitlement(freeUser.id);
+  expectTrue(
+    'service override "free": isEntitled === false (despite a real active row)',
+    freeResult.isEntitled === false,
+  );
+  expectTrue(
+    'service override "free": membership === "free"',
+    freeResult.membership === 'free',
+    `got '${freeResult.membership}'`,
+  );
+
+  // Sanity: the SAME user, through a service with NO override (`null`), reads its real
+  // row as entitled — proving the override is what changed the answer above, not a bug
+  // that always returns 'free'.
+  const nullService = new EntitlementsService(prisma as unknown as PrismaService, null);
+  const realResult = await nullService.getEffectiveEntitlement(freeUser.id);
+  expectTrue(
+    'service override null: the same user\'s real active row still reads entitled',
+    realResult.isEntitled === true && realResult.membership === 'lifetime',
+    `got isEntitled=${realResult.isEntitled} membership='${realResult.membership}'`,
+  );
 }
 
 function summarize(): void {

@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
 import { EntitlementsService } from './entitlements.service';
+import {
+  DEV_MEMBERSHIP_OVERRIDE,
+  loadDevMembershipOverride,
+} from './dev-membership-override';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EntitlementsModule — Feature 62 (Phase 5, intake §3).
@@ -14,10 +18,20 @@ import { EntitlementsService } from './entitlements.service';
 // scope). PrismaService is global (PrismaModule), so it needs no import here — same
 // pattern as the other feature modules. No circular dependency: Entitlements depends
 // only on Prisma; Auth/Me depend on Entitlements (one direction).
+//
+// DEV_MEMBERSHIP_OVERRIDE (Task 65) — a single env-derived value (factory reads
+// `process.env` once at module wiring, same idiom as `AUTH_CONFIG`/`BILLING_CONFIG`),
+// injected into EntitlementsService rather than read from `process.env` per call. The
+// factory THROWS (never at request time) when `DEV_FORCE_MEMBERSHIP` is set but invalid,
+// or set in production, or set against a live Stripe key — see
+// `dev-membership-override.ts`'s header for why this must fail boot, not silently no-op.
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Module({
-  providers: [EntitlementsService],
+  providers: [
+    { provide: DEV_MEMBERSHIP_OVERRIDE, useFactory: () => loadDevMembershipOverride() },
+    EntitlementsService,
+  ],
   exports: [EntitlementsService],
 })
 export class EntitlementsModule {}
