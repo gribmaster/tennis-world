@@ -1,35 +1,38 @@
 import type { MembershipStatus } from '@tennis/contracts';
 import { PaywallTrigger } from '@/features/paywall';
 import { ManageBillingButton } from '@/features/billing';
+import { MEMBERSHIP_BADGE_LABEL } from './ProfileHeader';
 
-// ProfileMembershipCard — the Profile screen's membership card, restyled to the v2
-// prototype's two variants (`new design/tennis_world_v2_standalone.html` lines
-// 1430-1449):
-//   • `membership === 'free'`         → the existing dark "Choose your membership." card
-//     (unchanged copy/CTA — PaywallTrigger opens the shared Paywall modal).
-//   • `membership !== 'free'` (active) → the prototype's gradient dark card with a
-//     subhead + "✦ Active" badge, its CTA swapped for ManageBillingButton (the
-//     existing "Subscription & Purchases" mechanism — Feature 67 — not a new one).
-//     Task 44: the status-label eyebrow above the subhead ("Active Subscriber" /
-//     "Lifetime Member") was removed — redundant with the "✦ Active" pill and not in
-//     the mobile design.
+// ProfileMembershipCard — the Profile screen's membership card, with two variants
+// (TASK_61):
+//   • `membership === 'free'`         → the dark "Choose your membership." row —
+//     unchanged copy/CTA (PaywallTrigger opens the shared Paywall modal), v3's row
+//     geometry. Never shows a price (TASK_61 decision 3 — our model is a recurring
+//     subscription, not v3's one-time $29).
+//   • `membership !== 'free'` (active) → a gold uppercase eyebrow ("Active Subscriber" /
+//     "Lifetime Member", reusing `ProfileHeader`'s `MEMBERSHIP_BADGE_LABEL` map instead of
+//     a third copy) above the real subhead, with `ManageBillingButton` on the right (the
+//     existing hosted Stripe Customer Portal mechanism — Feature 67 — not a new one).
 //
 // `lifetime` IS a real membership state (`MembershipStatus`, `EntitlementKind.
 // lifetime_unlock`) reachable via manual grant or promo — its handling is kept, not
 // collapsed into `subscription` (TASK_14 point 4).
 //
-// The page now renders this UNCONDITIONALLY (both branches are real UI, matching the
-// prototype's `!unlocked`/`unlocked` split at the SAME card, rather than the page
-// deciding whether to render it at all).
+// The page renders this UNCONDITIONALLY — both branches are real UI, not a `?` the page
+// decides on.
 //
 // PRESENTATIONAL ONLY. The free-tier CTA opens the shared Paywall modal (Phase 1 —
 // checkout is Stripe-backed, Feature 66/67); the active-tier CTA opens the real hosted
 // Stripe Customer Portal via the existing ManageBillingButton — no new billing
 // mechanism, no Stripe artifact added here.
 //
-// DATA SOURCE: the free-tier copy + price live in a small feature-local config object
-// below (unchanged from before this restyle) — this component must NOT import
+// DATA SOURCE: the free-tier copy lives in a small feature-local config object below
+// (unchanged from before this restyle) — this component must NOT import
 // `@tennis/mock-data` in UI (hard rule).
+//
+// REAL DEFECT FIXED HERE (TASK_61): the active variant's `Manage` link used to be
+// `text-stone … hover:text-ink` — ink-on-near-black is invisible on hover against this
+// card's dark gradient. It is now `text-bone/70 hover:text-bone`.
 
 interface MembershipCardCopy {
   eyebrow: string;
@@ -82,16 +85,19 @@ export function ProfileMembershipCard({
   if (membership !== 'free') {
     return (
       <div
-        className="my-8 flex items-center justify-between gap-3 rounded-lg p-5 text-bone"
+        className="rounded-lg px-4 py-3.5 text-bone md:rounded-[14px] md:px-6 md:py-[18px]"
         style={{ background: 'linear-gradient(135deg, #1A1A1A, #2A2A2A)' }}
       >
-        <div>
-          <div className="body-m text-bone/90">{ACTIVE_SUBHEAD[membership]}</div>
-        </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="eyebrow text-gold">{MEMBERSHIP_BADGE_LABEL[membership]}</div>
+            <div className="mt-1 text-[13px] text-bone md:text-[14px]">
+              {ACTIVE_SUBHEAD[membership]}
+            </div>
+          </div>
           {/* Existing "manage subscription" mechanism (Feature 67) — the hosted Stripe
               Customer Portal, not a new billing surface. */}
-          <ManageBillingButton className="body-s text-stone underline underline-offset-2 transition-colors hover:text-ink">
+          <ManageBillingButton className="body-s shrink-0 text-bone/70 underline underline-offset-2 transition-colors hover:text-bone">
             Manage
           </ManageBillingButton>
         </div>
@@ -102,14 +108,18 @@ export function ProfileMembershipCard({
   const { eyebrow, headline, ctaLabel } = copy;
 
   return (
-    <div className="my-8 bg-ink p-7 text-bone">
-      <div className="eyebrow text-gold">{eyebrow}</div>
-      <div className="display-m mt-2 text-bone">{headline}</div>
+    <div className="flex items-center gap-3 rounded-lg bg-ink p-4 py-[18px] md:gap-4 md:rounded-[14px] md:px-6 md:py-[22px]">
+      <div className="flex-1">
+        <div className="eyebrow text-gold">{eyebrow}</div>
+        <div className="serif mt-2 text-[20px] font-light leading-[1.15] text-bone md:text-[24px]">
+          {headline}
+        </div>
+      </div>
 
       {/* CTA — opens the shared Paywall modal (presentational only; the modal's
           checkout is a Phase 4 placeholder). The gold `btn-premium` variant is
-          reserved for the paywall (this is it). */}
-      <PaywallTrigger source="profile" className="btn btn-premium mt-5 gap-2">
+          reserved for the paywall (this is it). Never shows a price (decision 3). */}
+      <PaywallTrigger source="profile" className="btn btn-premium h-9 shrink-0 gap-2 px-4 text-[11px]">
         {ctaLabel}
         <ArrowGlyph />
       </PaywallTrigger>

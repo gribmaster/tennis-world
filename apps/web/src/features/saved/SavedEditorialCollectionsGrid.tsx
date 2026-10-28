@@ -17,7 +17,10 @@ import { CollectionCard, CollectionSaveHeart } from '@/features/collections';
 // on failure — the same guarantee `SavedCourtsGrid` gives with its own local pending state.
 //
 // CARD REUSE: renders `CollectionCard` — the SAME card `/collections`' Featured strip and
-// Home's teaser use — rather than inventing a third editorial-collection card look.
+// Home's teaser use — rather than inventing a third editorial-collection card look, with
+// its `compact` prop (TASK_61) so the tile matches `SavedCollectionRow`'s 150/200px height
+// and type scale. The save control is the v3 bookmark (`glyph="bookmark"`), coral once
+// saved, bone while idle (TASK_61 decision 7).
 //
 // EMPTY STATE: renders nothing when the visible list is empty (no bare heading over a
 // void), matching `FeaturedCollectionsStrip`/`CuratedCollectionsList`'s own rule. The
@@ -46,16 +49,26 @@ export function SavedEditorialCollectionsGrid({
   if (visible.length === 0) return null;
 
   return (
-    <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+    <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5">
       {visible.map((collection, index) => (
-        <li key={collection.id} className="relative h-[150px]">
-          <CollectionCard collection={collection} priority={index === 0} className="collection-card" />
+        <li key={collection.id} className="relative h-[150px] md:h-[200px]">
+          <CollectionCard
+            collection={collection}
+            priority={index === 0}
+            className="collection-card"
+            compact
+            sizes="(max-width: 768px) 50vw, 33vw"
+          />
           <CollectionSaveHeart
             collectionId={collection.id}
             collectionSlug={collection.slug}
             collectionLabel={collection.name}
             initialSaved
             onSavedChange={(saved) => onUnsavedChange(collection.id, !saved)}
+            glyph="bookmark"
+            size={14}
+            className="absolute right-2 top-2 z-10 grid h-7 w-7 place-items-center rounded-pill bg-ink/45 backdrop-blur-[8px] md:right-2.5 md:top-2.5 md:h-8 md:w-8"
+            idleColorClassName="text-bone"
           />
         </li>
       ))}

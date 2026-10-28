@@ -7,105 +7,37 @@ import { SavedCollectionsGrid } from './SavedCollectionsGrid';
 import { SavedEditorialCollectionsGrid } from './SavedEditorialCollectionsGrid';
 import { SavedWishlistMap } from './SavedWishlistMap';
 import { SavedSortControl, sortSavedCourts, type SavedSortKey } from './SavedSortControl';
+import { CourtGlyph, CollectGlyph, MapGlyph } from './saved-glyphs';
 
-// SavedTabs — the ONLY 'use client' component on the Saved page, rebuilt to the v2
-// prototype's `SavedScreen` (tennis_world_v2_standalone.html:1192–1290).
+// SavedTabs — the ONLY 'use client' component on the Saved page, rebuilt to the v3
+// `SavedScreen` layout (TASK_61 — see docs/TASK_61_V3_PROFILE_SAVED_SETTINGS.md §2): a
+// single header+tabs row that stacks on mobile and spreads out at md+ (title left, tab
+// chips right), a count/sort row, and the three panels below.
 //
 // It still owns exactly the state it owned before (the active tab, plus the folders
 // created in-session) and gains ONE more: the Courts tab's sort key. It does NOT fetch
 // (the server page does that and passes the data in as props), does NOT import
 // @tennis/mock-data, and does NOT use localStorage.
 //
-// Prototype geometry, from the file:
-//   • header block `padding:'52px 20px 0'` (line 1201) — the top inset is `pt-8` under
-//     AppShell's standard 72px header offset, the 20px side gutter is `.container-page`.
-//   • title `className="serif display-l"` (line 1202); subtitle `fontSize:13`,
-//     `color:'var(--stone)'`, `marginTop:4` (line 1203).
-//   • tab row `display:'flex', gap:10, marginTop:16` (line 1204); each tab is a
-//     `label-chip chip-filter` with `flex:1`, centred `gap:8`, `fontSize:14`,
-//     `fontWeight:600`, `padding:'12px 0'` (line 1206).
-//   • count/sort row `justifyContent:'space-between'`, `marginTop:16`, `marginBottom:12`;
-//     count `fontSize:13, fontWeight:500` (lines 1211–1216).
-//
 // ── THREE TABS, NOT TWO (intake §8 Q2, DECIDED) ─────────────────────────────────────────
-// The prototype draws Courts and Collections only. "Wishlist Map" is a shipped feature and
-// is NOT deleted as a redesign side effect — it stays as a third tab. The tab control is
-// restyled to the prototype's chip language and holds three chips instead of two; the row
-// below carries the note on how the third one is made to fit at 390px.
+// v3 draws Courts and Collections only. "Wishlist Map" is a shipped feature and is NOT
+// deleted as a redesign side effect — it stays as a third tab (TASK_61 decision 5). The
+// tab control is the shared `.filter-pill` chip, and the row below carries the note on
+// how the third one is made to fit at 390px.
 //
 // ── TAB SWITCHING IS PURELY LOCAL UI (CLAUDE.md §4 rule 10) ─────────────────────────────
 // Changing tabs performs no navigation and no repository call — the data for all three
 // panels is already in hand. So the tab chips are plain <button role="tab">s with NO
 // pending primitive and NO spinner, exactly as rule 10 requires. The same holds for the
-// sort control (see SavedSortControl).
-
-/** The prototype's `Ico.court(18)` — a tennis-court plan glyph (line 264). */
-function CourtGlyph() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      aria-hidden
-    >
-      <rect x="2" y="4" width="20" height="16" rx="1" />
-      <line x1="12" y1="4" x2="12" y2="20" />
-      <line x1="2" y1="12" x2="22" y2="12" />
-      <line x1="6" y1="4" x2="6" y2="20" strokeDasharray="2 2" />
-      <line x1="18" y1="4" x2="18" y2="20" strokeDasharray="2 2" />
-    </svg>
-  );
-}
-
-/** The prototype's `Ico.collect(18)` — a 2×2 grid glyph (line 243). */
-function CollectGlyph() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <rect x="3" y="3" width="7" height="7" />
-      <rect x="14" y="3" width="7" height="7" />
-      <rect x="14" y="14" width="7" height="7" />
-      <rect x="3" y="14" width="7" height="7" />
-    </svg>
-  );
-}
-
-/** The prototype's `Ico.map(18)` — the third tab has no prototype icon; this is its own. */
-function MapGlyph() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
-      <line x1="8" y1="2" x2="8" y2="18" />
-      <line x1="16" y1="6" x2="16" y2="22" />
-    </svg>
-  );
-}
+// sort control (see SavedSortControl), which stays visible at every size (decision 6).
 
 export type TabId = 'courts' | 'collections' | 'wishlist';
 
-const TABS: ReadonlyArray<{ id: TabId; label: string; icon: () => React.ReactElement }> = [
+const TABS: ReadonlyArray<{
+  id: TabId;
+  label: string;
+  icon: (props: { size?: number }) => React.ReactElement;
+}> = [
   { id: 'courts', label: 'Courts', icon: CourtGlyph },
   { id: 'collections', label: 'Collections', icon: CollectGlyph },
   { id: 'wishlist', label: 'My Map', icon: MapGlyph },
@@ -224,22 +156,34 @@ export function SavedTabs({
 
   return (
     <div className="bg-bone pb-section-lg min-h-[70vh]">
-      <header className="container-page pt-8">
-        <h1 className="serif display-l text-ink">Saved</h1>
-        <p className="mt-1 text-[13px] leading-snug text-stone">{SUBTITLE}</p>
-      </header>
+      {/* Header + tabs — ONE flex container (TASK_61 §2): stacked on mobile (title,
+          subtitle, tabs below), spread into a single row at md+ (title left, tab chips
+          right). */}
+      <div className="container-page pt-8 md:pt-11 flex flex-col md:flex-row md:flex-wrap md:items-end md:justify-between md:gap-5">
+        <div>
+          <h1 className="serif display-l text-ink md:text-[40px] md:font-normal md:leading-[1.1]">
+            Saved
+          </h1>
+          <p className="mt-1 text-[13px] leading-snug text-stone md:text-[14px] md:mt-1.5">
+            {SUBTITLE}
+          </p>
+        </div>
 
-      {/* Tab chips — prototype `label-chip chip-filter`, which the shared `.filter-pill`
-          primitive already expresses (bone/mist when idle, ink/bone when active). No new
-          button system is introduced for this row.
-          FITTING THREE AT 390px: the prototype sized two chips at `flex:1` against the
-          primitive's 16px side padding. The third chip this screen keeps ("Wishlist Map",
-          intake §8 Q2) overflows that row on a 390px viewport — 409px of chips in 346px of
-          content width — so the row trims its own horizontal padding and lets the labels
-          wrap rather than hiding a tab behind a scroll or dropping its icon. From `sm` up
-          there is room, so the chips return to the primitive's natural sizing. */}
-      <div className="container-page mt-4">
-        <div role="tablist" aria-label="Saved" className="flex gap-2">
+        {/* Tab chips — prototype `label-chip chip-filter`, which the shared `.filter-pill`
+            primitive already expresses (bone/mist when idle, ink/bone when active). No new
+            button system is introduced for this row.
+            FITTING THREE AT 390px: two chips at `flex:1` against the primitive's 16px side
+            padding overflows at 390px with a third chip ("Wishlist Map", intake §8 Q2) —
+            409px of chips in 346px of content width — so on mobile the row trims its own
+            horizontal padding and lets the labels wrap rather than hiding a tab behind a
+            scroll or dropping its icon. From `sm` up there is room, so the chips return to
+            the primitive's natural sizing; at md+ they sit at the header's right edge with
+            their own (larger) natural-width sizing. */}
+        <div
+          role="tablist"
+          aria-label="Saved"
+          className="flex gap-2 mt-4 md:mt-0 md:gap-2.5"
+        >
           {TABS.map((tab) => {
             const isActive = tab.id === activeTab;
             const Icon = tab.icon;
@@ -251,23 +195,31 @@ export function SavedTabs({
                 aria-selected={isActive}
                 onClick={() => setActiveTab(tab.id)}
                 className={[
-                  'filter-pill justify-center gap-1.5 whitespace-normal px-2.5 py-3',
+                  'filter-pill justify-center gap-1.5 whitespace-normal px-2.5 py-3 md:flex-none',
                   'text-[13px] font-semibold leading-tight sm:gap-2 sm:px-4 sm:text-[14px]',
+                  'md:px-5 md:py-2.5 md:text-[13px] md:gap-2',
                   isActive ? 'is-active' : '',
                 ]
                   .filter(Boolean)
                   .join(' ')}
               >
-                <Icon />
+                <span className="md:hidden">
+                  <Icon />
+                </span>
+                <span className="hidden md:inline-flex">
+                  <Icon size={16} />
+                </span>
                 {tab.label}
               </button>
             );
           })}
         </div>
+      </div>
 
+      <div className="container-page">
         {/* Count + sort row. */}
-        <div className="mb-3 mt-4 flex items-center justify-between gap-3">
-          <span className="text-[13px] font-medium text-ink">{count} saved</span>
+        <div className="mb-3 mt-4 flex items-center justify-between gap-3 md:mt-7 md:mb-4">
+          <span className="text-[13px] font-medium text-ink md:text-stone">{count} saved</span>
           {activeTab === 'courts' && courts.length > 1 ? (
             <SavedSortControl value={sortKey} onChange={setSortKey} />
           ) : null}
@@ -285,13 +237,15 @@ export function SavedTabs({
           />
         ) : null}
         {activeTab === 'collections' ? (
-          <div className="flex flex-col gap-6 mt-8">
+          <div className="flex flex-col">
             {/* Saved Collections — editorial collections this visitor has bookmarked via
                 the heart (Task 42). Only rendered alongside a non-empty grid (the grid
                 itself returns null when empty), so there is never a bare heading. */}
             {visibleEditorialCollections.length > 0 ? (
               <div>
-                <h3 className="mb-3 text-[14px] font-semibold text-ink">Saved Collections</h3>
+                <h3 className="mb-3 text-[16px] font-semibold text-ink md:mb-4 md:text-[17px]">
+                  Saved Collections
+                </h3>
                 <SavedEditorialCollectionsGrid
                   collections={visibleEditorialCollections}
                   unsavedIds={unsavedEditorialCollectionIds}
@@ -301,8 +255,10 @@ export function SavedTabs({
             ) : null}
 
             {/* Your Folders — the visitor's own wishlist folders, unchanged. */}
-            <div>
-              <h3 className="mb-3 text-[14px] font-semibold text-ink">Your Folders</h3>
+            <div className="mt-6 md:mt-8">
+              <h3 className="mb-3 text-[16px] font-semibold text-ink md:mb-4 md:text-[17px]">
+                Your Folders
+              </h3>
               <SavedCollectionsGrid
                 collections={collections}
                 onCollectionCreated={(collection) =>

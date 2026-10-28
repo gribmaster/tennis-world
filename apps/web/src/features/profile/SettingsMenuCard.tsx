@@ -36,7 +36,8 @@ const SUBSCRIPTION_SUBCOPY: Record<MembershipStatus, string> = {
   lifetime: 'Lifetime member — active',
 };
 
-const ROW_CLASS = 'block w-full px-4 py-3.5 text-left transition-colors hover:bg-ink/[0.02]';
+const ROW_CLASS =
+  'block w-full px-4 py-3.5 text-left transition-colors hover:bg-ink/[0.02] md:px-5 md:py-4';
 
 export interface SettingsMenuCardProps {
   user: UserProfileDTO;
@@ -44,7 +45,7 @@ export interface SettingsMenuCardProps {
 
 export function SettingsMenuCard({ user }: SettingsMenuCardProps) {
   return (
-    <div className="overflow-hidden rounded-lg bg-paper">
+    <div className="overflow-hidden rounded-lg bg-paper md:rounded-[14px]">
       <ManageBillingButton className={ROW_CLASS} ariaLabel="Subscription & access">
         <RowContent label="Subscription & access" sub={SUBSCRIPTION_SUBCOPY[user.membership]} />
       </ManageBillingButton>

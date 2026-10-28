@@ -119,7 +119,7 @@ export function UserCollectionRename({ collectionId, name }: UserCollectionRenam
                 cancel();
               }
             }}
-            className="display-l min-w-0 flex-1 border-0 border-b-2 border-ink bg-transparent text-ink outline-none"
+            className="display-l min-w-0 flex-1 border-0 border-b-2 border-ink bg-transparent text-ink outline-none md:text-[40px] md:leading-[1.1]"
           />
           <button
             type="button"
@@ -152,7 +152,7 @@ export function UserCollectionRename({ collectionId, name }: UserCollectionRenam
 
   return (
     <>
-      <h1 className="display-l text-ink">{currentName}</h1>
+      <h1 className="display-l text-ink md:text-[40px] md:leading-[1.1]">{currentName}</h1>
       <button
         type="button"
         onClick={openEditor}

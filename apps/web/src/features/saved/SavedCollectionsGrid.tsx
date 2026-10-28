@@ -23,8 +23,9 @@ import { SavedEmptyState } from './SavedEmptyState';
 // RESTYLED, not replaced: the same folders, the same create flow, the same per-folder link
 // target (`/saved/collections/{slug}`) — a 2-col grid of image cards instead of a row list.
 //
-// Prototype geometry: `display:'grid', gridTemplateColumns:'1fr 1fr', gap:12` (line 1265);
-// the card itself is `SavedCollectionRow`.
+// Grid (TASK_61): 2 columns on mobile, 3 at md+, matching the "Saved Collections" grid
+// above it on the same tab so both sections share one tile height/type scale. The card
+// itself is `SavedCollectionRow`.
 //
 // PRESENTATIONAL & data-driven: receives the folders via props; no repository, no
 // @tennis/mock-data. The one interactive descendant is `CreateCollectionTrigger` (a client
@@ -96,7 +97,7 @@ export function SavedCollectionsGrid({
 
   return (
     <div>
-      <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5">
         {collections.map((collection) => (
           <li key={collection.id}>
             <SavedCollectionRow collection={collection} />

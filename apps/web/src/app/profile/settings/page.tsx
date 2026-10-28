@@ -5,9 +5,8 @@ import { SettingsMenuCard } from '@/features/profile';
 import { getRepositoriesForRequest } from '@/lib/repositories.server';
 import { loadOrSignIn } from '@/lib/auth-redirect';
 
-// Settings page (`/profile/settings`) — Feature 81/82, the screen the Profile page's
-// gear icon leads to (`docs/FEATURE_71_DESIGN_V2_INTAKE.md` §2.8; prototype
-// `SettingsScreen`, `new design/tennis_world_v2_standalone.html` lines 1519-1554).
+// Settings page (`/profile/settings`) — Feature 81/82, restyled to the v3 narrow centred
+// column (TASK_61 §4).
 //
 // PRIVATE, same as /profile: a thin SERVER component and the only repository boundary
 // on this screen (`getRepositoriesForRequest()` + `loadOrSignIn`, redirecting a
@@ -16,8 +15,11 @@ import { loadOrSignIn } from '@/lib/auth-redirect';
 // name/email (for the Account settings → edit-profile modal); it has no stats of its
 // own.
 //
-// NESTED PAGE ⇒ the shared BackButton (CLAUDE.md §5), fallbackHref="/profile" (the only
-// place this screen is reached from).
+// NESTED PAGE ⇒ the shared BackButton (CLAUDE.md §5), fallbackHref="/profile". TWO
+// instances (TASK_61, matching Court Detail's split): a mobile icon back inside the
+// header row (`md:hidden`), and a desktop plain-text "Back to Profile" link above the
+// heading (`hidden md:inline-flex`). `verify:ux-pending-states` reads this file and wants
+// `fallbackHref="/profile"`.
 //
 // ── WHERE EVERY OLD ProfileMenuList ROW ENDED UP (the old list is retired) ──────────
 //   • Subscription & Purchases (action:'portal')  → SettingsMenuCard's "Subscription &
@@ -45,28 +47,42 @@ export const metadata: Metadata = {
 export default async function ProfileSettingsPage() {
   const repositories = await getRepositoriesForRequest();
   const user = await loadOrSignIn(() => repositories.user.getCurrentUser(), '/profile/settings');
-  const unlocked = user.membership !== 'free';
 
   return (
-    <AppShell
-      unlocked={unlocked}
-      signedIn
-      headerUser={{ name: user.name, initials: user.initials, avatarUrl: user.avatarUrl }}
-    >
+    <AppShell signedIn>
       <PageContainer className="py-section-lg md:py-section-xl min-h-[70vh]">
-        <div className="mx-auto max-w-[680px]">
-          <div className="mb-8 flex items-center gap-3.5">
-            <BackButton fallbackHref="/profile" />
-            <h1 className="serif display-m text-ink">Settings</h1>
+        <div className="mx-auto max-w-[480px]">
+          {/* Desktop plain-text back link, above the heading (hidden on mobile, which
+              gets the icon back inside the header row below). */}
+          <BackButton
+            fallbackHref="/profile"
+            label="Back to Profile"
+            className="eyebrow mb-5 hidden items-center gap-1.5 text-[13px] normal-case tracking-normal text-stone transition-colors hover:text-ink md:inline-flex"
+          />
+
+          <div className="mb-8 flex items-center gap-3.5 md:mb-6">
+            <BackButton
+              fallbackHref="/profile"
+              className="eyebrow inline-flex items-center gap-1.5 text-stone transition-colors hover:text-ink disabled:cursor-default disabled:opacity-70 md:hidden"
+            />
+            <h1 className="serif display-m text-ink md:text-[34px] md:font-normal md:leading-[1.1]">
+              Settings
+            </h1>
           </div>
 
           <SettingsMenuCard user={user} />
 
-          <div className="mt-4 flex justify-center gap-4">
-            <PendingLink href="/privacy" className="body-s text-stone underline underline-offset-2 hover:text-ink">
+          <div className="mt-4 flex justify-center gap-4 md:mt-[18px] md:gap-[18px]">
+            <PendingLink
+              href="/privacy"
+              className="text-[11px] underline underline-offset-2 text-stone hover:text-ink md:text-[12px]"
+            >
               Privacy Policy
             </PendingLink>
-            <PendingLink href="/terms" className="body-s text-stone underline underline-offset-2 hover:text-ink">
+            <PendingLink
+              href="/terms"
+              className="text-[11px] underline underline-offset-2 text-stone hover:text-ink md:text-[12px]"
+            >
               Terms of Service
             </PendingLink>
           </div>

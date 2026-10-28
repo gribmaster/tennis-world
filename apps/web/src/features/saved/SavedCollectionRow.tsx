@@ -2,34 +2,23 @@ import Image from 'next/image';
 import type { UserCollectionDTO } from '@tennis/contracts';
 import { PendingCardLink } from '@/components/navigation';
 
-// SavedCollectionRow — ONE of the visitor's own wishlist folders in the Saved →
-// Collections tab, rebuilt to the v2 prototype's card (tennis_world_v2_standalone.html:
-// 1264–1284).
-//
-// RESTYLED IN PLACE, keeping the filename. v1 was a horizontal list row (thumbnail stack +
-// name + chevron); v2 is a full-bleed image card in a two-column grid. Its contract is
-// unchanged — one `UserCollectionDTO` in, a whole-card link to `/saved/collections/{slug}`
-// out — so every guarantee about it still holds: presentational, no repository, no
-// @tennis/mock-data, no client state, navigation is its only behaviour.
+// SavedCollectionRow — ONE of the visitor's own wishlist folders, used in two places:
+// the Saved → Collections tab grid (`variant="tile"`, default — `h-[150px] md:h-[200px]`,
+// matching `CollectionCard`'s `compact` tile so both Saved grids share one type scale,
+// TASK_61) and the Profile "My collections" strip (`variant="tall"` — fills its slot via
+// `h-full`, larger serif name). Its contract is otherwise unchanged — one
+// `UserCollectionDTO` in, a whole-card link to `/saved/collections/{slug}` out —
+// presentational, no repository, no @tennis/mock-data, no client state, navigation is its
+// only behaviour.
 //
 // ── THIS IS THE USER'S OWN FOLDER, NOT AN EDITORIAL COLLECTION ──────────────────────────
-// The prototype draws saved *podborki* (editorial collections the visitor bookmarked) here.
-// This card carries the prototype's TREATMENT but not that MEANING: `getSavedCollections()`
-// returns `UserCollectionDTO[]` — the folders a user creates and fills with courts.
-// Bookmarking an editorial `CollectionDTO` IS now a real feature (Task 42), but it lives in
-// its own sibling section (`SavedEditorialCollectionsGrid.tsx`, which reuses `CollectionCard`
-// + `CollectionSaveHeart` — not this component). See the grid's own note.
-//
-// Prototype geometry, from the file:
-//   • grid `gridTemplateColumns:'1fr 1fr'`, `gap:12` (line 1265) — owned by the grid.
-//   • card `height:150`, `borderRadius:12`, `overflow:hidden` (line 1267).
-//   • `.img-overlay` (CSS line 87): `linear-gradient(180deg, rgba(0,0,0,0) 40%,
-//     rgba(0,0,0,0.72) 100%)`.
-//   • count pill top-left at `8,8`: `rgba(15,15,15,0.5)` + `backdrop-filter:blur(8px)`,
-//     `padding:'3px 9px'`, `borderRadius:100`, `fontSize:9`, `fontWeight:600`,
-//     `letterSpacing:'0.08em'`, uppercase, white (lines 1270–1272).
-//   • name block `padding:'10px 12px'`: serif `fontSize:17`, `fontWeight:400`,
-//     `lineHeight:1.2`, white (lines 1279–1281).
+// v3's reference prototype draws saved *podborki* (editorial collections the visitor
+// bookmarked) in this slot. This card carries the prototype's TREATMENT but not that
+// MEANING: `getSavedCollections()` returns `UserCollectionDTO[]` — the folders a user
+// creates and fills with courts. Bookmarking an editorial `CollectionDTO` IS a real
+// feature (Task 42), but it lives in its own sibling section
+// (`SavedEditorialCollectionsGrid.tsx`, which reuses `CollectionCard` + `CollectionSaveHeart`
+// — not this component). See the grid's own note.
 //
 // ── THE CORNER CONTROL IS DELIBERATELY ABSENT ───────────────────────────────────────────
 // The prototype puts an unsave heart at the card's top-right (lines 1274–1276). It is not
@@ -85,24 +74,35 @@ function EmptyFolderArt() {
 
 export interface SavedCollectionRowProps {
   collection: UserCollectionDTO;
+  /**
+   * `'tile'` (default) — the Saved → Collections tab grid cell, `h-[150px] md:h-[200px]`.
+   * `'tall'` — the Profile "My collections" strip (TASK_61 §1): fills its slot (`h-full`)
+   * instead, with a larger serif name. Everything else (empty-folder art, count pill,
+   * PendingCardLink, singular "1 court") is shared between the two.
+   */
+  variant?: 'tile' | 'tall';
 }
 
-export function SavedCollectionRow({ collection }: SavedCollectionRowProps) {
+export function SavedCollectionRow({ collection, variant = 'tile' }: SavedCollectionRowProps) {
   // `coverImageUrls` is a handful of MEMBER-COURT hero images, not a single cover field —
   // the card uses the first as its image. Absent/empty ⇒ the designed empty-folder state.
   const cover = collection.coverImageUrls?.[0];
   const isEmpty = collection.count === 0 || !cover;
+  const isTall = variant === 'tall';
 
   return (
     <PendingCardLink
       href={`/saved/collections/${collection.slug}`}
       ariaLabel={collection.name}
-      className="block h-[150px] overflow-hidden rounded-lg"
+      className={[
+        'block overflow-hidden rounded-lg md:rounded-[14px]',
+        isTall ? 'h-full' : 'h-[150px] md:h-[200px]',
+      ].join(' ')}
     >
       {isEmpty ? (
         <EmptyFolderArt />
       ) : (
-        <Image src={cover} alt="" fill sizes="(max-width: 768px) 50vw, 320px" className="object-cover" />
+        <Image src={cover} alt="" fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover" />
       )}
 
       {/* `.img-overlay` — transparent to 40%, then to 72% black. Over the empty-folder art
@@ -120,17 +120,18 @@ export function SavedCollectionRow({ collection }: SavedCollectionRowProps) {
 
       <span
         className={[
-          'absolute left-2 top-2 inline-flex rounded-pill px-2.5 py-[3px] text-[9px] font-semibold uppercase tracking-caption backdrop-blur-[8px]',
+          'absolute left-2 top-2 inline-flex rounded-pill px-2.5 py-[3px] text-[9px] font-semibold uppercase tracking-caption backdrop-blur-[8px] md:left-2.5 md:top-2.5 md:text-[10px]',
           isEmpty ? 'bg-ink/10 text-graphite' : 'bg-ink/50 text-paper',
         ].join(' ')}
       >
         {collection.count} {collection.count === 1 ? 'court' : 'courts'}
       </span>
 
-      <span className="absolute inset-x-0 bottom-0 block px-3 pb-2.5 pt-2.5">
+      <span className="absolute inset-x-0 bottom-0 block px-3 pb-2.5 pt-2.5 md:px-4 md:pb-3.5">
         <span
           className={[
-            'serif block text-[17px] font-normal leading-[1.2]',
+            'serif block font-normal leading-[1.2]',
+            isTall ? 'text-[22px] md:text-[19px]' : 'text-[17px] md:text-[20px]',
             isEmpty ? 'text-ink' : 'text-paper',
           ].join(' ')}
         >

@@ -14,8 +14,8 @@ function parseInitialTab(tab: string | undefined): TabId {
 // docs/FEATURE_19_SAVED_PAGE_LAYOUT.md), rebuilt to the v2 prototype's `SavedScreen` in
 // Feature 77. That rebuild is PRESENTATION ONLY: this file's reads, its auth flow and its
 // props are byte-for-byte what they were — no new model, endpoint or repository method.
-// Resolves the desktop AppHeader bookmark icon and the mobile BottomNavigation "Saved" tab
-// (both already point at /saved).
+// Reached from Profile (ProfileStats / ProfileCollectionsStrip link here) — /saved is not
+// in the v3 nav itself (TASK_55), it stays reachable from Profile, which lights up.
 //
 // This is a thin SERVER component and the ONLY repository boundary on the screen: it
 // fetches the saved courts + wishlist folders once and passes them down as props. The
@@ -69,9 +69,9 @@ export default async function SavedPage({
   const viewerIsEntitled = user.membership !== 'free';
 
   return (
-    // Saved is private — if it rendered, the visitor is signed in. Point the header icon
-    // at /profile.
-    <AppShell unlocked={viewerIsEntitled} signedIn>
+    // Saved is private — if it rendered, the visitor is signed in. Point the Profile nav
+    // item at /profile.
+    <AppShell signedIn>
       <SavedTabs
         savedCourts={savedCourts}
         savedCollections={savedCollections}

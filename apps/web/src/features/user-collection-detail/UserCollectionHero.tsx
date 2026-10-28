@@ -3,9 +3,9 @@ import { BackButton } from '@/components/navigation';
 import { UserCollectionRename } from './UserCollectionRename';
 
 // UserCollectionHero — the header for a USER wishlist folder
-// (`/saved/collections/[slug]`), ported from files/collection.html's
-// `CollectionDetailPage`: a slim "← Saved" back-bar, then the folder name and a
-// "{n} courts in this collection" eyebrow.
+// (`/saved/collections/[slug]`), restyled to the v3 page rhythm (TASK_61 §3): the old
+// full-width back-bar is gone, replaced by a plain-text `BackButton` inline above the
+// title, matching the other v3 detail screens.
 //
 // This is the USER-collection detail (a person's own folder), NOT the editorial
 // `/collections/[slug]` hero (FEATURE_32 guardrail): the back-link goes to /saved,
@@ -16,14 +16,17 @@ import { UserCollectionRename } from './UserCollectionRename';
 // @tennis/mock-data. The only interactive piece is the small <UserCollectionRename>
 // client island it mounts in the title slot (plus the <BackButton> client island below).
 //
-// RENAME (Feature 37 / 57): the prototype's inline "Rename" affordance is LIVE via the
+// RENAME (Feature 37 / 57): the inline "Rename" affordance is LIVE via the
 // <UserCollectionRename> island — it swaps the title for an inline edit field and Saves
 // through `repositories.saved.renameUserCollection` (mock in-memory seam in mock mode;
 // protected PATCH /v1/me/collections/:id in `api` mode). The "{n} courts" count below is
 // unaffected by a rename, so it stays server-rendered here.
 //
-// BACK NAVIGATION: uses the shared <BackButton> (history-aware, falls back to /saved on a
-// direct load) instead of a hardcoded "← Saved" link.
+// BACK NAVIGATION: the shared <BackButton> (history-aware, falls back to /saved on a
+// direct load), visible at EVERY size here (unlike Court/Collection Detail, which split a
+// mobile pill overlay from a desktop-only plain link — this page has no photo hero for a
+// pill to sit over). `verify:ux-pending-states` reads this file and asserts
+// `<BackButton` + `fallbackHref="/saved"`.
 
 export interface UserCollectionHeroProps {
   collection: UserCollectionDTO;
@@ -33,26 +36,21 @@ export interface UserCollectionHeroProps {
 
 export function UserCollectionHero({ collection, courtCount }: UserCollectionHeroProps) {
   return (
-    <>
-      {/* Slim back-bar to the Saved page (the prototype's "← Saved"). */}
-      <div className="flex h-14 items-center border-b border-hairline bg-bone px-[clamp(16px,4vw,64px)]">
-        <BackButton
-          fallbackHref="/saved"
-          label="Saved"
-          className="eyebrow inline-flex items-center gap-2 text-stone transition-colors hover:text-ink"
-        />
-      </div>
+    <div className="container-page pt-4 md:pt-6">
+      <BackButton
+        fallbackHref="/saved"
+        label="Back to Saved"
+        className="eyebrow mb-5 inline-flex items-center gap-1.5 text-[13px] normal-case tracking-normal text-stone transition-colors hover:text-ink"
+      />
 
-      <div className="container-page pt-[clamp(32px,5vw,48px)]">
-        <div className="mb-2 flex flex-wrap items-end justify-between gap-4">
-          {/* Inline title + "Rename" — a small client island that owns the edit state and
-              calls the mock-only renameUserCollection seam (Feature 37). */}
-          <UserCollectionRename collectionId={collection.id} name={collection.name} />
-        </div>
-        <p className="eyebrow text-stone">
-          {courtCount} {courtCount === 1 ? 'court' : 'courts'} in this collection
-        </p>
+      <div className="mb-2 flex flex-wrap items-end justify-between gap-4">
+        {/* Inline title + "Rename" — a small client island that owns the edit state and
+            calls the mock-only renameUserCollection seam (Feature 37). */}
+        <UserCollectionRename collectionId={collection.id} name={collection.name} />
       </div>
-    </>
+      <p className="text-[13px] text-stone md:text-[14px]">
+        {courtCount} {courtCount === 1 ? 'court' : 'courts'} in this collection
+      </p>
+    </div>
   );
 }

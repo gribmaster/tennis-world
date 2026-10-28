@@ -3,12 +3,13 @@ import { Badge, UserAvatar } from '@/components/ui';
 import { isDemoMode } from '@/lib/demo-auth';
 import { ProfileEditTrigger } from './ProfileEditTrigger';
 
-// ProfileHeader — the top "profile block" of the /profile screen (v2 prototype's
-// ProfileScreen, `new design/tennis_world_v2_standalone.html` lines 1400-1412): an 80px
-// circular avatar, serif name, and an "Edit profile" pill that opens EditProfileModal.
-// The gear icon + wordmark row above this block is the PAGE's job, not this
-// component's — AppHeader already owns the wordmark (CLAUDE.md instruction), so this
-// component starts at the avatar row.
+// ProfileHeader — the top "profile block" of the /profile screen: an 80px circular
+// avatar, serif name, and an "Edit profile" pill that opens EditProfileModal. Restyled
+// TASK_61: mobile stays row-layout (avatar left, name+edit right); md+ stacks into a
+// column (avatar on top, 96px) for the left side of the two-column Profile page. The gear
+// icon + wordmark row above this block is the PAGE's job, not this component's —
+// AppHeader already owns the wordmark (CLAUDE.md instruction), so this component starts
+// at the avatar row.
 //
 // PRESENTATIONAL, plus ONE client island (`ProfileEditTrigger`, which owns the modal's
 // open state and the save mutation) dropped in for the edit affordance — same pattern
@@ -41,7 +42,11 @@ export interface ProfileHeaderProps {
   user: UserProfileDTO;
 }
 
-const MEMBERSHIP_BADGE_LABEL: Record<'subscription' | 'lifetime', string> = {
+/**
+ * The two active-membership labels, shared with `ProfileMembershipCard` (TASK_61) so its
+ * active-variant eyebrow reuses this map instead of a third copy of the same two strings.
+ */
+export const MEMBERSHIP_BADGE_LABEL: Record<'subscription' | 'lifetime', string> = {
   subscription: 'Active Subscriber',
   lifetime: 'Lifetime Member',
 };
@@ -78,17 +83,19 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
       : null;
 
   return (
-    <div className="flex items-start gap-4">
+    <div className="flex items-start gap-4 md:flex-col md:items-start md:gap-3.5">
       <UserAvatar
         name={user.name}
         initials={user.initials}
         avatarUrl={user.avatarUrl}
         size="lg"
-        className="shadow-[0_2px_12px_rgba(15,15,15,0.15)] ring-[3px] ring-paper"
+        className="shadow-[0_2px_12px_rgba(15,15,15,0.15)] ring-[3px] ring-paper md:h-24 md:w-24"
       />
 
-      <div className="flex-1">
-        <h1 className="serif text-[26px] font-normal leading-[1.1] text-ink">{user.name}</h1>
+      <div className="flex-1 md:flex-initial">
+        <h1 className="serif text-[26px] font-normal leading-[1.1] text-ink md:text-[28px]">
+          {user.name}
+        </h1>
         <div className="mt-2 flex flex-wrap items-center gap-2 hidden">
           {badgeLabel ? (
             <Badge tone="gold">{badgeLabel}</Badge>

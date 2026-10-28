@@ -11,9 +11,10 @@ import { CheckoutStatusBanner, parseCheckoutStatus } from '@/features/billing';
 import { getRepositoriesForRequest } from '@/lib/repositories.server';
 import { loadOrSignIn } from '@/lib/auth-redirect';
 
-// Profile page (`/profile`) — rebuilt to the v2 prototype's ProfileScreen (Feature
-// 81/82; `docs/FEATURE_71_DESIGN_V2_INTAKE.md` §2.7, prototype
-// `new design/tennis_world_v2_standalone.html` lines 1376-1516).
+// Profile page (`/profile`) — restyled to the v3 layout (TASK_61 §1,
+// docs/TASK_61_V3_PROFILE_SAVED_SETTINGS.md): a single column on mobile, a two-column
+// page at md+ (avatar/name/stats on the left, membership/"My collections" on the right),
+// gear icon top-right.
 //
 // This is a thin SERVER component and the ONLY repository boundary on the screen. The
 // only interactivity is self-contained client islands dropped into the tree —
@@ -28,15 +29,18 @@ import { loadOrSignIn } from '@/lib/auth-redirect';
 // `redirect('/signin?redirectTo=/profile')` — we never render a broken/empty profile. In
 // MOCK mode the protected reads never 401, so this stays the fixed mock profile.
 //
-// THE MENU IS GONE FROM THIS SCREEN — the prototype moves Subscription/Contact/
-// Privacy/Terms/Sign-out into the new `/profile/settings` screen (reached via the gear
-// icon below), matching the prototype's ProfileScreen (no menu list at all). See
+// THE MENU IS GONE FROM THIS SCREEN — Subscription/Contact/Privacy/Terms/Sign-out live on
+// the `/profile/settings` screen (reached via the gear icon below). See
 // `app/profile/settings/page.tsx`'s header comment for the full old-row inventory.
 //
-// GEAR + WORDMARK ROW: the wordmark itself is AppHeader's job (already rendered by
-// AppShell above this content) — this page adds only the page-local gear icon, a small
-// header row matching the prototype's `padding:'48px 20px 0'` spacing, navigating to
-// `/profile/settings` via PendingLink (CLAUDE.md §4 rule 1).
+// GEAR ROW: the wordmark itself is AppHeader's job (already rendered by AppShell above
+// this content) — this page adds only the page-local gear icon, now a circular button
+// (TASK_61) navigating to `/profile/settings` via PendingLink (CLAUDE.md §4 rule 1).
+//
+// CHECKOUT BANNER: moved to just under the gear row (TASK_61), spanning the full width
+// above both columns — in the two-column layout there is no shared "top of the single
+// column" spot left for it, and it should be the first thing a Stripe-return visitor sees
+// regardless of which column the membership card ends up in.
 //
 // NOT `overHero` — Profile has no full-bleed hero, so AppShell's header uses its
 // standard solid bar + 72px offset; this page's own gear row sits below that.
@@ -46,9 +50,9 @@ export const metadata: Metadata = {
   description: 'Your membership, saved courts, and account.',
 };
 
-function GearGlyph() {
+function GearGlyph({ size = 16 }: { size?: number }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </svg>
@@ -90,52 +94,60 @@ export default async function ProfilePage({
   const collectionsCount = savedCollections.length;
   const countriesCount = new Set(savedCourts.map((court) => court.country)).size;
 
-  // `unlocked` is derived from the real membership (entitlement-derived, Feature 62).
-  // Any non-free membership (subscription OR lifetime) counts as unlocked.
-  const unlocked = user.membership !== 'free';
-
   return (
-    <AppShell
-      unlocked={unlocked}
-      signedIn
-      headerUser={{ name: user.name, initials: user.initials, avatarUrl: user.avatarUrl }}
-    >
-      <PageContainer className="py-section-lg md:py-section-xl">
-        {/* Single calm reading column — ~680px on all breakpoints (no desktop dashboard). */}
-        <div className="mx-auto max-w-[680px]">
-          {/* Page-local gear row. The wordmark stays AppHeader's job — this row only adds
-              the settings entry point (prototype: an empty spacer / wordmark / gear
-              three-up row; the wordmark half is already covered by AppShell above). */}
-          <div className="mb-6 flex justify-end">
+    <AppShell signedIn>
+      <PageContainer className="pt-8 pb-section-lg md:pt-11 md:pb-section-xl">
+        <div className="mx-auto max-w-[1120px]">
+          {/* Page-local gear row — now a circle (TASK_61). The wordmark stays AppHeader's
+              job; this row only adds the settings entry point. */}
+          <div className="mb-3 flex justify-end md:mb-4">
             <PendingLink
               href="/profile/settings"
               aria-label="Settings"
-              className="p-2 text-stone transition-colors hover:text-ink"
+              className="grid h-9 w-9 place-items-center rounded-pill border border-mist/40 bg-paper text-graphite md:h-[38px] md:w-[38px]"
             >
-              <GearGlyph />
+              <span className="md:hidden">
+                <GearGlyph size={16} />
+              </span>
+              <span className="hidden md:inline-flex">
+                <GearGlyph size={17} />
+              </span>
             </PendingLink>
           </div>
 
-          <ProfileHeader user={user} />
-
           {/* Checkout status (Feature 67) — shown only when Stripe's default success/cancel
-              URL lands here with `?checkout=…`. Presentational; the membership card below
-              still reflects the real `/v1/me` state. */}
-          {checkoutStatus ? <CheckoutStatusBanner status={checkoutStatus} /> : null}
+              URL lands here with `?checkout=…`. Spans the full width above both columns so
+              it's the first thing a Stripe-return visitor sees. Presentational; the
+              membership card below still reflects the real `/v1/me` state. */}
+          {checkoutStatus ? (
+            <div className="mb-6">
+              <CheckoutStatusBanner status={checkoutStatus} />
+            </div>
+          ) : null}
 
-          <ProfileStats
-            savedCourtsCount={savedCourtsCount}
-            collectionsCount={collectionsCount}
-            countriesCount={countriesCount}
-          />
+          {/* Two columns at md+: left (header, stats), right (membership, collections).
+              No explicit grid placement needed — sibling order already gives the right
+              mobile order (header, stats, membership, collections). */}
+          <div className="md:grid md:grid-cols-[320px_1fr] md:items-start md:gap-12">
+            <div>
+              <ProfileHeader user={user} />
 
-          {/* Membership card — now unconditional: the free-tier "Choose your membership"
-              variant and the active (subscription/lifetime) gradient variant are both
-              real UI, matching the prototype's `!unlocked`/`unlocked` split at the SAME
-              card rather than the page choosing whether to render it at all. */}
-          <ProfileMembershipCard membership={user.membership} />
+              <ProfileStats
+                savedCourtsCount={savedCourtsCount}
+                collectionsCount={collectionsCount}
+                countriesCount={countriesCount}
+              />
+            </div>
 
-          <ProfileCollectionsStrip collections={savedCollections} />
+            <div className="mt-5 md:mt-0">
+              {/* Membership card — unconditional: the free-tier "Choose your membership"
+                  variant and the active (subscription/lifetime) gradient variant are both
+                  real UI, not a branch the page decides whether to render. */}
+              <ProfileMembershipCard membership={user.membership} />
+
+              <ProfileCollectionsStrip collections={savedCollections} />
+            </div>
+          </div>
         </div>
       </PageContainer>
     </AppShell>
