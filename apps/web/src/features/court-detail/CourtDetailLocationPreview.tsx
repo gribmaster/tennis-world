@@ -1,7 +1,6 @@
 import type { ExactLocationDTO } from '@tennis/contracts';
 import { CourtMap, type MapMarker } from '@/features/map';
 import { PaywallTrigger } from '@/features/paywall';
-import {CourtDetailUnlockCard} from "@/features/court-detail/CourtDetailUnlockCard";
 
 // CourtDetailLocationPreview — the location block on Court Detail (Feature 11 §2),
 // restyled for the v2 redesign (Feature 78). Its map engine moved off Leaflet to Google
@@ -27,13 +26,18 @@ import {CourtDetailUnlockCard} from "@/features/court-detail/CourtDetailUnlockCa
 // `locked` and `exactLocation` are computed once at the page level (Feature 64); the
 // component never derives its own lock state.
 //
-// LAYOUT VARIANTS (Feature 78). The v2 redesign changed only the ARRANGEMENT, never the
-// branching above:
-//   • `variant="v2"` — the prototype's two-column arrangement (design_v2_stripped.html:
-//     1091–1114): a 100px-tall map box on the left, the location text and the directions
-//     button stacked on the right. Feature 79 moved the LOCKED page onto this variant too,
-//     so both readings of Court Detail now render the same block; only the strings and the
-//     directions control differ, exactly as the prototype's `isLocked` branches do.
+// LAYOUT VARIANTS (Feature 78, resized by TASK_59). The redesigns changed only the
+// ARRANGEMENT, never the branching above:
+//   • `variant="v2"` — the two-column arrangement both v3 prototypes draw (mobile
+//     `CourtDetailScreen` ~line 745, desktop ~line 571): an equal-width map box on the
+//     left (100px tall mobile, 140px desktop — TASK_59), the location text and the
+//     directions button STACKED in the right column, `justify-between`. Feature 79 moved
+//     the LOCKED page onto this variant too, so both readings of Court Detail render the
+//     same block; only the strings and the directions control differ. TASK_59 also
+//     REMOVED the dark unlock card that used to sit beside the locked map at md+ (Task
+//     46) — it now lives in `CourtDetailShell`'s info panel / mobile-end slot instead
+//     (see that file), and the directions/"Unlock location" button is no longer hidden
+//     at md+: it shows at every size.
 //   • `variant="rail"` — the original single-column block (eyebrow, 16/9 map, directions
 //     button underneath). No longer used by Court Detail; kept because it is the component's
 //     default and its locked branch carries its own paywall CTA.
@@ -189,41 +193,35 @@ export function CourtDetailLocationPreview({
           heroImageUrl,
         };
 
-  // ── v2: the prototype's two-column Location block ───────────────────────────────────
+  // ── v2: the prototype's two-column Location block (TASK_59 resizes + simplifies it) ──
   if (variant === 'v2') {
     return (
       <div>
-        <h2 className="mb-3 text-[16px] font-semibold flex items-center text-ink">
-            Location
-            <span className="items-center inline-flex gap-1 ml-2 text-[11px] leading-[1.4] text-stone md:text-[13px]">
-              <PinGlyph />
-                    {/* Country · region — NOT a street address; the model carries none. Locked ⇒
-                      the prototype's "Address hidden" (line 1106). Unlike the description
-                      below, this string is fully REPLACED — nothing to reveal in the DOM. */}
-                    <span>{locked ? 'Address hidden' : (locationLine ?? '')}</span>
-            </span>
+        {/* Plain heading — the prototype's `<h2>Location</h2>` (both mobile and desktop
+            `CourtDetailScreen`). The address line moved into the right column below,
+            matching both prototypes; it no longer rides along inside the heading. */}
+        <h2 className="mb-3 text-[16px] font-semibold text-ink md:mb-3.5 md:text-[17px]">
+          Location
         </h2>
 
-        <div className=" md:flex md:flex-col grid-cols-2 gap-2.5">
-          {/* Left: the map box. Prototype `height:100`, `borderRadius:10` (line 1096) —
-              allowed to grow on desktop where the two columns get much wider. */}
-          <div className="h-[200px] overflow-hidden rounded-[10px] border border-hairline md:h-[clamp(200px,14vw,480px)]">
+        {/* Two EQUAL columns at every size (`grid-cols-2` — the previous `md:flex
+            md:flex-col` here was a bug: it stacked the map above the text at md+ instead
+            of placing them side by side, as both prototypes draw). */}
+        <div className="grid grid-cols-2 gap-2.5 md:gap-4">
+          {/* Left: the map box. TASK_59: 100px tall mobile, 140px desktop (was a single
+              200px→clamp(…,480px) rule that no longer matches either prototype). */}
+          <div className="h-[100px] overflow-hidden rounded-[10px] border border-hairline md:h-[140px] md:rounded-[14px]">
             {locked ? (
-              <div className="flex h-full flex-col md:flex-row">
-                  <div className="relative h-full w-full" id="single-court-map-container">
-                      {/* No live map — see LockedMapPlaceholder above (Feature 88 §6.1). No
+              <div className="relative h-full w-full">
+                {/* No live map — see LockedMapPlaceholder above (Feature 88 §6.1). No
                     coordinate, exact or approximate, is present in this state. */}
-                      <div aria-hidden className="absolute inset-0 scale-105 blur-[6px]">
-                          <LockedMapPlaceholder />
-                      </div>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-bone/60 text-stone backdrop-blur-[2px]">
-                          <LockGlyph />
-                          <span className="text-[10px]">Unlock to reveal</span>
-                      </div>
-                  </div>
-                  <div className="flex relative">
-                      <CourtDetailUnlockCard />
-                  </div>
+                <div aria-hidden className="absolute inset-0 scale-105 blur-[6px]">
+                  <LockedMapPlaceholder />
+                </div>
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-bone/60 text-stone backdrop-blur-[2px]">
+                  <LockGlyph />
+                  <span className="text-[10px]">Unlock to reveal</span>
+                </div>
               </div>
             ) : (
               // Unlocked: entitled → exact marker; otherwise → approximate marker.
@@ -237,16 +235,31 @@ export function CourtDetailLocationPreview({
             )}
           </div>
 
-          {/* Right: the location text over the directions button (prototype 1104–1113). */}
+          {/* Right: the address line over the directions button, `justify-between`
+              (both prototypes). TASK_59 moved the address text OUT of the heading above
+              and into this column, and shows the button at EVERY size — it used to hide
+              at md+ in favor of the dark unlock card embedded in this block, which has
+              moved out (see CourtDetailShell). */}
           <div className="flex flex-col justify-between">
+            <div className="flex items-start gap-1.5 text-[11px] text-stone md:text-[13px]">
+              <PinGlyph size={13} />
+              {/* Country · region — NOT a street address; the model carries none. Locked ⇒
+                  the prototype's "Address hidden" (line 1106 desktop / 755 mobile). Unlike
+                  the description below, this string is fully REPLACED — nothing to reveal
+                  in the DOM. */}
+              <span className="leading-[1.4] md:leading-[1.5]">
+                {locked ? 'Address hidden' : (locationLine ?? '')}
+              </span>
+            </div>
+
             {locked ? (
-              // LOCKED: the prototype disables this button (line 1109, `disabled={isLocked}`)
-              // and relabels it "Unlock location" (line 1110). There is no `directionsUrl`
-              // for a locked viewer, so it must never be a link — a link needs a
-              // destination. We keep the prototype's DISABLED reading rather than making it
-              // a second paywall opener: the card below and the sticky footer are the two
-              // unlock entry points, and a control sitting inside the location block reads
-              // as "give me directions", which this cannot do.
+              // LOCKED: the prototype disables this button (`disabled={isLocked}`) and
+              // relabels it "Unlock location". There is no `directionsUrl` for a locked
+              // viewer, so it must never be a link — a link needs a destination. We keep
+              // the prototype's DISABLED reading rather than making it a second paywall
+              // opener: the unlock card and the action row/bar are the unlock entry
+              // points, and a control sitting inside the location block reads as "give me
+              // directions", which this cannot do.
               //
               // A real `disabled` attribute would drop the button out of the tab order and
               // out of most screen-reader announcements, so the user would never learn WHY
@@ -257,7 +270,7 @@ export function CourtDetailLocationPreview({
                 type="button"
                 aria-disabled="true"
                 title="Membership required to see this court's exact location"
-                className="btn btn-primary mt-2 w-full !h-10 cursor-not-allowed justify-center gap-1.5 !px-4 !text-[11px] opacity-40 md:hidden"
+                className="btn btn-primary mt-2 w-full !h-10 cursor-not-allowed justify-center gap-1.5 !px-4 !text-[11px] opacity-40"
               >
                 <PinGlyph size={11} />
                 Unlock location
@@ -272,7 +285,7 @@ export function CourtDetailLocationPreview({
                 href={exactLocation.directionsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-primary mt-2 w-full !h-10 justify-center gap-1.5 !px-4 !text-[11px]  md:hidden"
+                className="btn btn-primary mt-2 w-full !h-10 justify-center gap-1.5 !px-4 !text-[11px]"
               >
                 <PinGlyph size={11} />
                 Open in Maps

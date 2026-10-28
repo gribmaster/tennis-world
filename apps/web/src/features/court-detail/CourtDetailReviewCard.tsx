@@ -86,16 +86,21 @@ export function CourtDetailReviewCard({
 
   return (
     <>
-      {/* Ivory ground, 12px radius, 16px padding, 12px gap, hairline border — the
-          prototype's geometry (line 1156) in existing tokens. */}
-      <div className="flex items-center gap-3 rounded-lg border border-hairline bg-ivory p-4">
-        {/* 40px paper circle holding the gold star (prototype line 1157). */}
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill border border-hairline bg-paper text-gold">
+      {/* Mobile: ivory ground, 12px radius, 16px padding, hairline border — the
+          prototype's mobile geometry. Desktop (TASK_59): the colours SWAP — `bg-paper`
+          card with an `bg-ivory` circle (both prototypes' `CourtDetailScreen` do this,
+          not a typo) — plus a 14px radius, 18px padding, 14px gap and a literal
+          `rgba(184,184,182,0.3)` border matching the desktop spec exactly. */}
+      <div className="flex items-center gap-3 rounded-lg border border-hairline bg-ivory p-4 md:gap-3.5 md:rounded-[14px] md:border-[rgba(184,184,182,0.3)] md:bg-paper md:p-[18px]">
+        {/* 40px paper circle mobile, 44px ivory circle desktop, holding the gold star. */}
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill border border-hairline bg-paper text-gold md:h-11 md:w-11 md:bg-ivory">
           <StarBadgeGlyph />
         </div>
         <div className="flex-1">
-          <p className="text-[13px] font-semibold text-ink">{REVIEW_COPY.card.title}</p>
-          <p className="mt-0.5 text-[11px] leading-[1.4] text-stone">
+          <p className="text-[13px] font-semibold text-ink md:text-[14px]">
+            {REVIEW_COPY.card.title}
+          </p>
+          <p className="mt-0.5 text-[11px] leading-[1.4] text-stone md:text-[12px]">
             {REVIEW_COPY.card.subline}
           </p>
         </div>

@@ -1,9 +1,14 @@
 import { PaywallTrigger, PAYWALL_COPY } from '@/features/paywall';
 
-// CourtDetailUnlockCard — the LOCKED page's dark unlock card
-// (design_v2_stripped.html:1169–1176): ink ground, 12px radius, 20px padding, centered;
-// an uppercase eyebrow, a light serif headline, a value line, then a full-width gold
-// button.
+// CourtDetailUnlockCard — the LOCKED page's dark unlock card: ink ground, 12px radius,
+// 20px padding, centered; an uppercase eyebrow, a light serif headline, a value line,
+// then a full-width gold button. TASK_59 moved it OUT of the location block (Task 46 had
+// embedded it beside the locked map) and into `CourtDetailShell`'s two slots — the info
+// panel's right column at md+, the end of the mobile card otherwise — rendered from ONE
+// `reviewOrUnlockCard` prop so the markup stays in exactly one place even though it
+// appears twice in the DOM (CLAUDE.md's "duplicated text/button block" allowance).
+// Desktop grows to 14px radius / 26px padding / a 24px headline, matching the v3
+// desktop `CourtDetailScreen`'s dark card; mobile is unchanged (12px / 20px / 22px).
 //
 // ── COPY, AND WHERE EACH STRING COMES FROM ──────────────────────────────────────────────
 //   • eyebrow   "Premium Content"      — the prototype, verbatim (line 1171).
@@ -30,11 +35,11 @@ import { PaywallTrigger, PAYWALL_COPY } from '@/features/paywall';
 
 export function CourtDetailUnlockCard() {
   return (
-    <div className="rounded-lg bg-ink p-5 text-center flex flex-col justify-center w-full">
+    <div className="rounded-lg bg-ink p-5 text-center flex flex-col justify-center w-full md:rounded-[14px] md:p-[26px]">
       {/* 11px / 0.08em uppercase, 60% bone (prototype line 1171). */}
       <p className="text-[11px] uppercase tracking-caption text-bone/60">Premium Content</p>
-      {/* 22px serif, weight 300 (prototype line 1172). */}
-      <p className="serif mt-1.5 text-[22px] font-light text-bone">Unlock the full atlas</p>
+      {/* 22px serif mobile, 24px desktop, weight 300 (prototype lines 1172/637). */}
+      <p className="serif mt-1.5 text-[22px] font-light text-bone md:text-[24px]">Unlock the full atlas</p>
       {/* 13px / 1.5, 70% bone (prototype line 1173) — with the REAL offer's words. */}
       <p className="mt-2 text-[13px] leading-[1.5] text-bone/70">{PAYWALL_COPY.valueProp}</p>
       <PaywallTrigger

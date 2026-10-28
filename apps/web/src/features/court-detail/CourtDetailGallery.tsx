@@ -109,16 +109,38 @@ export function CourtDetailGalleryProvider({
 }: CourtDetailGalleryProviderProps) {
   const slides = useMemo(() => resolveSlides(images, heroImageUrl), [images, heroImageUrl]);
   const [activeIndex, setActiveIndex] = useState(0);
+  // The ONE shared lightbox index (TASK_59) — see GalleryContextValue's doc comment.
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   // Guard the index against slide-count changes (e.g. re-render with fewer images).
   const safeIndex = activeIndex < slides.length ? activeIndex : 0;
 
   const value = useMemo<GalleryContextValue>(
-    () => ({ slides, activeIndex: safeIndex, setActiveIndex, courtName, courtLabel: courtLabel ?? courtName }),
-    [slides, safeIndex, courtName, courtLabel],
+    () => ({
+      slides,
+      activeIndex: safeIndex,
+      setActiveIndex,
+      courtName,
+      courtLabel: courtLabel ?? courtName,
+      lightboxIndex,
+      setLightboxIndex,
+    }),
+    [slides, safeIndex, courtName, courtLabel, lightboxIndex],
   );
 
-  return <GalleryContext.Provider value={value}>{children}</GalleryContext.Provider>;
+  return (
+    <GalleryContext.Provider value={value}>
+      {children}
+      {/* Rendered ONCE here rather than inside CourtDetailGalleryHero or
+          CourtDetailGalleryStrip, since both can now open it (TASK_59: desktop's main
+          image click, mobile's thumbnail tap) and must share one dialog instance. */}
+      <CourtDetailGalleryLightbox
+        open={lightboxIndex !== null}
+        initialIndex={lightboxIndex ?? 0}
+        onClose={() => setLightboxIndex(null)}
+      />
+    </GalleryContext.Provider>
+  );
 }
 
 function ImageGlyph({ size = 12 }: { size?: number }) {
@@ -145,20 +167,30 @@ export interface CourtDetailGalleryHeroProps {
   /**
    * The overlaid control row's left slot — the shared `BackButton` (CLAUDE.md §5). The
    * page owns it so the harness-asserted `fallbackHref="/map"` / label `Courts` pairing
-   * stays in page.tsx.
+   * stays in page.tsx. Mobile only (TASK_59: `md:hidden`) — desktop gets its own
+   * plain-text Back link above the grid instead, rendered by `CourtDetailShell`.
    */
   backControl?: ReactNode;
-  /** The overlaid control row's right slot — the save + share controls. */
-  actions?: ReactNode;
 }
 
 /**
- * The full-bleed hero band: prototype `height:320` (line 1014), the `.img-overlay-top`
- * gradient (line 88), the overlaid control row, the "N / M" counter chip and "All photos"
- * affordance (lines 1032–1039), and the dot pager whose active dot widens (lines 1041–1046).
+ * TASK_59 (v3): one gallery element that is a FULL-BLEED mobile hero (290px, overlaid
+ * chrome) and a FRAMED desktop box (440px, `rounded-[20px]`, no overlaid chrome — the
+ * thumbnail strip right below it replaces the dot pager/"All photos" chip) at md+. It
+ * sits as the first child of `CourtDetailShell`'s grid, `md:col-start-1 md:row-start-1`.
+ *
+ * WHAT CHANGED FROM FEATURE 78/79: the overlaid save/share row is GONE — those controls
+ * moved to the mobile floating action bar and the desktop inline action row (both built
+ * by `CourtDetailShell`, which still owns the ONE shared `useCourtSaveState()`). Only
+ * `backControl` remains in the overlay, and only on mobile. The dot pager and "All
+ * photos" chip hide at md+ (thumbnails underneath take over); the counter chip and the
+ * prev/next arrows (Task 37) stay at both sizes. A new transparent button — "under the
+ * arrows" so it never steals their clicks — opens the SHARED lightbox at the active slide,
+ * desktop only: thumbnails now switch the hero image at md+ (see CourtDetailGalleryStrip),
+ * so without this the lightbox would be unreachable from the desktop hero.
  */
-export function CourtDetailGalleryHero({ backControl, actions }: CourtDetailGalleryHeroProps) {
-  const { slides, activeIndex, setActiveIndex, courtName } = useGallery();
+export function CourtDetailGalleryHero({ backControl }: CourtDetailGalleryHeroProps) {
+  const { slides, activeIndex, setActiveIndex, courtName, courtLabel, setLightboxIndex } = useGallery();
   const active = slides[activeIndex] ?? slides[0]!;
   const hasMultiple = slides.length > 1;
 
@@ -197,12 +229,13 @@ export function CourtDetailGalleryHero({ backControl, actions }: CourtDetailGall
       aria-label="Court image gallery"
       onKeyDown={onKeyDown}
       onPointerDown={onPointerDown}
-      // Prototype `height:320`; allowed to grow on wide screens so the band doesn't read
-      // as a letterbox strip on desktop, the same hedge HomeHero makes. `touch-pan-y` lets
-      // the browser keep handling vertical scroll natively while the swipe hook above owns
+      // TASK_59: mobile full-bleed 290px (was 320); desktop a FRAMED box, 440px,
+      // `rounded-[20px]` — no longer full-bleed/clamped at md+, since it now sits inside
+      // the left grid column rather than spanning the viewport. `touch-pan-y` lets the
+      // browser keep handling vertical scroll natively while the swipe hook above owns
       // horizontal drag (only `preventDefault`s once a drag commits, so a plain tap on any
       // overlaid control below is unaffected).
-      className="relative h-[320px] w-full touch-pan-y overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-paper/70 md:h-[clamp(320px,42vw,480px)]"
+      className="relative h-[290px] w-full touch-pan-y overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-paper/70 md:col-start-1 md:row-start-1 md:h-[440px] md:rounded-[20px]"
     >
       <Image
         // Keyed so a slide change remounts the element and re-runs the fade-in
@@ -217,8 +250,9 @@ export function CourtDetailGalleryHero({ backControl, actions }: CourtDetailGall
       />
 
       {/* `.img-overlay-top` (prototype line 88), stop for stop: dark at the top so the
-          transparent AppHeader and the control row stay legible, clear through the
-          middle, heavy at the bottom for the counter/pager chrome. */}
+          transparent AppHeader and the mobile control row stay legible, clear through the
+          middle, heavy at the bottom for the counter/pager chrome. Harmless at md+, where
+          nothing overlaps the top of the frame any more. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
@@ -228,18 +262,32 @@ export function CourtDetailGalleryHero({ backControl, actions }: CourtDetailGall
         }}
       />
 
-      {/* Overlaid control row. The prototype also draws a wordmark here (line 1021) — in
-          the real app that is AppHeader, rendered transparently over this band via
-          AppShell's `overHero`, so building a second one here is deliberately skipped.
-          Its fake iOS StatusBar (line 1017) is discarded outright (intake §4).
-          Offset below the 72px AppHeader so the two rows never collide. */}
-      <div className="absolute inset-x-0 top-[72px] flex items-center justify-between gap-3 px-4 md:px-[clamp(20px,4vw,64px)]">
+      {/* TASK_59: clicking the image opens the SHARED lightbox at the active slide —
+          a transparent button placed BELOW the arrows/chips/dots in the DOM (so they
+          render on top and stay clickable), desktop only. Mobile keeps the hero
+          swipe-only; the strip's thumbnails are its lightbox opener there (unchanged). */}
+      <button
+        type="button"
+        onClick={() => setLightboxIndex(activeIndex)}
+        aria-label={`Open ${courtLabel} photo ${activeIndex + 1} of ${slides.length}`}
+        className="absolute inset-0 hidden cursor-zoom-in md:block"
+      />
+
+      {/* Overlaid control row — mobile only (TASK_59). The desktop Back link lives above
+          the grid instead (`CourtDetailShell`); save/share moved to the action bar/row. The
+          prototype also draws a wordmark here (line 1021) — in the real app that is
+          AppHeader, rendered transparently over this band via AppShell's `overHero`, so
+          building a second one here is deliberately skipped. Its fake iOS StatusBar (line
+          1017) is discarded outright (intake §4). Offset below the 72px AppHeader so the
+          two rows never collide. */}
+      <div className="absolute inset-x-0 top-[72px] flex items-center justify-between gap-3 px-4 md:hidden">
         <div className="flex items-center">{backControl}</div>
-        <div className="flex items-center gap-2">{actions}</div>
       </div>
 
-      {/* Counter chip, bottom-left (prototype lines 1032–1037). */}
-      <div className="pointer-events-none absolute bottom-12 left-4 flex items-center gap-1 rounded-pill bg-ink/50 px-2.5 py-1 text-paper backdrop-blur-[8px] md:left-[clamp(20px,4vw,64px)]">
+      {/* Counter chip, bottom-left: mobile `bottom-3`/`left-4` (prototype lines 1032–1037,
+          TASK_59 mobile spec), desktop `bottom-3.5`/`left-3.5` (TASK_59 desktop spec) —
+          stays visible at every size, repositioned. */}
+      <div className="pointer-events-none absolute bottom-3 left-4 flex items-center gap-1 rounded-pill bg-ink/50 px-2.5 py-1 text-paper backdrop-blur-[8px] md:bottom-3.5 md:left-3.5 md:px-3 md:py-[5px]">
         <ImageGlyph />
         <span className="text-[11px] font-medium">
           {activeIndex + 1} / {slides.length}
@@ -247,10 +295,12 @@ export function CourtDetailGalleryHero({ backControl, actions }: CourtDetailGall
       </div>
 
       {/* "All photos" — scrolls to the Gallery strip further down the page. A same-page
-          anchor, not navigation, so no pending primitive (§4 rule 10). */}
+          anchor, not navigation, so no pending primitive (§4 rule 10). Hidden at md+
+          (TASK_59): the thumbnail strip sits directly under the image there, so there is
+          nothing further down the page to jump to. */}
       <a
         href="#court-gallery-strip"
-        className="absolute bottom-12 right-4 inline-flex items-center gap-[5px] rounded-pill bg-ink/50 px-2.5 py-1 text-[10px] font-medium text-paper backdrop-blur-[8px] transition-colors hover:bg-ink/65 md:right-[clamp(20px,4vw,64px)]"
+        className="absolute bottom-3 right-4 inline-flex items-center gap-[5px] rounded-pill bg-ink/50 px-2.5 py-1 text-[10px] font-medium text-paper backdrop-blur-[8px] transition-colors hover:bg-ink/65 md:hidden"
       >
         <ImageGlyph size={11} />
         All photos
@@ -261,7 +311,8 @@ export function CourtDetailGalleryHero({ backControl, actions }: CourtDetailGall
           Hidden on mobile, which already has swipe (same "touch covers mobile" reasoning
           as `HScrollArrows`). Style lifted from the old locked-page gallery's own
           prev/next buttons (`CourtDetailFramedGallery.tsx`) — an established precedent
-          for a nav control floating over a photo. */}
+          for a nav control floating over a photo. Rendered AFTER the zoom button above,
+          so they stack above it and stay clickable (TASK_59). */}
       {hasMultiple ? (
         <>
           <button
@@ -284,9 +335,10 @@ export function CourtDetailGalleryHero({ backControl, actions }: CourtDetailGall
       ) : null}
 
       {/* Dot pager (prototype lines 1041–1046): 6px dots, the active one widening to 20px
-          over 200ms. Real buttons, not the prototype's clickable <div>s. */}
+          over 200ms. Real buttons, not the prototype's clickable <div>s. Mobile only
+          (TASK_59) — thumbnails are the desktop equivalent. */}
       {hasMultiple ? (
-        <div className="absolute inset-x-0 bottom-[50px] flex justify-center gap-[5px]">
+        <div className="absolute inset-x-0 bottom-[50px] flex justify-center gap-[5px] md:hidden">
           {slides.map((slide, i) => {
             const isActive = i === activeIndex;
             return (
@@ -310,29 +362,36 @@ export function CourtDetailGalleryHero({ backControl, actions }: CourtDetailGall
 }
 
 /**
- * The "Gallery" thumbnail strip (prototype lines 1116–1125): 210×158 thumbs (TASK 38,
- * matching the "Nearby courts" card size) in a horizontally scrolling row, the one
- * matching the hero's current image at full opacity with an ink border.
+ * The "Gallery" thumbnail strip (prototype lines 1116–1125 mobile / the desktop
+ * `CourtDetailScreen`'s thumbnail row right under the hero). TASK_59 resizes it from
+ * TASK 38's "match the Nearby card" rule (which is now far too large for v3) to the
+ * prototypes' own thumbnail sizes: 90×68 mobile, 84×64 desktop, both `rounded-[8px]`.
+ * No "Gallery" heading at md+ — the thumbnails sit directly under the image there and
+ * need no label; it stays below md.
  *
- * TASK 18: clicking a thumbnail no longer touches the shared `activeIndex` — it used to
- * call the same `setActiveIndex` the hero's dots use, which silently re-pointed the hero
- * band instead of opening anything. It now opens `CourtDetailGalleryLightbox` at the
- * clicked photo via its OWN local state (`lightboxIndex`, below); the hero band is
- * unaffected by opening, navigating within, or closing it. `isActive`/`aria-current` still
- * read the shared `activeIndex` — purely a read, to keep showing which thumbnail matches
- * the hero's current photo.
+ * TASK 18 → TASK_59: what a click DOES now depends on the breakpoint, decided at click
+ * time via `matchMedia` (the same technique `MapExpandedModal` uses), not a render-time
+ * read (no hydration mismatch risk, since nothing about the FIRST render depends on it):
+ *   • mobile — unchanged from Task 18: opens the shared lightbox at the clicked photo via
+ *     `setLightboxIndex`. The strip sits far below the hero here, so re-pointing the hero
+ *     silently would be invisible; opening the lightbox is the only sensible action.
+ *   • desktop (TASK_59) — thumbnails sit right under the hero image, so clicking one
+ *     SWITCHES the hero's `activeIndex` instead, exactly like the prototype's desktop
+ *     `CourtDetailScreen`. The lightbox is still reachable there, just via the hero's own
+ *     click-to-zoom button (CourtDetailGalleryHero) rather than the thumbnails.
+ * `isActive`/`aria-current` always read the shared `activeIndex`, at both breakpoints —
+ * which thumbnail "matches" is a property of the hero's current photo either way.
  */
 export function CourtDetailGalleryStrip() {
   // `courtLabel`, NOT `courtName`: these are CONTROLS, and their accessible names must
   // say what the page displays. The images' own alt text (the hero, above) keeps the real
   // name — an alt describes the photograph, it is not a masked surface.
-  const { slides, activeIndex, courtLabel } = useGallery();
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const { slides, activeIndex, setActiveIndex, courtLabel, setLightboxIndex } = useGallery();
   if (slides.length < 2) return null;
 
   return (
     <div id="court-gallery-strip" className="scroll-mt-[88px]">
-      <h2 className="mb-3 px-5 text-[16px] font-semibold text-ink md:px-0">Gallery</h2>
+      <h2 className="mb-3 px-5 text-[16px] font-semibold text-ink md:hidden">Gallery</h2>
       <ul className="no-scrollbar flex gap-2 overflow-x-auto px-5 pb-[2px] md:px-0">
         {slides.map((slide, i) => {
           const isActive = i === activeIndex;
@@ -340,22 +399,30 @@ export function CourtDetailGalleryStrip() {
             <li key={`${slide.url}-${i}`} className="shrink-0">
               <button
                 type="button"
-                onClick={() => setLightboxIndex(i)}
+                onClick={() => {
+                  const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+                  if (isDesktop) {
+                    setActiveIndex(i);
+                  } else {
+                    setLightboxIndex(i);
+                  }
+                }}
                 aria-label={`Show ${courtLabel} image ${i + 1}`}
                 aria-current={isActive ? 'true' : undefined}
                 className={[
-                  // TASK 38: matches the "Nearby courts" card size (CourtDetailNearbyStrip,
-                  // w-[210px]/h-[158px]) at every breakpoint — the border is always 2px,
-                  // only its colour changes, so selecting never reflows the row.
-                  'relative block h-[158px] w-[210px] overflow-hidden rounded-md border-2 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/50',
-                  isActive ? 'border-ink opacity-100' : 'border-transparent opacity-75 hover:opacity-100',
+                  // TASK_59: 90×68 mobile, 84×64 desktop — the border is always 2px, only
+                  // its colour/opacity changes, so selecting never reflows the row.
+                  'relative block h-[68px] w-[90px] overflow-hidden rounded-[8px] border-2 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/50 md:h-16 md:w-[84px]',
+                  isActive
+                    ? 'border-ink opacity-100'
+                    : 'border-transparent opacity-75 hover:opacity-100 md:opacity-60',
                 ].join(' ')}
               >
                 <Image
                   src={slide.url || FALLBACK_IMAGE}
                   alt=""
                   fill
-                  sizes="210px"
+                  sizes="90px"
                   className="object-cover"
                 />
               </button>
@@ -363,12 +430,6 @@ export function CourtDetailGalleryStrip() {
           );
         })}
       </ul>
-
-      <CourtDetailGalleryLightbox
-        open={lightboxIndex !== null}
-        initialIndex={lightboxIndex ?? 0}
-        onClose={() => setLightboxIndex(null)}
-      />
     </div>
   );
 }

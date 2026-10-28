@@ -2,6 +2,7 @@ import Image from 'next/image';
 import type { CourtSummaryDTO } from '@tennis/contracts';
 import { PendingCardLink } from '@/components/navigation';
 import { courtDisplay } from '@/components/court/court-display';
+import { PremiumBadge } from '@/components/court/PremiumBadge';
 
 // CourtDetailNearbyStrip — the "Nearby courts" horizontal card row
 // (design_v2_stripped.html:1127–1152): 210px-wide cards, a 158px-tall image (4:3, TASK 37
@@ -31,25 +32,12 @@ import { courtDisplay } from '@/components/court/court-display';
 // field. No entitlement check happens here and no coordinate reaches this component.
 //
 // The whole card navigates ⇒ `PendingCardLink` (CLAUDE.md §4 rule 1).
-
-function LockGlyph() {
-  return (
-    <svg
-      width="9"
-      height="9"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <rect x="4" y="11" width="16" height="10" rx="2" />
-      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-    </svg>
-  );
-}
+//
+// TASK_59 (v3): resized from TASK 37's "match the Gallery thumbnail" rule (210×158) down
+// to the prototypes' own card sizes — 120×90 mobile, 140×100 desktop — and swapped the
+// inline gold badge for the shared `PremiumBadge` (TASK_56). The full-image dim overlay
+// on a locked card stays at mobile (the prototype's own treatment there) but drops at
+// md+, where the desktop prototype shows the badge alone with no dimming.
 
 export interface CourtDetailNearbyStripProps {
   /** Related courts from `getRelated()`. Empty ⇒ the section is not rendered by the page. */
@@ -70,39 +58,37 @@ export function CourtDetailNearbyStrip({
   if (courts.length === 0) return null;
 
   return (
-    <ul className="no-scrollbar flex gap-4 overflow-x-auto px-5 pb-[2px] md:px-0">
+    <ul className="no-scrollbar flex gap-4 overflow-x-auto px-5 pb-[2px] md:gap-3.5 md:px-0">
       {courts.map((court) => {
         const display = courtDisplay(court, viewerIsEntitled);
         return (
-          <li key={court.id} className="w-[210px] shrink-0">
+          <li key={court.id} className="w-[120px] shrink-0 md:w-[140px]">
             <PendingCardLink
               href={`/courts/${court.slug}`}
               ariaLabel={display.name}
               className="block"
             >
-              <span className="relative block h-[158px] w-full overflow-hidden rounded-md">
+              <span className="relative block h-[90px] w-full overflow-hidden rounded-[8px] md:h-[100px] md:rounded-[10px]">
                 <Image
                   src={court.heroImageUrl}
                   alt=""
                   fill
-                  sizes="210px"
+                  sizes="140px"
                   className="object-cover"
                 />
                 {display.locked ? (
-                  <span className="absolute inset-0 flex items-start bg-ink/30 p-1.5">
-                    {/* `.premium-badge` (prototype line 138) — the existing gold token. */}
-                    <span className="inline-flex items-center gap-1 rounded-pill bg-gold px-2 py-[3px] text-[9px] font-semibold uppercase tracking-[0.08em] text-paper">
-                      <LockGlyph />
-                      Premium
-                    </span>
+                  // Dim overlay stays at mobile (the prototype's own locked-card
+                  // treatment there); drops at md+, where the badge alone is the teaser.
+                  <span className="absolute inset-0 flex items-start bg-ink/30 p-1.5 md:bg-transparent">
+                    <PremiumBadge />
                   </span>
                 ) : null}
               </span>
-              <span className="mt-1.5 block truncate text-[14px] font-medium leading-[1.2] text-ink">
+              <span className="mt-1.5 block truncate text-[12px] font-medium leading-[1.2] text-ink md:text-[13px]">
                 {display.name}
               </span>
               {/* Country · region — what stands in for the prototype's fake kilometres. */}
-              <span className="mt-0.5 block truncate text-[13px] text-stone">
+              <span className="mt-0.5 block truncate text-[13px] text-stone md:text-[11px]">
                 {display.location}
               </span>
             </PendingCardLink>

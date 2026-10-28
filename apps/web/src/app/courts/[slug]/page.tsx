@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { AppShell } from '@/components/layout';
 import { BackButton } from '@/components/navigation';
+import { SurfaceChip } from '@/components/court/SurfaceChip';
 import {
   CourtDetailLocationPreview,
   CourtDetailShell,
@@ -45,17 +46,20 @@ import { getRepositoriesForRequest } from '@/lib/repositories.server';
 // lat/lng; only the opaque `directionsUrl` (never the raw coords) reaches the UI, in an
 // href. In MOCK mode there is no auth/entitlement seam, so locked courts stay locked.
 //
-// ── TWO RENDERINGS, ONE GATE (Features 78 + 79) ─────────────────────────────────────────
+// ── TWO RENDERINGS, ONE GATE (Features 78 + 79, reshaped by TASK_59) ────────────────────
 // The data prologue below — including every line of the entitlement derivation — is
-// SHARED and UNCHANGED by both features; only the final `return` forks:
+// SHARED and UNCHANGED by every redesign; only the final `return` forks:
 //
-//   • `locked === false` → `renderUnlocked()` (Feature 78): the v2 layout — full-bleed hero
-//     gallery, the overlapping white card, tag strip, clamped description, two-column
-//     location block, gallery strip, nearby courts, sticky footer bar.
-//   • `locked === true`  → `renderLocked()` (Feature 79): the SAME v2 shell and the same
-//     sections, in the prototype's locked reading — masked title, "Location hidden —
-//     Premium only", blurred description, lock overlay on the map, "Address hidden", the
-//     dark unlock card, and a sticky footer whose primary action opens the paywall.
+//   • `locked === false` → `renderUnlocked()`: the v3 layout — mobile full-bleed hero +
+//     overlapping white card / desktop two-column grid (`CourtDetailShell`), tag strip,
+//     clamped-on-mobile/full-on-desktop description, two-column location block, gallery
+//     strip (thumbnails that switch the image at md+), nearby courts, a review card, and
+//     the save/share/collection/directions controls in a mobile floating action bar or a
+//     desktop inline row.
+//   • `locked === true`  → `renderLocked()`: the SAME shell and the same sections, in the
+//     locked reading — masked title, "Location hidden — Premium only", blurred
+//     description, lock overlay on the map, "Address hidden", and the dark unlock card in
+//     place of the review card; the primary action opens the paywall instead of linking.
 //
 // Both branches receive `locked` and `directionsUrl` as PROPS from the single computation
 // below. Neither re-derives entitlement, neither calls the exact-location endpoint, and no
@@ -241,7 +245,7 @@ function PinGlyph() {
   );
 }
 
-// ── UNLOCKED: the v2 prototype layout (Feature 78) ──────────────────────────────────────
+// ── UNLOCKED: the v3 layout (TASK_59) ────────────────────────────────────────────────────
 function renderUnlocked({
   court,
   related,
@@ -253,19 +257,13 @@ function renderUnlocked({
   signedIn,
   viewerIsEntitled,
 }: RenderProps) {
-  // Section gutters follow the prototype's flat 20px on mobile and widen into
-  // `.container-page`'s own gutter on desktop, so the card content lines up with the rest
-  // of the app instead of hugging a wide screen's edge.
-  const gutter = 'px-5 md:px-[clamp(20px,4vw,64px)]';
-  const column = 'mx-auto w-full max-w-container';
-
   return (
-    // `overHero` — the v2 hero is a FULL-BLEED image, so the header sits transparently over
-    // it (the same treatment Home uses) rather than as a solid bar with a content offset.
-    // `signedIn` also points the header user icon at /profile vs /signin. `unlocked` is the
-    // viewer's REAL membership (Task 52) — not implied by this court's own unlock, since
-    // Task 41 made free courts unlock for every viewer regardless of membership.
-    <AppShell overHero unlocked={viewerIsEntitled} signedIn={signedIn}>
+    // `overHero` — the mobile hero is a FULL-BLEED image, so the header sits transparently
+    // over it (the same treatment Home uses) rather than as a solid bar with a content
+    // offset. At md+ `CourtDetailShell` adds back the nav-offset padding itself (TASK_59
+    // — the desktop gallery isn't full-bleed under the header any more). `signedIn` also
+    // points the Profile nav item at /profile vs /signin.
+    <AppShell overHero signedIn={signedIn}>
       <CourtDetailShell
         images={court.images}
         heroImageUrl={court.heroImageUrl}
@@ -279,40 +277,44 @@ function renderUnlocked({
         // The opaque, server-built deep link only — never the coordinates behind it.
         directionsUrl={exactLocation?.directionsUrl ?? null}
         backControl={
-          // The ONE Back control (CLAUDE.md §5), styled as the hero's over-image pill.
-          // NOTE: this app has no standalone `/courts` index route — courts are browsed via
-          // the `/map` explorer (list + map), which is the real "all courts" surface, so
-          // that's the fallback destination. `verify:ux-pending-states` asserts this exact
-          // fallbackHref/label pairing against this file.
+          // The mobile pill overlay (CLAUDE.md §5), `md:hidden` — desktop gets
+          // `desktopBackControl` below instead. NOTE: this app has no standalone
+          // `/courts` index route — courts are browsed via the `/map` explorer (list +
+          // map), which is the real "all courts" surface, so that's the fallback
+          // destination. `verify:ux-pending-states` asserts this exact fallbackHref/label
+          // pairing against this file.
           <BackButton
             fallbackHref="/map"
             label="Courts"
-            className="eyebrow inline-flex h-9 items-center gap-1.5 rounded-pill bg-ink/40 px-3.5 text-paper backdrop-blur-[8px] transition-colors hover:bg-ink/55 disabled:opacity-70"
+            className="eyebrow inline-flex h-9 items-center gap-1.5 rounded-pill bg-ink/40 px-3.5 text-paper backdrop-blur-[8px] transition-colors hover:bg-ink/55 disabled:opacity-70 md:hidden"
           />
         }
-      >
-        <article>
-          {/* Title block (prototype lines 1052–1061). */}
-          <header className={`${gutter} pt-5`}>
-            <div className={column}>
-              <h1 className="serif text-[28px] font-normal leading-[1.15] text-ink md:text-[clamp(28px,3vw,40px)]">
-                {court.name}
-              </h1>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="flex items-center gap-1 text-[13px] text-stone">
-                  <PinGlyph />
-                  {locationLine}
-                </span>
-                {/* The surface chip, reusing the existing `.meta-chip` token. */}
-                <span className="meta-chip !py-[3px] !text-[12px]">{court.surface}</span>
-              </div>
+        desktopBackControl={
+          // A SECOND BackButton instance (TASK_59 desktop spec) — same fallback, a
+          // plain-text link above the grid instead of a pill over the photo.
+          <BackButton
+            fallbackHref="/map"
+            label="Back to Courts"
+            className="eyebrow mb-[26px] hidden items-center gap-1.5 text-[13px] normal-case tracking-normal text-stone transition-colors hover:text-ink md:inline-flex"
+          />
+        }
+        infoPanelTop={
+          <>
+            {/* Title block. */}
+            <h1 className="serif text-[28px] font-normal leading-[1.15] text-ink md:text-[38px] md:leading-[1.1]">
+              {court.name}
+            </h1>
+            <div className="mt-2 flex flex-wrap items-center gap-2 md:mt-3 md:gap-2.5">
+              <span className="flex items-center gap-1 text-[13px] text-stone">
+                <PinGlyph />
+                {locationLine}
+              </span>
+              <SurfaceChip surface={court.surface} size="md" />
             </div>
-          </header>
 
-          {/* Tag chips — a scrolling row, never a wrapping one (prototype lines 1062–1069).
-              Always shows at least the access chip, plus Scenic when flagged. */}
-          <div className="mt-3.5">
-            <div className={column}>
+            {/* Tag chips — scrolls on mobile, wraps at md+. Always shows at least the
+                access chip, plus Scenic when flagged. */}
+            <div className="mt-3.5 md:mt-[18px]">
               <CourtDetailTagStrip
                 tags={court.tags}
                 access={court.access}
@@ -320,99 +322,88 @@ function renderUnlocked({
                 isScenic={court.isScenic}
               />
             </div>
-          </div>
 
-          {/* Description with the character clamp + Read more/less (lines 1078–1088). */}
-          <div className={`${gutter} mt-4`}>
-            <div className={column}>
+            {/* Description: clamped + Read more/less on mobile, full text at md+. */}
+            <div className="mt-4 px-5 md:mt-[22px] md:px-0">
               <CourtDetailDescription blurb={court.blurb} />
             </div>
-          </div>
+          </>
+        }
+        reviewOrUnlockCard={
+          // "Played here? Leave a review" — Feature 80. It sits in the UNLOCKED branch
+          // only, where it makes sense: a viewer who cannot be told where the court IS
+          // has not played there.
+          //
+          // COLLECTION ONLY: the card opens a form that collects a rating and a note and
+          // POSTs them. It displays NO score, NO average and NO review count, and neither
+          // does anything else on this page or any other — no endpoint returns a review.
+          // `signedIn` (derived once above) sends a logged-out visitor to /signin rather
+          // than opening a form whose submit would 401.
+          <CourtDetailReviewCard courtSlug={court.slug} signedIn={signedIn} />
+        }
+      >
+        {/* Location — the two-column block. Country · region stands in for the
+            prototype's invented street address; the model carries no `address` field
+            and this feature adds none. The directions href is the SERVER-supplied
+            `directionsUrl`; no maps URL is ever built from coordinates here.
+            `md:row-start-3` — desktop left column: gallery(1)/strip(2)/location(3)/
+            nearby(4), independent of this DOM order (TASK_59). */}
+        <section className="px-5 md:col-start-1 md:row-start-3 md:mt-9 md:px-0">
+          <CourtDetailLocationPreview
+            variant="v2"
+            locked={false}
+            courtName={court.name}
+            approxLat={court.approxLat}
+            approxLng={court.approxLng}
+            exactLocation={exactLocation}
+            locationLine={locationLine}
+            heroImageUrl={court.heroImageUrl}
+          />
+        </section>
 
-          <div className={`${gutter} my-5`}>
-            <div className={`${column} h-px bg-hairline`} />
-          </div>
+        {/* Gallery strip — drives the hero image through the shared gallery state.
+            `md:row-start-2`: right under the hero at md+ (the thumbnails there), even
+            though it sits after Location in this DOM/mobile order. */}
+        <section className="mt-5 md:col-start-1 md:row-start-2 md:mt-3">
+          <CourtDetailGalleryStrip />
+        </section>
 
-          {/* Location — the two-column block. Country · region stands in for the
-              prototype's invented street address; the model carries no `address` field
-              and this feature adds none. The directions href is the SERVER-supplied
-              `directionsUrl`; no maps URL is ever built from coordinates here. */}
-          <section className={gutter}>
-            <div className={column}>
-              <CourtDetailLocationPreview
-                variant="v2"
-                locked={false}
-                courtName={court.name}
-                approxLat={court.approxLat}
-                approxLng={court.approxLng}
-                exactLocation={exactLocation}
-                locationLine={locationLine}
-                heroImageUrl={court.heroImageUrl}
-              />
+        {/* Nearby courts. From `getRelated()` — shared country + surface, not proximity.
+            No distance is rendered; see CourtDetailNearbyStrip's header for why.
+            Task 52: uses this viewer's REAL membership, not `locked === false` for THIS
+            court — Task 41 made free courts unlock for every viewer, so a non-paying
+            visitor can reach this branch on a free court and must still see OTHER,
+            premium nearby courts masked. */}
+        {related.length > 0 ? (
+          <section className="mt-5 md:col-start-1 md:row-start-4 md:mt-9">
+            <div className="mb-3 flex items-baseline justify-between px-5 md:mb-3.5 md:px-0">
+              <h2 className="text-[16px] font-semibold text-ink md:text-[17px]">
+                Nearby courts
+              </h2>
             </div>
+            <CourtDetailNearbyStrip courts={related} viewerIsEntitled={viewerIsEntitled} />
           </section>
-
-          {/* Gallery strip — drives the hero image through the shared gallery state. */}
-          <section className="mt-5 md:px-[clamp(20px,4vw,64px)]">
-            <div className={column}>
-              <CourtDetailGalleryStrip />
-            </div>
-          </section>
-
-          {/* Nearby courts. From `getRelated()` — shared country + surface, not proximity.
-              No distance is rendered; see CourtDetailNearbyStrip's header for why.
-              Task 52: uses this viewer's REAL membership, not `locked === false` for THIS
-              court — Task 41 made free courts unlock for every viewer, so a non-paying
-              visitor can reach this branch on a free court and must still see OTHER,
-              premium nearby courts masked. */}
-          {related.length > 0 ? (
-            <section className="mt-5 md:px-[clamp(20px,4vw,64px)]">
-              <div className={column}>
-                <div className="mb-3 flex items-baseline justify-between px-5 md:px-0">
-                  <h2 className="text-[16px] font-semibold text-ink">Nearby courts</h2>
-                </div>
-                <CourtDetailNearbyStrip courts={related} viewerIsEntitled={viewerIsEntitled} />
-              </div>
-            </section>
-          ) : null}
-
-          {/* "Played here? Leave a review" (prototype lines 1154–1166) — Feature 80. It
-              sits in the UNLOCKED branch only, where the prototype puts it
-              (`{!isLocked && …}`) and where it makes sense: a viewer who cannot be told
-              where the court is has not played there.
-
-              COLLECTION ONLY: the card opens a form that collects a rating and a note and
-              POSTs them. It displays NO score, NO average and NO review count, and neither
-              does anything else on this page or any other — no endpoint returns a review.
-              `signedIn` (derived once above) sends a logged-out visitor to /signin rather
-              than opening a form whose submit would 401. */}
-          <section className={`${gutter} mt-5`}>
-            <div className={column}>
-              <CourtDetailReviewCard courtSlug={court.slug} signedIn={signedIn} />
-            </div>
-          </section>
-        </article>
+        ) : null}
       </CourtDetailShell>
     </AppShell>
   );
 }
 
-// ── LOCKED: the v2 prototype's locked reading (Feature 79) ──────────────────────────────
-// Same shell, same gallery, same Back control, same save/share chrome and the same sticky
-// footer as `renderUnlocked()` above — the prototype draws ONE screen and branches inside
-// it (`CourtDetailScreen`, `isLocked`, lines 1005–1188), so this is that same structure
-// with the prototype's locked strings and controls, not a second layout.
+// ── LOCKED: the v3 locked reading (Feature 79, reshaped by TASK_59) ─────────────────────
+// Same shell, same gallery, same Back controls, same save/share/collection chrome and the
+// same action row/bar as `renderUnlocked()` above — both prototypes draw ONE screen and
+// branch inside it on `isLocked`, so this is that same structure with the locked strings
+// and controls, not a second layout.
 //
 // WHAT DIFFERS FROM THE UNLOCKED READING, and only this:
-//   • the serif title → "Unlock to reveal court name"      (prototype line 1054)
-//   • country · region → "Location hidden — Premium only"  (prototype line 1057)
-//   • the description  → the real text, visually blurred   (prototype lines 1073–1077)
-//   • the map          → blurred, behind the lock overlay  (prototype line 1100)
-//   • the address line → "Address hidden"                  (prototype line 1106)
-//   • the directions control → disabled "Unlock location"  (prototype lines 1109–1110)
-//   • the dark unlock card replaces the review card        (prototype lines 1169–1176)
-//   • the footer's primary action → "Unlock to get directions", opening the paywall
-//                                                          (prototype lines 1183–1185)
+//   • the serif title → "Unlock to reveal court name"
+//   • country · region → "Location hidden — Premium only"
+//   • the description  → the real text, visually blurred
+//   • the map          → blurred, behind the lock overlay
+//   • the address line → "Address hidden"
+//   • the directions control → disabled "Unlock location", shown at every size
+//   • the dark unlock card replaces the review card, in both its mobile/desktop slots
+//   • the primary action → "Unlock to get directions", opening the paywall
 //
 // WHAT DELIBERATELY DOES NOT DIFFER: the surface chip and the tag chips stay VISIBLE. The
 // prototype keeps both (`SurfaceLabel` line 1058, the `.h-scroll` of labels 1062–1069) and
@@ -449,15 +440,9 @@ function renderLocked({
   // court" / "Show this court image 2" are names a screen-reader user can act on.
   const maskedControlName = 'this court';
 
-  // Same gutters as the unlocked branch — the two readings must line up.
-  const gutter = 'px-5 md:px-[clamp(20px,4vw,64px)]';
-  const column = 'mx-auto w-full max-w-container';
-
   return (
-    // `overHero` + `unlocked={false}` — the locked page now gets the same full-bleed hero
-    // as the unlocked one, so the header sits transparently over it. The header's own CTA
-    // still reads as locked.
-    <AppShell overHero unlocked={false} signedIn={signedIn}>
+    // `overHero` — the locked page gets the same full-bleed hero as the unlocked one.
+    <AppShell overHero signedIn={signedIn}>
       <CourtDetailShell
         locked
         images={court.images}
@@ -475,51 +460,58 @@ function renderLocked({
         // There is no directions link for a locked viewer, by construction.
         directionsUrl={null}
         primaryAction={
-          // Prototype line 1184. Opens the SHARED paywall modal — the same path the unlock
-          // card below uses. Opening a modal is local UI, so per CLAUDE.md §4 rule 10 it
-          // takes no pending primitive and no spinner.
+          // Opens the SHARED paywall modal — the same path the unlock card uses. Opening
+          // a modal is local UI, so per CLAUDE.md §4 rule 10 it takes no pending
+          // primitive and no spinner. A plain element, not a function — CourtDetailShell
+          // (client) clones it with each render site's extra className; a function prop
+          // can't cross from this Server Component to a Client Component.
           <PaywallTrigger
             source="court-detail-locked-footer"
-            className="btn btn-primary flex-1 md:flex-none  justify-center gap-2"
+            className="btn btn-primary justify-center gap-2"
           >
             Unlock to get directions
           </PaywallTrigger>
         }
         backControl={
-          // The ONE Back control (CLAUDE.md §5), identical to the unlocked branch's.
-          // NOTE: this app has no standalone `/courts` index route — courts are browsed via
-          // the `/map` explorer (list + map), which is the real "all courts" surface, so
-          // that's the fallback destination. `verify:ux-pending-states` asserts this exact
+          // The mobile pill overlay (CLAUDE.md §5), identical to the unlocked branch's,
+          // `md:hidden` — desktop gets `desktopBackControl` below instead. NOTE: this app
+          // has no standalone `/courts` index route — courts are browsed via the `/map`
+          // explorer (list + map), which is the real "all courts" surface, so that's the
+          // fallback destination. `verify:ux-pending-states` asserts this exact
           // fallbackHref/label pairing against this file.
           <BackButton
             fallbackHref="/map"
             label="Courts"
-            className="eyebrow inline-flex h-9 items-center gap-1.5 rounded-pill bg-ink/40 px-3.5 text-paper backdrop-blur-[8px] transition-colors hover:bg-ink/55 disabled:opacity-70"
+            className="eyebrow inline-flex h-9 items-center gap-1.5 rounded-pill bg-ink/40 px-3.5 text-paper backdrop-blur-[8px] transition-colors hover:bg-ink/55 disabled:opacity-70 md:hidden"
           />
         }
-      >
-        <article>
-          {/* Masked title block (prototype lines 1052–1061). Same type, same spacing as
-              the unlocked branch — only the two strings change. */}
-          <header className={`${gutter} pt-5`}>
-            <div className={column}>
-              <h1 className="serif text-[28px] font-normal leading-[1.15] text-ink md:text-[clamp(28px,3vw,40px)]">
-                {maskedName}
-              </h1>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="flex items-center gap-1 text-[13px] text-stone">
-                  <PinGlyph />
-                  Location hidden — Premium only
-                </span>
-                {/* The surface chip STAYS — public metadata, and the teaser. */}
-                <span className="meta-chip !py-[3px] !text-[12px]">{court.surface}</span>
-              </div>
+        desktopBackControl={
+          // A SECOND BackButton instance (TASK_59 desktop spec), identical to the
+          // unlocked branch's.
+          <BackButton
+            fallbackHref="/map"
+            label="Back to Courts"
+            className="eyebrow mb-[26px] hidden items-center gap-1.5 text-[13px] normal-case tracking-normal text-stone transition-colors hover:text-ink md:inline-flex"
+          />
+        }
+        infoPanelTop={
+          <>
+            {/* Masked title block. Same type, same spacing as the unlocked branch — only
+                the two strings change. */}
+            <h1 className="serif text-[28px] font-normal leading-[1.15] text-ink md:text-[38px] md:leading-[1.1]">
+              {maskedName}
+            </h1>
+            <div className="mt-2 flex flex-wrap items-center gap-2 md:mt-3 md:gap-2.5">
+              <span className="flex items-center gap-1 text-[13px] text-stone">
+                <PinGlyph />
+                Location hidden — Premium only
+              </span>
+              {/* The surface chip STAYS — public metadata, and the teaser. */}
+              <SurfaceChip surface={court.surface} size="md" />
             </div>
-          </header>
 
-          {/* Tag chips STAY too — same component, same scrolling row as unlocked. */}
-          <div className="mt-3.5">
-            <div className={column}>
+            {/* Tag chips STAY too — same component, same behaviour as unlocked. */}
+            <div className="mt-3.5 md:mt-[18px]">
               <CourtDetailTagStrip
                 tags={court.tags}
                 access={court.access}
@@ -527,65 +519,65 @@ function renderLocked({
                 isScenic={court.isScenic}
               />
             </div>
-          </div>
 
-          {/* Description: the real (public) blurb, visually blurred, with no "Read more"
-              control — see CourtDetailBlurredDescription for why this is decoration and
-              how it is presented to a screen reader. */}
-          <div className={`${gutter} mt-4`}>
-            <div className={column}>
+            {/* Description: the real (public) blurb, visually blurred, with no "Read
+                more" control — see CourtDetailBlurredDescription for why this is
+                decoration and how it is presented to a screen reader. */}
+            <div className="mt-4 px-5 md:mt-[22px] md:px-0">
               <CourtDetailBlurredDescription blurb={court.blurb} />
             </div>
-          </div>
+          </>
+        }
+        reviewOrUnlockCard={
+          // The dark unlock card — TASK_59 moved it out of the location block (where
+          // Task 46 had embedded it beside the locked map) and into this slot, the one
+          // the prototype actually draws it in: replacing the review card at the end of
+          // the content / in the info panel. Its own `PaywallTrigger source` is unchanged.
+          <CourtDetailUnlockCard />
+        }
+      >
+        {/* Location, locked: the blurred APPROXIMATE map behind the lock overlay,
+            "Address hidden", and the disabled "Unlock location" control (now shown at
+            every size — TASK_59 removed the md:hidden trick that used to defer to the
+            unlock card embedded here). `approxLat`/`approxLng` are the always-public
+            jittered coordinates — the exact pair is never fetched for this viewer and
+            never reaches this component. `courtName` here is the MASKED string: it would
+            feed a map marker's label, which the locked branch does not even plot, and
+            must not carry the real name. `md:row-start-3` — see the unlocked branch. */}
+        <section className="px-5 md:col-start-1 md:row-start-3 md:mt-9 md:px-0">
+          <CourtDetailLocationPreview
+            variant="v2"
+            locked
+            courtName={maskedControlName}
+            approxLat={court.approxLat}
+            approxLng={court.approxLng}
+            exactLocation={null}
+            heroImageUrl={court.heroImageUrl}
+          />
+        </section>
 
-          <div className={`${gutter} my-5`}>
-            <div className={`${column} h-px bg-hairline`} />
-          </div>
+        {/* Gallery strip — unchanged; the photographs are public. `md:row-start-2`, same
+            reasoning as the unlocked branch. */}
+        <section className="mt-5 md:col-start-1 md:row-start-2 md:mt-3">
+          <CourtDetailGalleryStrip />
+        </section>
 
-          {/* Location, locked: the blurred APPROXIMATE map behind the lock overlay,
-              "Address hidden", and the disabled "Unlock location" control. `approxLat` /
-              `approxLng` are the always-public jittered coordinates — the exact pair is
-              never fetched for this viewer and never reaches this component. `courtName`
-              here is the MASKED string: it would feed a map marker's label, which the
-              locked branch does not even plot, and must not carry the real name. */}
-          <section className={gutter}>
-            <div className={column}>
-              <CourtDetailLocationPreview
-                variant="v2"
-                locked
-                courtName={maskedControlName}
-                approxLat={court.approxLat}
-                approxLng={court.approxLng}
-                exactLocation={null}
-                heroImageUrl={court.heroImageUrl}
-              />
+        {/* Nearby courts — the same strip as unlocked. Its cards apply their OWN masking
+            rule (`courtDisplay`, off the public `isLocked` flag), which is independent of
+            this page's entitlement result for THIS court. Task 26: `viewerIsEntitled=
+            {false}` is explicit here — this branch only runs when `locked === true`, i.e.
+            this viewer's exact-location call did NOT prove entitlement, so a locked
+            nearby court stays masked for them too. */}
+        {related.length > 0 ? (
+          <section className="mt-5 md:col-start-1 md:row-start-4 md:mt-9">
+            <div className="mb-3 flex items-baseline justify-between px-5 md:mb-3.5 md:px-0">
+              <h2 className="text-[16px] font-semibold text-ink md:text-[17px]">
+                Nearby courts
+              </h2>
             </div>
+            <CourtDetailNearbyStrip courts={related} viewerIsEntitled={false} />
           </section>
-
-          {/* Gallery strip — unchanged; the photographs are public. */}
-          <section className="mt-5 md:px-[clamp(20px,4vw,64px)]">
-            <div className={column}>
-              <CourtDetailGalleryStrip />
-            </div>
-          </section>
-
-          {/* Nearby courts — the same strip as unlocked. Its cards apply their OWN masking
-              rule (`courtDisplay`, off the public `isLocked` flag), which is independent of
-              this page's entitlement result for THIS court. Task 26: `viewerIsEntitled=
-              {false}` is explicit here — this branch only runs when `locked === true`, i.e.
-              this viewer's exact-location call did NOT prove entitlement, so a locked
-              nearby court stays masked for them too. */}
-          {related.length > 0 ? (
-            <section className="mt-5 md:px-[clamp(20px,4vw,64px)]">
-              <div className={column}>
-                <div className="mb-3 flex items-baseline justify-between px-5 md:px-0">
-                  <h2 className="text-[16px] font-semibold text-ink">Nearby courts</h2>
-                </div>
-                <CourtDetailNearbyStrip courts={related} viewerIsEntitled={false} />
-              </div>
-            </section>
-          ) : null}
-        </article>
+        ) : null}
       </CourtDetailShell>
     </AppShell>
   );

@@ -13,6 +13,14 @@ import { useState } from 'react';
 // LAYOUT STABILITY: the toggle sits BELOW the paragraph and keeps a fixed label width per
 // state, so expanding grows the block downward without shifting anything above it.
 //
+// TASK_59 (v3): the desktop `CourtDetailScreen` prints the FULL blurb with no "Read more"
+// at all — the info panel has room. Mobile keeps the clamp-110 toggle above unchanged.
+// Rather than read the viewport in JS (which would mismatch between server and client
+// render and flash), this renders BOTH a clamped mobile paragraph (`md:hidden`) and a
+// full-text desktop paragraph (`hidden md:block`) and lets CSS pick one — the
+// "duplicated text/button block, toggled with md:hidden" allowance CLAUDE.md's redesign
+// tasks rely on elsewhere (there is only ever one gallery/map; this is plain text).
+//
 // THE PULL-QUOTE IS GONE. The v1 page ran the blurb through a `splitBlurb` helper that
 // promoted the first sentence to an italic serif pull-quote with the remainder as body
 // copy. That treatment is incompatible with this block: the prototype clamps the
@@ -59,18 +67,21 @@ export function CourtDetailDescription({ blurb }: CourtDetailDescriptionProps) {
 
   return (
     <div>
-      <p className="body-m leading-[1.6] text-graphite">{shown}</p>
+      {/* Mobile: clamped + toggle (unchanged). */}
+      <p className="body-m leading-[1.6] text-graphite md:hidden">{shown}</p>
       {clampable ? (
         <button
           type="button"
           onClick={() => setExpanded((e) => !e)}
           aria-expanded={expanded}
-          className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-medium text-clay transition-opacity hover:opacity-80"
+          className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-medium text-clay transition-opacity hover:opacity-80 md:hidden"
         >
           {expanded ? 'Read less' : 'Read more'}
           <ChevronGlyph up={expanded} />
         </button>
       ) : null}
+      {/* Desktop: full text, no toggle (TASK_59). */}
+      <p className="hidden text-[14px] leading-[1.7] text-graphite md:block">{text}</p>
     </div>
   );
 }

@@ -9,10 +9,12 @@ import type { AccessType, CourtTag, IndoorOutdoor } from '@tennis/contracts';
 // was never modeled as a label in the prototype's demo data, but it's added here
 // on the same always-public basis as access and Scenic).
 //
-// SCROLLS, NEVER WRAPS (brief §4): `.chip-exp` chips are `white-space:nowrap` and the row
-// is `overflow-x-auto` with `no-scrollbar`, so a court carrying many tags scrolls sideways
-// instead of growing a second line and pushing the title block, description and location
-// down the page. That is the whole reason the prototype uses `.h-scroll` here.
+// SCROLLS ON MOBILE, WRAPS AT md+ (TASK_59): `.chip-exp` chips are `white-space:nowrap`
+// and the row is `overflow-x-auto` with `no-scrollbar` on mobile, so a court carrying
+// many tags scrolls sideways instead of growing a second line and pushing the
+// description/location down the page — the brief §4 rule, and the prototype's mobile
+// `.h-scroll`. At md+ the info panel is a narrower, taller column with room below, so the
+// desktop `CourtDetailScreen` instead lets the row wrap (`flex-wrap`, no scrollbar).
 //
 // `access` and `indoorOutdoor` are required, always-populated fields on every court, so
 // the combined row can never be empty — unlike the old tags-only version, which could
@@ -49,7 +51,7 @@ export function CourtDetailTagStrip({
   if (labels.length === 0) return null;
 
   return (
-    <ul className="no-scrollbar flex gap-2 overflow-x-auto px-5 pb-[2px] md:px-0">
+    <ul className="no-scrollbar flex gap-2 overflow-x-auto px-5 pb-[2px] md:flex-wrap md:overflow-visible md:px-0 md:pb-0">
       {labels.map((label) => (
         <li key={label} className="shrink-0">
           {/* `.chip-exp` (prototype line 72), 12px / 5px 10px (line 67). */}

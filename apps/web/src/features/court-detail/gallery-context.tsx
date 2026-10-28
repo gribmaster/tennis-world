@@ -30,6 +30,16 @@ export interface GalleryContextValue {
    * cannot leak through the accessibility tree. Falls back to `courtName`.
    */
   courtLabel: string;
+  /**
+   * The ONE shared lightbox index (TASK_59). `null` = closed. Both the hero's desktop
+   * zoom trigger and the thumbnail strip's mobile tap open the SAME lightbox through this
+   * — lifted here (rather than each component owning a local index, Task 18's original
+   * design) because v3 gives the hero band its own opener too, and a single shared
+   * instance, rendered once by `CourtDetailGalleryProvider`, is simpler than reasoning
+   * about two independent lightbox mounts that must never both be "open" at once.
+   */
+  lightboxIndex: number | null;
+  setLightboxIndex: (i: number | null) => void;
 }
 
 export const GalleryContext = createContext<GalleryContextValue | null>(null);
