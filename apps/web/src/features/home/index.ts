@@ -1,39 +1,14 @@
-// Home feature — public surface (v2, Feature 74).
+// Home feature — public surface (v3 "Atlas", TASK_58).
 //
-// The page (`apps/web/src/app/page.tsx`) is a SERVER component and the single repository
-// boundary; it renders the hero and then hands every fetched array to `HomeExplorer`, the
-// screen's one `'use client'` boundary. The section components below are consumed BY
-// HomeExplorer, not by the page — they are exported here so the feature's surface stays
-// legible and testable, not because the page mounts them directly.
-export { HomeHero, HOME_HERO_CONTENT } from './HomeHero';
-export type { HomeHeroProps, HomeHeroContent, HomeHeroCta } from './HomeHero';
+// `app/page.tsx` is a SERVER component and the single repository boundary; it picks the
+// hero's 4 slides server-side and renders `<HomeHero slides={…} />` followed by
+// `<HomeMembership viewerIsEntitled={…} />` inside one shared wrapper (the membership
+// section's floating mobile CTA needs to be that wrapper's last child — see
+// `HomeMembership`'s own header). Everything v2 Home had beyond this — search, shortcut
+// row, featured/editor's-cut strips, collections/journal teasers, the map-preview band —
+// was removed from Home in this task (REDESIGN_V3_PLAN.md decision 1).
+export { HomeHero } from './HomeHero';
+export type { HomeHeroProps, HomeHeroSlide } from './HomeHero';
 
-export { HomeExplorer } from './HomeExplorer';
-export type { HomeExplorerProps } from './HomeExplorer';
-
-export { HomeSearchBar } from './HomeSearchBar';
-export type { HomeSearchBarProps } from './HomeSearchBar';
-
-export { HomeShortcutsRow } from './HomeShortcutsRow';
-export type { HomeShortcutsRowProps } from './HomeShortcutsRow';
-
-export { HOME_SHORTCUTS } from './home-shortcuts';
-export type { HomeShortcut } from './home-shortcuts';
-
-export { HomeFeaturedCourts } from './HomeFeaturedCourts';
-export type { HomeFeaturedCourtsProps } from './HomeFeaturedCourts';
-
-export { HomeCourtSaveHeart } from './HomeCourtSaveHeart';
-export type { HomeCourtSaveHeartProps } from './HomeCourtSaveHeart';
-
-export { HomeCollectionsTeaser } from './HomeCollectionsTeaser';
-export type { HomeCollectionsTeaserProps } from './HomeCollectionsTeaser';
-
-export { HomeJournalTeaser } from './HomeJournalTeaser';
-export type { HomeJournalTeaserProps } from './HomeJournalTeaser';
-
-export { HomeEditorsCut } from './HomeEditorsCut';
-export type { HomeEditorsCutProps } from './HomeEditorsCut';
-
-export { HomePaywallBand } from './HomePaywallBand';
-export type { HomePaywallBandProps } from './HomePaywallBand';
+export { HomeMembership } from './HomeMembership';
+export type { HomeMembershipProps } from './HomeMembership';

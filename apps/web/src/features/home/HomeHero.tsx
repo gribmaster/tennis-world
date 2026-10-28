@@ -1,131 +1,217 @@
+'use client';
+
+import { useState } from 'react';
 import Image from 'next/image';
-import { PendingLink } from '@/components/navigation';
+import { PendingCardLink } from '@/components/navigation';
 
-// HomeHero — the v2 opening band (Feature 74), rebuilt from the prototype's HomeScreen
-// hero (design_v2_stripped.html:419–434).
+// HomeHero — the v3 "Atlas" hero carousel (TASK_58). Replaces the v2 fixed-image band
+// entirely: a floating, inset card over the page background with 4 cross-fading court
+// photos, a giant serif "ATLAS" title, and a place pill + dot pagination.
 //
-// Prototype geometry, taken from the file rather than from memory:
-//   • the band is `height:340` (line 420) — a fixed image band, not the old full-viewport
-//     hero. Kept fixed at mobile and allowed to grow on wide screens so the 44px headline
-//     does not float in an over-tall box on desktop.
-//   • `.img-overlay-top` (line 88): `linear-gradient(180deg, rgba(0,0,0,0.5) 0%,
-//     rgba(0,0,0,0) 44%, rgba(0,0,0,0.78) 100%)` — dark at the top for the transparent
-//     header, clear through the middle, heavy at the bottom for the headline. Reproduced
-//     verbatim as an inline gradient because Tailwind's `via-` stop lands at 50%, not the
-//     prototype's 44%, and the three stops are the whole character of the treatment.
-//   • copy block at `left:20 right:20 bottom:20` (line 428).
-//   • headline `display-xl` in three hard-wrapped lines, `marginBottom:4` (line 429).
-//   • sub-line `body-s` at 75% white, `marginBottom:16` (line 430).
-//   • CTA: `btn btn-gold btn-sm btn-pill`, `fontSize:11`, `letterSpacing:0.12em` (line 431)
-//     — a pill, 40px tall.
+// Ported from both v3 prototypes' `HomeScreen` hero (values only, not scaffolding):
+//   • desktop: tennis_world_desktop_standalone4.html HomeScreen, ~line 292
+//   • mobile:  tennis_world_v17_standalone.html HomeScreen, ~line 368
 //
-// CTA VARIANT — one deliberate divergence from the prototype. The prototype paints this
-// button GOLD (`.btn-gold`). In this app gold is `.btn-premium`, which globals.css:167
-// reserves for the PAYWALL, and every current call site honours that (the paywall modal,
-// Court Detail's unlock CTA, Profile's membership card). This CTA just navigates to /map —
-// painting it gold would make the app's one "this costs money" signal mean nothing. So it
-// uses `.btn-over-image`, the existing variant for exactly this situation (a CTA sitting on
-// a photograph), with the prototype's pill radius, 40px height, 11px size and 0.12em
-// tracking applied as utilities. No `.btn-gold`, `.btn-sm` or `.btn-pill` class is added —
-// this repo has no such variants and the brief forbids a second button system.
+// DATA: the page (`app/page.tsx`) picks the 4 slides SERVER-SIDE (unlocked courts,
+// featured first) and hands this component only what it needs to render — never the
+// whole court list. See that file's `selectHeroSlides` for the selection rule and its
+// safety net for the odd case where the catalogue has no unlocked courts at all.
 //
-// NO WORDMARK, NO AVATAR (brief §1): the prototype draws a `TENNIS · WORLD` wordmark and a
-// 32×32 avatar inside the hero (lines 425–427). In the real app that row IS `AppHeader`,
-// rendered transparently over this band by `AppShell`'s existing `overHero` prop. Building
-// them here would put a second header on top of the real one. The prototype's fake iOS
-// `StatusBar` (line 423) is discarded outright per intake §4.
+// INTERACTIVITY WITHOUT NESTING (CLAUDE.md §4): the whole card is a `PendingCardLink` to
+// the current slide's court page. The place pill (advances the slide) and the dots
+// (jump to a slide) are rendered as SIBLINGS of that link, positioned with `z-10`, never
+// inside the anchor — clicking either must not navigate, and there is no `<button>`
+// inside an `<a>` anywhere in this tree. The pill/dots are purely local UI (no
+// network/navigation), so neither uses a `Pending*` primitive (CLAUDE.md §4 rule 10).
 //
-// PRESENTATIONAL & data-agnostic, unchanged from v1: no repository, no @tennis/mock-data.
-// The copy stays a config object (not inline JSX) so it remains data-shaped.
+// CROSS-FADE: all 4 images render stacked (`absolute inset-0`), the active one at
+// `opacity-100`, the rest at `opacity-0`, transitioning over ~400ms. Nothing unmounts on
+// slide change, so there is no remount flash. `motion-reduce:` disables the transition
+// for `prefers-reduced-motion` visitors.
 
-export interface HomeHeroCta {
-  label: string;
-  href: string;
-}
-
-export interface HomeHeroContent {
-  /** The serif display headline. `\n` renders as a line break. */
-  headline: string;
-  /** Short line under the headline. */
-  subtitle: string;
-  /** The single pill CTA. */
-  primaryCta: HomeHeroCta;
-  /** Background photograph (root-relative so it resolves in every environment). */
+export interface HomeHeroSlide {
+  /** Court slug — the hero card navigates to `/courts/{slug}`. */
+  slug: string;
+  /** `court.heroImageUrl`, resolved server-side. */
   imageUrl: string;
-  /** Alt text (decorative hero → empty string). */
-  imageAlt?: string;
+  /** Place pill text — `court.region` (falls back to `court.country`), or "Premium" for
+   *  the masked safety-net case. Rendered uppercase via CSS, not uppercased in data. */
+  place: string;
+  /** Accessible name for the card link — the court's real name, or "Premium Court". */
+  alt: string;
 }
 
-/** Default hero content — copy ported verbatim from the prototype (lines 429–431). */
-export const HOME_HERO_CONTENT: HomeHeroContent = {
-  headline: "The world's\nmost amazing\ntennis courts",
-  subtitle: 'Explore. Save. Travel.',
-  primaryCta: { label: 'Explore the map', href: '/map' },
-  imageUrl: '/placeholders/maurits-bausenhart-XtcZbSPVJ3A-unsplash.jpg',
-  imageAlt: '',
-};
+export interface HomeHeroProps {
+  slides: HomeHeroSlide[];
+}
 
-function ArrowGlyph() {
+/** The prototype's crossed-racket crest mark (`<svg viewBox="0 0 40 40">`). */
+function CrestMark({ size, strokeWidth }: { size: number; strokeWidth: number }) {
   return (
     <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      viewBox="0 0 40 40"
       fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      stroke="#fff"
+      strokeWidth={strokeWidth}
       aria-hidden
     >
-      <path d="M5 12h14M13 6l6 6-6 6" />
+      <g transform="rotate(-25 20 20)">
+        <ellipse cx="20" cy="12" rx="8" ry="10" />
+        <line x1="20" y1="22" x2="20" y2="34" />
+      </g>
+      <g transform="rotate(25 20 20)">
+        <ellipse cx="20" cy="12" rx="8" ry="10" />
+        <line x1="20" y1="22" x2="20" y2="34" />
+      </g>
     </svg>
   );
 }
 
-export interface HomeHeroProps {
-  content?: HomeHeroContent;
+/** A dot's visible 6px circle, wrapped in a transparent >=24px hit target. */
+function PaginationDot({
+  background,
+  onClick,
+  label,
+}: {
+  background: string;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className="flex h-6 w-6 shrink-0 items-center justify-center"
+    >
+      <span aria-hidden className="h-[6px] w-[6px] rounded-full" style={{ background }} />
+    </button>
+  );
 }
 
-export function HomeHero({ content = HOME_HERO_CONTENT }: HomeHeroProps) {
-  const { headline, subtitle, primaryCta, imageUrl, imageAlt } = content;
+export function HomeHero({ slides }: HomeHeroProps) {
+  const [index, setIndex] = useState(0);
+
+  if (slides.length === 0) return null;
+
+  const current = slides[Math.min(index, slides.length - 1)]!;
+  const advance = () => setIndex((i) => (i + 1) % slides.length);
+  const jumpTo = (i: number) => setIndex(i);
+  const showDots = slides.length > 1;
 
   return (
-    <section className="relative h-[340px] w-full overflow-hidden md:h-[clamp(340px,46vw,570px)] home-banner" id="home-banner">
-      <Image
-        src={imageUrl}
-        alt={imageAlt ?? ''}
-        fill
-        priority
-        sizes="100vw"
-        className="object-cover"
-      />
+    <div className="mx-4 mt-[18px] md:mx-auto md:mt-9 md:max-w-[1240px] md:px-10">
+      <div className="relative h-[480px] overflow-hidden rounded-[28px] md:h-[600px] md:rounded-[32px] md:shadow-[0_24px_64px_rgba(15,15,15,0.18)]">
+        <PendingCardLink
+          href={`/courts/${current.slug}`}
+          ariaLabel={current.alt}
+          className="absolute inset-0 block"
+        >
+          {slides.map((slide, i) => (
+            <Image
+              key={slide.slug}
+              src={slide.imageUrl}
+              alt=""
+              fill
+              priority={i === 0}
+              sizes="(min-width: 1280px) 1240px, 100vw"
+              className="object-cover transition-opacity duration-[400ms] motion-reduce:transition-none"
+              style={{ opacity: i === index ? 1 : 0 }}
+            />
+          ))}
 
-      {/* `.img-overlay-top`, stop for stop (prototype line 88). */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            'linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 44%, rgba(0,0,0,0.78) 100%)',
-        }}
-      />
+          {/* Same overlay recipe as `CourtCard` — transparent to 40%, then to black 72%. */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background: 'linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.72) 100%)',
+            }}
+          />
 
-      {/* Copy block, bottom-left at the prototype's 20px gutter (widening on desktop so
-          it tracks `.container-page`'s own gutter rather than hugging the edge). */}
-      <div className="absolute inset-x-0 bottom-4 md:bottom-12 px-5 md:px-[clamp(20px,4vw,64px)]">
-        <div className="container-page">
-          <h1 className="display-xl mb-1 whitespace-pre-line text-paper">{headline}</h1>
-          <p className="body-s mb-4 text-paper/75">{subtitle}</p>
-          <PendingLink
-            href={primaryCta.href}
-            className="btn btn-over-image h-10 gap-2 rounded-pill px-4 text-[11px] tracking-[0.12em]"
+          {/* Crest mark — two sizes via CSS visibility, since stroke-width can't be
+              expressed as a Tailwind breakpoint variant on an inline-styled SVG attr. */}
+          <span className="absolute inset-x-0 top-[26px] flex justify-center md:hidden">
+            <CrestMark size={32} strokeWidth={1.3} />
+          </span>
+          <span className="absolute inset-x-0 top-9 hidden justify-center md:flex">
+            <CrestMark size={36} strokeWidth={1.2} />
+          </span>
+
+          {/* Giant title — the page <h1>. Mobile: left-aligned, mid-height, no vertical
+              centering transform. Desktop: centered both ways. */}
+          <h1 className="serif absolute left-[18px] right-[18px] top-1/2 text-[60px] font-medium leading-[0.95] tracking-[0.01em] text-white md:inset-x-0 md:-translate-y-1/2 md:text-center md:text-[76px] md:leading-[0.92]">
+            ATLAS
+          </h1>
+        </PendingCardLink>
+
+        {/* Place pill + dots — SIBLINGS of the card link (never inside the <a>), so
+            clicking either never navigates. */}
+
+        {/* Mobile: dots split left/right of the pill, each side flex-1. */}
+        <div className="absolute inset-x-[18px] bottom-[18px] z-10 flex items-center justify-center gap-2 md:hidden">
+          <div className="flex flex-1 justify-end gap-[5px]">
+            {showDots
+              ? slides.map((slide, i) =>
+                  i < index ? (
+                    <PaginationDot
+                      key={slide.slug}
+                      background="rgba(255,255,255,0.85)"
+                      onClick={() => jumpTo(i)}
+                      label={`Go to slide ${i + 1}`}
+                    />
+                  ) : null,
+                )
+              : null}
+          </div>
+          <button
+            type="button"
+            onClick={advance}
+            className="serif shrink-0 rounded-pill border border-white/40 bg-white/20 px-6 py-[10px] text-[13px] uppercase tracking-[0.16em] text-white backdrop-blur-[10px]"
           >
-            {primaryCta.label}
-            <ArrowGlyph />
-          </PendingLink>
+            {current.place}
+          </button>
+          <div className="flex flex-1 gap-[5px]">
+            {showDots
+              ? slides.map((slide, i) =>
+                  i > index ? (
+                    <PaginationDot
+                      key={slide.slug}
+                      background="rgba(255,255,255,0.85)"
+                      onClick={() => jumpTo(i)}
+                      label={`Go to slide ${i + 1}`}
+                    />
+                  ) : null,
+                )
+              : null}
+          </div>
+        </div>
+
+        {/* Desktop: pill, then every dot to its right (active one brighter). */}
+        <div className="absolute inset-x-0 bottom-9 z-10 hidden items-center justify-center gap-2.5 md:flex">
+          <button
+            type="button"
+            onClick={advance}
+            className="serif shrink-0 rounded-pill border border-white/40 bg-white/20 px-[26px] py-[10px] text-[13px] uppercase tracking-[0.16em] text-white backdrop-blur-[10px]"
+          >
+            {current.place}
+          </button>
+          {showDots ? (
+            <div className="flex gap-[5px]">
+              {slides.map((slide, i) => (
+                <PaginationDot
+                  key={slide.slug}
+                  background={i === index ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.45)'}
+                  onClick={() => jumpTo(i)}
+                  label={`Go to slide ${i + 1}`}
+                />
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
-    </section>
+    </div>
   );
 }
