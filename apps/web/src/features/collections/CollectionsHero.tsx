@@ -45,9 +45,13 @@ export function CollectionsHero({
   subtitle = DEFAULT_SUBTITLE,
 }: CollectionsHeroProps) {
   return (
-    <header className="container-page pt-8">
-      <h1 className="serif display-l text-ink">{title}</h1>
-      <p className="mt-1 text-[13px] leading-snug text-stone">{subtitle}</p>
+    <header className="container-page pt-8 md:pt-11">
+      <h1 className="serif display-l text-ink md:text-[40px] md:font-normal md:leading-[1.1]">
+        {title}
+      </h1>
+      <p className="mt-1 text-[13px] leading-snug text-stone md:mt-1.5 md:text-[14px]">
+        {subtitle}
+      </p>
     </header>
   );
 }

@@ -1,36 +1,47 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { AppShell } from '@/components/layout';
-import { CollectionDetailHero, CollectionCourtsGrid } from '@/features/collection-detail';
+import {
+  CollectionDetailShell,
+  CollectionCourtsGrid,
+  type CollectionMapCta,
+} from '@/features/collection-detail';
+import { courtDisplay } from '@/components/court';
 import { repositories, AuthRequiredError } from '@/lib/repositories';
 import { getRepositoriesForRequest } from '@/lib/repositories.server';
 
-// Collection Detail page (`/collections/[slug]`) — a Phase-1 screen (Feature 17).
-// Resolves the per-collection links emitted by the /collections grid and the
-// HomeCollectionsTeaser (which already point at /collections/{slug}).
+// Collection Detail page (`/collections/[slug]`) — a Phase-1 screen (Feature 17),
+// restyled to v3 in TASK_60: a mobile full-bleed hero under the pill nav + an
+// overlapping white card, a desktop framed hero with "Back to Collections", and a
+// two-column body (description + courts grid / a sticky map CTA card). See
+// `docs/TASK_60_V3_COLLECTIONS.md`.
 //
 // This is a SERVER component and the ONLY repository boundary on the screen: it
 // resolves the collection by slug, 404s if it doesn't exist, fetches the courts that
-// belong to it, and passes both down as props. The feature-local components (hero +
-// courts grid) stay presentational and never fetch.
+// belong to it, and passes everything down as props. The feature-local components
+// (`CollectionDetailShell`/`CollectionDetailHero`/`CollectionCourtsGrid`) stay
+// presentational (or, for the shell, client-side state-only) and never fetch.
 //
-// Repository methods used (both already exist — no repository/contract changes):
+// Repository methods used (all pre-existing — no repository/contract changes):
 //   • repositories.collections.getBySlug(slug)        → CollectionDTO | null
 //   • repositories.courts.list({ collection: slug })  → CourtSummaryDTO[]
-//     (CourtFilter.collection is already supported by the mock, which maps the slug
-//      through the COLLECTION_COURTS membership table.)
+//   • protectedRepos.saved.getSavedCourts()           → seeds each CourtCard's bookmark
+//   • protectedRepos.saved.getSavedEditorialCollections() → seeds the collection's own
+//     save state (TASK_60 — added to the same protected `Promise.all` as the other two)
+//   • protectedRepos.user.getCurrentUser()            → this viewer's real entitlement
 //
-// Phase-1 scope: mock-first, presentational only. No auth, no payments, no API. The
-// grid renders its own Featured-style card (Task 47) with a real, database-backed save
-// heart, so this page now also does a PROTECTED read — `saved.getSavedCourts()` +
-// `user.getCurrentUser()` — to seed those hearts and resolve this viewer's real
-// entitlement, mirroring `app/page.tsx`'s own protected block: a logged-out visitor in
-// `api` mode degrades on `AuthRequiredError` to an empty saved set + `signedIn:false` +
-// `viewerIsEntitled:false` (never a redirect, never a crash) since this collection page
-// stays public.
+// AUTH: this page is PUBLIC. The protected block degrades on `AuthRequiredError` to an
+// empty saved set + `signedIn:false` + `viewerIsEntitled:false` (never a redirect, never
+// a crash) — the same pattern `app/page.tsx` / `app/map/page.tsx` use.
 //
-// NOT `overHero` — the collection hero is a contained dark band, not a full-bleed
-// transparent-header hero, so the header uses its standard solid bar + 72px offset.
+// MAP CTA (TASK_60 decision 7): computed ONCE here from the real per-viewer masking
+// result (`courtDisplay(...).masked`) and `signedIn`, then handed to `CollectionDetailShell`
+// as a plain string — three readings (`guest` / `unlock` / `map`), rendered twice (the
+// desktop sticky card and the mobile floating bar) but derived in exactly one place.
+//
+// `overHero` (TASK_60) — the mobile hero is now a FULL-BLEED image under the pill nav,
+// like Court Detail's; `CollectionDetailShell` adds back the nav-offset padding at md+
+// itself, where the hero is no longer full-bleed.
 
 export async function generateMetadata({
   params,
@@ -67,17 +78,22 @@ export default async function CollectionDetailPage({
   const courts = await repositories.courts.list({ collection: slug });
 
   // Protected read — degrades for a logged-out visitor on this public page, exactly like
-  // `app/page.tsx`'s own block.
+  // `app/page.tsx`'s own block. TASK_60 added `getSavedEditorialCollections()` to this
+  // SAME `Promise.all`, so the collection's own save state and the courts' save state
+  // degrade together rather than via two separate try/catch blocks.
   let savedCourtIds: string[] = [];
   let signedIn = true;
   let viewerIsEntitled = false;
+  let initialCollectionSaved = false;
   try {
-    const [saved, user] = await Promise.all([
+    const [saved, user, savedCollections] = await Promise.all([
       protectedRepos.saved.getSavedCourts(),
       protectedRepos.user.getCurrentUser(),
+      protectedRepos.saved.getSavedEditorialCollections(),
     ]);
     savedCourtIds = saved.map((court) => court.id);
     viewerIsEntitled = user.membership !== 'free';
+    initialCollectionSaved = savedCollections.some((c) => c.id === collection.id);
   } catch (err) {
     if (err instanceof AuthRequiredError) {
       signedIn = false;
@@ -88,15 +104,41 @@ export default async function CollectionDetailPage({
     }
   }
 
+  // The `guest` row is checked first — a logged-out visitor never sees the map,
+  // regardless of masking. `courtDisplay(...).masked` already folds in `viewerIsEntitled`,
+  // so a free user on an all-free collection correctly gets `map`, not a paywall.
+  const anyMasked = courts.some((court) => courtDisplay(court, viewerIsEntitled).masked);
+  const mapCta: CollectionMapCta = !signedIn ? 'guest' : anyMasked ? 'unlock' : 'map';
+
   return (
-    <AppShell unlocked={viewerIsEntitled} signedIn={signedIn}>
-      <CollectionDetailHero collection={collection} />
-      <CollectionCourtsGrid
-        courts={courts}
-        viewerIsEntitled={viewerIsEntitled}
-        savedCourtIds={savedCourtIds}
+    <AppShell overHero signedIn={signedIn}>
+      <CollectionDetailShell
+        collection={collection}
         signedIn={signedIn}
-      />
+        initialSaved={initialCollectionSaved}
+        mapCta={mapCta}
+      >
+        {/* Description (TASK_60 decision 1: printed once here, dropping v3's extra `sub`
+            line) + the mobile-only divider — rendered only when a description exists, and
+            never a divider without one. */}
+        {collection.description ? (
+          <>
+            <div className="px-5 pt-5 md:px-0 md:pt-0">
+              <p className="body-m text-graphite leading-[1.6] md:max-w-[600px] md:text-[15px] md:leading-[1.7]">
+                {collection.description}
+              </p>
+            </div>
+            <div className="mx-5 my-5 h-px bg-hairline md:hidden" />
+          </>
+        ) : null}
+
+        <CollectionCourtsGrid
+          courts={courts}
+          viewerIsEntitled={viewerIsEntitled}
+          savedCourtIds={savedCourtIds}
+          signedIn={signedIn}
+        />
+      </CollectionDetailShell>
     </AppShell>
   );
 }

@@ -20,11 +20,11 @@ import { getRepositoriesForRequest } from '@/lib/repositories.server';
 // ── THE READS ───────────────────────────────────────────────────────────────────────────
 // TWO reads, both public, in parallel:
 //   • `collections.list()` — the whole published set. The featured strip and the curated
-//     list are two views of the SAME array (the strip is its first `FEATURED_COUNT`,
-//     matching the prototype's `COLLECTIONS.slice(0,3)`), derived here in memory rather
-//     than fetched twice. A second `list({ featured: true })` call would be a round-trip
-//     for a subset this array already contains, and would let the two sections disagree if
-//     the reads straddled a publish — the same reasoning `app/page.tsx` records for Home.
+//     list are two views of the SAME array (the strip is its first `FEATURED_MAX`,
+//     TASK_60's desktop count), derived here in memory rather than fetched twice. A second
+//     `list({ featured: true })` call would be a round-trip for a subset this array
+//     already contains, and would let the two sections disagree if the reads straddled a
+//     publish — the same reasoning `app/page.tsx` records for Home.
 //   • `countries.list()` — the country aggregate Feature 75 shipped (`GET /v1/countries`),
 //     reached through the SAME central factory as every other domain. There is no second
 //     way to reach it: no direct `HttpCountryRepository` construction, no fetch in a
@@ -48,8 +48,14 @@ export const metadata: Metadata = {
   description: 'Curated tennis destinations around the world.',
 };
 
-/** Prototype: `COLLECTIONS.slice(0,3)` in the featured strip (line 1310). */
-const FEATURED_COUNT = 3;
+/**
+ * TASK_60 (v3): desktop shows up to 6 collections in a 3-column grid
+ * (`CollectionsScreen`, tennis_world_desktop_standalone4.html ~line 728); mobile's strip
+ * shows only the first 3 (`COLLECTIONS.slice(0,3)`,
+ * tennis_world_v17_standalone.html ~line 1061) — `FeaturedCollectionsStrip` hides items
+ * index ≥ 3 below `md`. One array goes down from the page either way.
+ */
+const FEATURED_MAX = 6;
 
 export default async function CollectionsPage() {
   const protectedRepos = await getRepositoriesForRequest();
@@ -59,47 +65,37 @@ export default async function CollectionsPage() {
     repositories.countries.list(),
   ]);
 
-  // Protected reads (Task 42 + Task 52) — degrade together for a logged-out visitor on
-  // this public page, exactly as `app/page.tsx` does for saved courts + membership.
+  // Protected read (Task 42) — degrades for a logged-out visitor on this public page,
+  // exactly as `app/page.tsx` does for saved courts.
   let savedCollectionIds: string[] = [];
   let signedIn = true;
-  let viewerIsEntitled = false;
   try {
-    const [saved, user] = await Promise.all([
-      protectedRepos.saved.getSavedEditorialCollections(),
-      protectedRepos.user.getCurrentUser(),
-    ]);
+    const saved = await protectedRepos.saved.getSavedEditorialCollections();
     savedCollectionIds = saved.map((c) => c.id);
-    viewerIsEntitled = user.membership !== 'free';
   } catch (err) {
     if (err instanceof AuthRequiredError) {
       signedIn = false;
-      viewerIsEntitled = false;
     } else {
       throw err;
     }
   }
 
-  const featured = collections.slice(0, FEATURED_COUNT);
+  const featured = collections.slice(0, FEATURED_MAX);
 
   // Every section returns null when its own data is empty, so an empty dataset would
   // otherwise leave the screen as a bare title. This says so instead.
   const isEmpty = collections.length === 0 && countries.length === 0;
 
   return (
-    <AppShell unlocked={viewerIsEntitled} signedIn={signedIn}>
-      <div className="bg-bone pb-section-lg">
+    <AppShell signedIn={signedIn}>
+      <div className="bg-bone pb-10 md:pb-20">
         <CollectionsHero />
 
         {isEmpty ? (
           <p className="container-page body-m pt-8 text-stone">No collections to show yet.</p>
         ) : (
           <>
-            <FeaturedCollectionsStrip
-              collections={featured}
-              savedCollectionIds={new Set(savedCollectionIds)}
-              signedIn={signedIn}
-            />
+            <FeaturedCollectionsStrip collections={featured} />
             <CountriesStrip countries={countries} />
             <CuratedCollectionsList
               collections={collections}

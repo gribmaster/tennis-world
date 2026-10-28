@@ -2,30 +2,24 @@ import type { CollectionDTO } from '@tennis/contracts';
 import { CuratedCollectionCard } from './CuratedCollectionCard';
 import { CollectionSaveHeart } from './CollectionSaveHeart';
 
-// CuratedCollectionsList — the "Curated for You" section of /collections (Feature 76).
+// CuratedCollectionsList — the "Curated for You" section of /collections.
 //
-// Renders as a responsive card grid, matching `SavedCollectionsGrid.tsx`'s own grid
-// breakpoints (2 cols mobile → 3 → 4 desktop) — the "looks like Saved collections" result
-// the user asked for. Each cell is a `CuratedCollectionCard`, a small sibling component
-// that reproduces `SavedCollectionRow`'s (Saved → Collections tab) exact markup/classes for
-// a `CollectionDTO` — NOT `SavedCollectionRow` itself, which is typed for
-// `UserCollectionDTO` (the visitor's OWN wishlist folders) and documents in its own file
-// header that it is not built for editorial collections. See `CuratedCollectionCard.tsx`
-// for the full reasoning and the two deliberate departures from `SavedCollectionRow`
-// (link target, no description line).
+// TASK_60 (v3) SUPERSEDES Task 40's "look exactly like `SavedCollectionRow`" brief: this
+// is now a list of v3 ROWS (`CuratedCollectionCard`), not a photo-tile grid — a single
+// column on mobile, 2-up at md+ (desktop ~line 760, mobile ~line 1105 of the respective
+// prototype files). Still every collection, not a sliced subset.
 //
-// ── SAVE / BOOKMARK CONTROL (Task 42) ───────────────────────────────────────────────────
-// Bookmarking an editorial collection is now a real, database-backed feature (`SavedCollection`
-// model, `POST/DELETE /v1/me/saved-collections`). The heart is rendered here, as a SIBLING of
-// `CuratedCollectionCard`'s own `PendingCardLink`, not inside the card itself — see
-// `CollectionSaveHeart.tsx` for the full behaviour and `CuratedCollectionCard.tsx`'s header
-// for why the card itself stays unmodified.
+// ── SAVE / BOOKMARK CONTROL (Task 42, restyled TASK_60) ─────────────────────────────────
+// `CollectionSaveHeart` renders `glyph="bookmark"` here (v3's `Ico.save`) in a small bone
+// circle over the row's right edge — a REAL, database-backed bookmark
+// (`POST/DELETE /v1/me/saved-collections`), never the prototype's inert button. It is a
+// SIBLING of `CuratedCollectionCard`'s own `PendingCardLink`, not inside the card itself.
 //
 // PRESENTATIONAL & data-driven: the collections arrive as a prop from
 // `app/collections/page.tsx`, the screen's single repository boundary.
 //
 // PENDING STATES (CLAUDE.md §4 rule 1): each card navigates as a whole ⇒ `PendingCardLink`,
-// inside CuratedCollectionCard. The save heart is a database-backed action ⇒ the rule-2
+// inside CuratedCollectionCard. The bookmark is a database-backed action ⇒ the rule-2
 // triad, inside `CollectionSaveHeart`.
 
 export interface CuratedCollectionsListProps {
@@ -45,15 +39,17 @@ export function CuratedCollectionsList({
   savedCollectionIds,
   signedIn = true,
 }: CuratedCollectionsListProps) {
-  // An empty list renders nothing — a heading with no cards under it is worse than no
+  // An empty list renders nothing — a heading with no rows under it is worse than no
   // section at all. The page decides what (if anything) an entirely empty screen says.
   if (collections.length === 0) return null;
 
   return (
-    <section className="container-page pt-7">
-      <h2 className="mb-3 text-[16px] font-semibold leading-tight text-ink">{title}</h2>
+    <section className="container-page pt-7 md:pt-12">
+      <h2 className="mb-3 text-[16px] font-semibold leading-tight text-ink md:mb-4 md:text-[17px]">
+        {title}
+      </h2>
 
-      <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+      <ul className="flex flex-col gap-2.5 md:grid md:grid-cols-2 md:gap-3.5">
         {collections.map((collection) => (
           <li key={collection.id} className="relative">
             <CuratedCollectionCard collection={collection} />
@@ -63,6 +59,9 @@ export function CuratedCollectionsList({
               collectionLabel={collection.name}
               initialSaved={savedCollectionIds.has(collection.id)}
               signedIn={signedIn}
+              glyph="bookmark"
+              className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-pill bg-bone transition-colors disabled:opacity-60 md:right-3.5 md:h-9 md:w-9"
+              idleColorClassName="text-ink hover:text-saved"
             />
           </li>
         ))}

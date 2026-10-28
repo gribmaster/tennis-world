@@ -50,20 +50,22 @@ export function CountriesStrip({ countries, title = DEFAULT_TITLE }: CountriesSt
   if (countries.length === 0) return null;
 
   return (
-    <section className="pt-7">
+    <section className="pt-7 md:pt-12">
       <div className="container-page mb-3">
-        <h2 className="text-[16px] font-semibold leading-tight text-ink">{title}</h2>
+        <h2 className="text-[16px] font-semibold leading-tight text-ink md:text-[17px]">{title}</h2>
       </div>
 
       <div className="container-page">
-        <ul className="no-scrollbar -mr-[clamp(20px,4vw,64px)] flex gap-2.5 overflow-x-auto pb-1">
+        {/* TASK_60 (v3): mobile keeps the horizontal scroll; md+ wraps instead — a fixed
+            6-country set never needs a second row scroll at desktop width. */}
+        <ul className="no-scrollbar -mr-[clamp(20px,4vw,64px)] flex gap-2.5 overflow-x-auto pb-1 md:mr-0 md:flex-wrap md:gap-7 md:overflow-visible">
           {countries.map((country) => {
             // `courtCount` is always >= 1 (a country with no published court is omitted
             // from the aggregate entirely), but the singular is handled explicitly rather
             // than assumed — "1 courts" is the exact defect this guards.
             const countLabel = `${country.courtCount} ${country.courtCount === 1 ? 'court' : 'courts'}`;
             return (
-              <li key={country.isoCode} className="w-[90px] shrink-0">
+              <li key={country.isoCode} className="w-[90px] shrink-0 md:w-24">
                 <PendingCardLink
                   href={`/map?q=${encodeURIComponent(country.name)}`}
                   ariaLabel={`${country.name} — ${countLabel}`}
@@ -71,26 +73,26 @@ export function CountriesStrip({ countries, title = DEFAULT_TITLE }: CountriesSt
                 >
                   {/* The circle is its own positioning context so the round crop clips
                       the image without the pending overlay above being clipped with it. */}
-                  <span className="relative mx-auto block h-[72px] w-[72px] overflow-hidden rounded-full border border-mist/30">
+                  <span className="relative mx-auto block h-[72px] w-[72px] overflow-hidden rounded-full border border-mist/30 md:h-20 md:w-20">
                     <Image
                       src={country.imageUrl}
                       alt=""
                       fill
-                      sizes="72px"
+                      sizes="80px"
                       className="object-cover"
                     />
                   </span>
-                  <span className="mt-1.5 block text-[12px] font-medium leading-tight text-ink">
+                  <span className="mt-1.5 block text-[12px] font-medium leading-tight text-ink md:mt-2 md:text-[13px]">
                     {country.name}
                   </span>
-                  <span className="mt-0.5 block text-[10px] leading-tight text-stone">
+                  <span className="mt-0.5 block text-[10px] leading-tight text-stone md:text-[11px]">
                     {countLabel}
                   </span>
                 </PendingCardLink>
               </li>
             );
           })}
-          <li aria-hidden className="w-5 shrink-0" />
+          <li aria-hidden className="w-5 shrink-0 md:hidden" />
         </ul>
       </div>
     </section>

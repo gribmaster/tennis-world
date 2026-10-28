@@ -28,5 +28,9 @@ export type { CuratedCollectionsListProps } from './CuratedCollectionsList';
 export { CollectionCard } from './CollectionCard';
 export type { CollectionCardProps } from './CollectionCard';
 
-export { CollectionSaveHeart } from './CollectionSaveHeart';
-export type { CollectionSaveHeartProps } from './CollectionSaveHeart';
+export { CollectionSaveHeart, useCollectionSaveState } from './CollectionSaveHeart';
+export type {
+  CollectionSaveHeartProps,
+  CollectionSaveState,
+  UseCollectionSaveStateOptions,
+} from './CollectionSaveHeart';
