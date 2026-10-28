@@ -8,8 +8,8 @@
 // mode the forms keep their cosmetic success UX (no API). The transport lives in
 // `auth-client.ts`; none of this imports a domain repository (auth is not a domain
 // resource). Google sign-in is a real full-page navigation to the API's OAuth start route
-// (`GET /v1/auth/google`, in `api` mode only). The Apple button stays an inert placeholder
-// (Apple sign-in is out of scope).
+// (`GET /v1/auth/google`, in `api` mode only). There is no Apple sign-in control (removed
+// in TASK_62 — the API has no Apple sign-in).
 
 export { AuthLayout } from './AuthLayout';
 export type { AuthLayoutProps } from './AuthLayout';
@@ -21,4 +21,4 @@ export { SignUpForm } from './SignUpForm';
 export { VerifyMagicLink } from './VerifyMagicLink';
 export { SignOutButton } from './SignOutButton';
 
-export { AppleIcon, ArrowIcon, GoogleIcon, MailIcon } from './AuthIcons';
+export { ArrowIcon, GoogleIcon, MailIcon } from './AuthIcons';

@@ -325,10 +325,9 @@ render correctly with exactly one visible `<h1>`; `verify:web-billing` 13/13 and
   processed by "RevenueCat/App Store/Play Store"; the app uses **Stripe**. The file is
   self-labelled placeholder copy pending counsel review, so this is pre-existing and outside the
   redesign's scope — but it is wrong today.
-- **The "Continue with Apple" button is inert** on `/signin` and `/signup`, and in `mock` mode
-  the Google button is inert too (in `api` mode Google is a real OAuth navigation). Both are
-  documented placeholders, not regressions — but the Apple button is visually
-  indistinguishable from the working one.
+- **The "Continue with Apple" button was removed in TASK_62** (no Apple OAuth exists on the
+  API). In `mock` mode the Google button is still inert (in `api` mode Google is a real OAuth
+  navigation) — a documented placeholder, not a regression.
 - **`desert-courts`** is still the slug of the collection displayed as *Riviera Icons*; it was
   renamed in place, keeping its id and slug.
 - **The staging/production databases have not been touched** by this work. Both migrations
@@ -352,6 +351,7 @@ render correctly with exactly one visible `<h1>`; `verify:web-billing` 13/13 and
    or keep aspirational copy knowingly.
 6. **`legal-content.ts`'s payment-provider paragraph** — correct to Stripe when the legal copy
    goes to counsel.
-7. **Apple sign-in** — either implement it or make its inert state visible.
+7. ~~**Apple sign-in** — either implement it or make its inert state visible.~~ Resolved in
+   TASK_62: the control was removed (no Apple OAuth exists on the API).
 8. **Rate limiting is still per-instance in-memory** (billing and now reviews). Redis remains
    the documented follow-up.

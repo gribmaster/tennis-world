@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { AppShell, PageContainer } from '@/components/layout';
 import { BillingReturn } from '@/features/billing';
+import { ConsultationTrigger } from '@/features/consultation';
+import { PaywallTrigger } from '@/features/paywall';
 import { isSignedIn } from '@/lib/session.server';
 
 // Post-checkout return page (`/billing/return`) — Feature 67.
@@ -24,6 +26,12 @@ import { isSignedIn } from '@/lib/session.server';
 //
 // No real Stripe is needed to render or test this page — every state is a pure function of
 // what `/v1/me` returns and the `?status` query.
+//
+// TASK_62 (v3): the `cancelled` state's "Try again" / "Contact support" controls are built
+// HERE, not inside `BillingReturn`, and passed in as props — `features/paywall` already
+// imports `features/billing` (`PaywallCheckoutButton`), so `BillingReturn` importing it
+// back would be a cycle. `features/consultation` has no such cycle today, but it's built
+// here too for the same reason/symmetry.
 
 export const metadata: Metadata = {
   title: 'Confirming your membership — Tennis World',
@@ -46,7 +54,21 @@ export default async function BillingReturnRoute() {
             </div>
           }
         >
-          <BillingReturn />
+          <BillingReturn
+            tryAgain={
+              <PaywallTrigger source="billing-return" className="btn btn-primary w-full justify-center">
+                Try again
+              </PaywallTrigger>
+            }
+            support={
+              <ConsultationTrigger
+                source="billing-return"
+                className="font-medium text-clay underline-offset-2 hover:underline"
+              >
+                Contact support →
+              </ConsultationTrigger>
+            }
+          />
         </Suspense>
       </PageContainer>
     </AppShell>

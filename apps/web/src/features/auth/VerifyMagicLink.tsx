@@ -79,7 +79,9 @@ export function VerifyMagicLink() {
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-ink">
           <MailIcon width={24} height={24} className="text-bone" />
         </div>
-        <h1 className="display-m mt-6 text-ink">You&rsquo;re signed in</h1>
+        <h1 className="serif mt-6 text-[28px] font-normal leading-[1.15] text-ink md:text-[32px]">
+          You&rsquo;re signed in
+        </h1>
         <p className="body-l mt-3 text-stone">Taking you to your account…</p>
       </div>
     );
@@ -88,7 +90,9 @@ export function VerifyMagicLink() {
   if (status === 'error') {
     return (
       <div className="fade-in text-center">
-        <h1 className="display-m text-ink">Link expired</h1>
+        <h1 className="serif text-[28px] font-normal leading-[1.15] text-ink md:text-[32px]">
+          Link expired
+        </h1>
         <p className="body-l mt-3 text-stone">
           This sign-in link is invalid or has already been used. Request a new one.
         </p>
@@ -102,7 +106,9 @@ export function VerifyMagicLink() {
   if (status === 'no-token') {
     return (
       <div className="fade-in text-center">
-        <h1 className="display-m text-ink">Nothing to verify</h1>
+        <h1 className="serif text-[28px] font-normal leading-[1.15] text-ink md:text-[32px]">
+          Nothing to verify
+        </h1>
         <p className="body-l mt-3 text-stone">
           Open the sign-in link from your email, or start again.
         </p>
@@ -116,7 +122,9 @@ export function VerifyMagicLink() {
   // verifying
   return (
     <div className="fade-in text-center">
-      <h1 className="display-m text-ink">Signing you in…</h1>
+      <h1 className="serif text-[28px] font-normal leading-[1.15] text-ink md:text-[32px]">
+        Signing you in…
+      </h1>
       <p className="body-l mt-3 text-stone">One moment while we verify your link.</p>
     </div>
   );

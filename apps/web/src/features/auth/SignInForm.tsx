@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { AppleIcon, ArrowIcon, GoogleIcon, MailIcon } from './AuthIcons';
+import { ArrowIcon, GoogleIcon, MailIcon } from './AuthIcons';
 import {
   AuthClientError,
   buildGoogleSignInUrl,
@@ -13,7 +13,9 @@ import {
 } from './auth-client';
 import { InlineSpinner } from '@/components/ui';
 
-// SignInForm — the magic-link sign-in island, ported from `SignIn` in files/signin.html.
+// SignInForm — the magic-link sign-in island, ported from `SignIn` in files/signin.html,
+// restyled to v3's `AuthGateScreen` (TASK_62: field/button shapes, type sizes, spacing —
+// same content and flow as before).
 //
 // AUTH (Feature 57): in `api` mode, submitting POSTs `/v1/auth/request-link` with the
 // email (+ `redirectTo` from the query string, if present, so verify can return the user
@@ -27,8 +29,8 @@ import { InlineSpinner } from '@/components/ui';
 // fetch/onClick) to `GET ${API_BASE_URL}/auth/google?redirectTo=...` — the API responds
 // with a 302 to Google's consent screen, so this can only be a real browser navigation.
 // In MOCK mode there's no API, so the link is omitted (same "no API" boundary the
-// magic-link path already respects). The Apple button stays an INERT placeholder (Apple
-// sign-in is out of scope; recorded in PHASE_1_PLACEHOLDER_CTA_AUDIT §5).
+// magic-link path already respects). There is no Apple sign-in control (removed in
+// TASK_62 — the API has no Apple sign-in; see PHASE_1_PLACEHOLDER_CTA_AUDIT §5).
 //
 // State is local React state (email, `sent`, `loading`, `error`) discarded on unmount.
 
@@ -80,7 +82,9 @@ export function SignInForm() {
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-ink">
           <MailIcon width={24} height={24} className="text-bone" />
         </div>
-        <h1 className="display-m mt-6 text-ink">Check your inbox</h1>
+        <h1 className="serif mt-6 text-[28px] font-normal leading-[1.15] text-ink md:text-[32px]">
+          Check your inbox
+        </h1>
         <p className="body-l mt-3 text-stone">
           We&rsquo;ve sent a sign-in link to
           <br />
@@ -102,44 +106,49 @@ export function SignInForm() {
 
   return (
     <div className="fade-in">
-      <p className="eyebrow text-center text-stone">Welcome back</p>
-      <h1 className="display-l mt-3 text-center text-ink">Sign in to your account</h1>
-      <p className="body-m mt-3 text-center text-stone">
+      <p className="mb-2.5 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-stone">
+        Welcome back
+      </p>
+      <h1 className="serif text-center text-[28px] font-normal leading-[1.15] text-ink md:text-[32px]">
+        Sign in to your account
+      </h1>
+      <p className="mx-auto mt-2.5 max-w-[260px] text-center text-[13px] leading-[1.5] text-stone md:max-w-none">
         Access your saved courts, collections, and membership.
       </p>
 
-      {/* Apple stays an inert placeholder (out of scope). Google is a real full-page
-          navigation to the API's OAuth start route — omitted in MOCK mode (no API). */}
-      <div className="mt-10 flex flex-col gap-2.5">
-        <button type="button" className="btn btn-secondary w-full justify-center gap-2.5">
-          <AppleIcon width={16} height={16} /> Continue with Apple
+      {/* Google is a real full-page navigation to the API's OAuth start route —
+          omitted in MOCK mode (no API). There is no Apple control. */}
+      {isApiMode() ? (
+        <a
+          href={buildGoogleSignInUrl(redirectTo)}
+          className="mt-7 flex h-12 w-full items-center justify-center gap-2 rounded-md border border-ink/50 bg-transparent text-[12px] font-semibold uppercase tracking-[0.06em] text-ink"
+        >
+          <GoogleIcon width={15} height={15} /> Continue with Google
+        </a>
+      ) : (
+        <button
+          type="button"
+          className="mt-7 flex h-12 w-full items-center justify-center gap-2 rounded-md border border-ink/50 bg-transparent text-[12px] font-semibold uppercase tracking-[0.06em] text-ink"
+        >
+          <GoogleIcon width={15} height={15} /> Continue with Google
         </button>
-        {isApiMode() ? (
-          <a
-            href={buildGoogleSignInUrl(redirectTo)}
-            className="btn btn-secondary w-full justify-center gap-2.5"
-          >
-            <GoogleIcon width={16} height={16} /> Continue with Google
-          </a>
-        ) : (
-          <button type="button" className="btn btn-secondary w-full justify-center gap-2.5">
-            <GoogleIcon width={16} height={16} /> Continue with Google
-          </button>
-        )}
-      </div>
+      )}
 
-      <div className="my-7 flex items-center gap-3">
-        <span aria-hidden className="h-px flex-1 bg-hairline" />
-        <span className="eyebrow text-mist">or</span>
-        <span aria-hidden className="h-px flex-1 bg-hairline" />
+      <div className="my-[22px] flex items-center gap-3">
+        <span aria-hidden className="h-px flex-1 bg-mist/40" />
+        <span className="text-[10px] uppercase tracking-[0.1em] text-stone">OR</span>
+        <span aria-hidden className="h-px flex-1 bg-mist/40" />
       </div>
 
       <form onSubmit={submitMagicLink} noValidate>
-        <label htmlFor="signin-email" className="eyebrow mb-2 block text-stone">
+        <label
+          htmlFor="signin-email"
+          className="block text-[10px] font-semibold uppercase tracking-[0.08em] text-stone"
+        >
           Email
         </label>
-        <div className="flex h-[52px] items-center gap-2.5 border border-hairline bg-ivory px-4">
-          <MailIcon width={16} height={16} className="shrink-0 text-stone" />
+        <div className="mt-1.5 flex h-12 items-center gap-2 rounded-md border border-mist/40 bg-paper px-3.5">
+          <MailIcon width={14} height={14} className="shrink-0 text-stone" />
           <input
             id="signin-email"
             type="email"
@@ -147,7 +156,7 @@ export function SignInForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            className="body-m min-w-0 flex-1 border-none bg-transparent text-ink outline-none placeholder:text-stone/60"
+            className="min-w-0 flex-1 border-none bg-transparent text-[14px] text-ink outline-none placeholder:text-stone/60"
           />
         </div>
         <button
@@ -155,7 +164,7 @@ export function SignInForm() {
           disabled={loading}
           aria-busy={loading}
           aria-disabled={loading || undefined}
-          className="btn btn-primary mt-3.5 w-full justify-center"
+          className="btn btn-primary mt-3.5 !h-[50px] w-full justify-center rounded-pill text-[12px] tracking-[0.1em]"
         >
           {loading ? <InlineSpinner label="Sending magic link…" /> : null}
           {loading ? 'Sending…' : 'Send Magic Link'}
@@ -168,13 +177,13 @@ export function SignInForm() {
         ) : null}
       </form>
 
-      <p className="body-s mt-7 text-center text-stone">
+      <p className="mt-2.5 text-center text-[11px] text-stone">
         No password needed — we&rsquo;ll email you a secure sign-in link.
       </p>
 
-      <div className="mt-9 border-t border-hairline pt-7 text-center">
-        <span className="body-m text-stone">New to Tennis World? </span>
-        <Link href="/signup" className="body-m font-medium text-ink underline">
+      <div className="mt-6 border-t border-mist/30 pt-6 text-center">
+        <span className="text-[13px] text-stone">New to Tennis World? </span>
+        <Link href="/signup" className="text-[13px] font-medium text-ink underline">
           Create an account
         </Link>
       </div>

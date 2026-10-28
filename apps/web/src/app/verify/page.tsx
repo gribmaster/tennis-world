@@ -23,7 +23,9 @@ export default function VerifyRoute() {
       <Suspense
         fallback={
           <div className="text-center">
-            <h1 className="display-m text-ink">Signing you in…</h1>
+            <h1 className="serif text-[28px] font-normal leading-[1.15] text-ink md:text-[32px]">
+              Signing you in…
+            </h1>
           </div>
         }
       >

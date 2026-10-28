@@ -38,6 +38,15 @@
 // change only restyles what each state renders. See `ReturnHero`/`ReturnShell` below for
 // the six-state → screen mapping, and the header comment on each `if (state === …)`
 // branch for why that state looks the way it does.
+//
+// TASK_62 (v3): brought the desktop layout, type scale and actions up to v3's
+// `PurchaseSuccessScreen`/`PurchaseFailedScreen` — markup/classes only, the state
+// machine, polling and the `cancelled` init-then-setState sequencing above are
+// untouched. The cancelled state's actions became v3's failed-screen trio (Try again /
+// Back to your profile / Contact support), built in the SERVER page
+// (`app/billing/return/page.tsx`) and passed in as `tryAgain`/`support` to avoid
+// `features/billing` importing `features/paywall`/`features/consultation` (both of
+// which already import `features/billing`).
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -47,6 +56,7 @@ import { getClientRepositories } from '@/lib/repositories.client';
 import { AuthRequiredError } from '@/lib/repositories';
 import { BackButton, PendingLink, useElementPending } from '@/components/navigation';
 import { InlineSpinner } from '@/components/ui';
+import { CollectGlyph, MapGlyph } from '@/features/saved/saved-glyphs';
 
 // Bounded polling: total worst-case wait ≈ MAX_ATTEMPTS × POLL_INTERVAL_MS. The first
 // read happens immediately; subsequent reads are spaced by the interval. Kept short so a
@@ -67,7 +77,19 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function BillingReturn() {
+export interface BillingReturnProps {
+  /**
+   * The paywall's "pick a plan" trigger, rendered only in the `cancelled` state. Built
+   * in the server page and passed in — see the TASK_62 header note on the import-cycle
+   * `features/paywall` already has on `features/billing`. Omitted (no button rendered)
+   * when not given.
+   */
+  tryAgain?: ReactNode;
+  /** The consultation trigger, rendered only in the `cancelled` state. Same reasoning. */
+  support?: ReactNode;
+}
+
+export function BillingReturn({ tryAgain, support }: BillingReturnProps = {}) {
   const searchParams = useSearchParams();
   const cancelled = searchParams.get('status') === 'cancelled';
 
@@ -152,7 +174,9 @@ export function BillingReturn() {
 
   if (state === 'cancelled') {
     // The user backed out of Checkout themselves — not a failure. No charge ever
-    // happened, so the reassurance list is true here and shown.
+    // happened, so the reassurance list is true here and shown. Actions are v3's
+    // failed-screen trio (Try again / Back to your profile / Contact support), with our
+    // "checkout cancelled" copy — see the file header on why tryAgain/support are props.
     return (
       <ReturnHero
         tone="neutral"
@@ -161,9 +185,15 @@ export function BillingReturn() {
         body="No payment was taken. You can pick up where you left off whenever you’re ready."
         reassurance
       >
-        <PendingLink href="/profile" className="btn btn-primary w-full justify-center">
-          Back to your profile
-        </PendingLink>
+        <div className="flex flex-col gap-2.5">
+          {tryAgain}
+          <PendingLink href="/profile" className="btn btn-secondary w-full justify-center">
+            Back to your profile
+          </PendingLink>
+        </div>
+        {support ? (
+          <p className="mt-4 text-center text-[12px] text-stone">Need help? {support}</p>
+        ) : null}
       </ReturnHero>
     );
   }
@@ -176,20 +206,35 @@ export function BillingReturn() {
     // populate it (see report).
     return (
       <ReturnHero tone="success" eyebrow="WELCOME TO" title="Tennis World">
-        <p className="body-m mt-3 text-graphite">Your membership is now active.</p>
-        <p className="body-s mx-auto mt-2 max-w-[280px] text-stone">
+        <p className="mt-3 text-[15px] text-graphite">Your membership is now active.</p>
+        <p className="mx-auto mt-2 max-w-[280px] text-[13px] leading-[1.6] text-stone md:max-w-none">
           You now have full access to exact court locations, the complete atlas, and all
           curated collections across Tennis World.
         </p>
-        <div className="flex flex-col gap-2.5">
-          <PendingLink href="/map" className="btn btn-primary w-full justify-center">
+
+        {/* The "what you've unlocked" row — qualitative cells only (no invented
+            numbers; see the state's header comment). */}
+        <div className="my-6 flex justify-center gap-6 md:my-8 md:gap-8">
+          <UnlockCell icon={<MapGlyph size={22} />} top="Complete" caption="Atlas" />
+          <UnlockCell icon={<PinGlyph size={22} />} top="Exact" caption="Locations" />
+          <UnlockCell icon={<CollectGlyph size={22} />} top="Curated" caption="Collections" />
+        </div>
+
+        <div>
+          <PendingLink href="/map" className="btn btn-primary mb-3 w-full justify-center md:mb-3.5">
             Explore the map
           </PendingLink>
           <div className="flex gap-2.5">
-            <PendingLink href="/saved" className="btn btn-secondary flex-1 justify-center">
+            <PendingLink
+              href="/saved"
+              className="btn btn-secondary flex-1 justify-center text-[11px] md:text-[12px]"
+            >
               Saved courts
             </PendingLink>
-            <PendingLink href="/profile" className="btn btn-secondary flex-1 justify-center">
+            <PendingLink
+              href="/profile"
+              className="btn btn-secondary flex-1 justify-center text-[11px] md:text-[12px]"
+            >
               Go to profile
             </PendingLink>
           </div>
@@ -206,11 +251,11 @@ export function BillingReturn() {
     // reassurance list here, because "card not charged" would be false.
     return (
       <ReturnHero tone="success" eyebrow="Membership" title="Your payment is processing">
-        <p className="body-m mt-3 text-graphite">
+        <p className="mt-3 text-[15px] text-graphite">
           Thanks — your payment went through and we’re just finishing setting up your
           membership.
         </p>
-        <p className="body-s mx-auto mt-2 max-w-[320px] text-stone">
+        <p className="mx-auto mt-2 max-w-[320px] text-[13px] leading-[1.6] text-stone md:max-w-none">
           This usually takes a few moments and will unlock automatically. You can check
           again now, or come back to your profile in a bit.
         </p>
@@ -320,11 +365,11 @@ function ReturnShell({
       <BackButton
         fallbackHref="/profile"
         label="Profile"
-        className="eyebrow mb-8 inline-flex items-center gap-1.5 text-stone transition-colors hover:text-ink"
+        className="mb-8 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone transition-colors hover:text-ink"
       />
       <div className="fade-in text-center">
-        <div className="eyebrow text-gold">{eyebrow}</div>
-        <h1 className="display-l mt-3 text-ink">{title}</h1>
+        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gold">{eyebrow}</div>
+        <h1 className="serif mt-3 text-[32px] font-light text-ink md:text-[34px]">{title}</h1>
         <p className="body-l mt-4 text-graphite">{body}</p>
         {children ? <div className="mt-8">{children}</div> : null}
       </div>
@@ -332,19 +377,71 @@ function ReturnShell({
   );
 }
 
-function CheckCircleGlyph({ size = 24 }: { size?: number }) {
+function CheckCircleGlyph({ size = 24, className }: { size?: number; className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className={className}
+    >
       <path d="M5 13l4 4L19 7" />
     </svg>
   );
 }
 
-function CloseCircleGlyph() {
+function CloseCircleGlyph({ className }: { className?: string }) {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden>
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      aria-hidden
+      className={className}
+    >
       <path d="M6 6l12 12M18 6L6 18" />
     </svg>
+  );
+}
+
+/** Small inline pin glyph for the success screen's "Exact Locations" unlock cell. */
+function PinGlyph({ size = 22 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z" />
+      <circle cx="12" cy="9.5" r="2.4" />
+    </svg>
+  );
+}
+
+/** One cell of the success screen's "what you've unlocked" row. */
+function UnlockCell({ icon, top, caption }: { icon: ReactNode; top: string; caption: string }) {
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <span className="text-gold md:hidden">{icon}</span>
+      <span className="text-[18px] text-ink md:text-[20px] md:font-semibold">{top}</span>
+      <span className="text-[10px] text-stone md:text-[11px]">{caption}</span>
+    </div>
   );
 }
 
@@ -382,19 +479,23 @@ function ReturnHero({
   children?: ReactNode;
 }) {
   const circleColorClass = tone === 'success' ? 'border-gold text-gold' : 'border-clay text-clay';
+  const widthClass = tone === 'success' ? 'md:max-w-[520px]' : 'md:max-w-[480px]';
 
   return (
-    <div className="mx-auto max-w-[560px]">
+    <div className={`mx-auto max-w-[560px] ${widthClass}`}>
       <BackButton
         fallbackHref="/profile"
         label="Profile"
-        className="eyebrow mb-8 inline-flex items-center gap-1.5 text-stone transition-colors hover:text-ink"
+        className="mb-8 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone transition-colors hover:text-ink"
       />
       <div className="fade-in">
         {/* Hero image fading to bone, per the prototype (height:280 success / height:200
             failed, with a grayscale+dim filter on the neutral tone). Reuses an existing
-            app image — no new asset, no fabricated photography. */}
-        <div className={`relative -mx-5 overflow-hidden sm:mx-0 ${tone === 'success' ? 'h-[220px] sm:h-[280px]' : 'h-[160px] sm:h-[200px]'}`}>
+            app image — no new asset, no fabricated photography. Mobile only — v3's
+            desktop screens have no hero image. */}
+        <div
+          className={`relative -mx-5 overflow-hidden sm:mx-0 md:hidden ${tone === 'success' ? 'h-[220px] sm:h-[280px]' : 'h-[160px] sm:h-[200px]'}`}
+        >
           <Image
             src="/placeholders/jorge-salazar-pY_GFZNKrrc-unsplash.jpg"
             alt=""
@@ -414,20 +515,30 @@ function ReturnHero({
           />
         </div>
 
-        <div className="-mt-5 flex flex-col items-center px-2 text-center">
+        <div className="-mt-5 flex flex-col items-center px-2 text-center md:mt-0">
           <div
-            className={`mb-5 flex h-14 w-14 items-center justify-center rounded-full border-[1.5px] ${circleColorClass}`}
+            className={`mb-5 flex h-14 w-14 items-center justify-center rounded-full border-[1.5px] md:mb-[22px] md:h-[60px] md:w-[60px] ${circleColorClass}`}
           >
-            {tone === 'success' ? <CheckCircleGlyph /> : <CloseCircleGlyph />}
+            {tone === 'success' ? (
+              <CheckCircleGlyph className="h-6 w-6 md:h-[26px] md:w-[26px]" />
+            ) : (
+              <CloseCircleGlyph className="h-6 w-6 md:h-[26px] md:w-[26px]" />
+            )}
           </div>
           {eyebrow ? (
-            <div className="eyebrow text-gold">{eyebrow}</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gold">{eyebrow}</div>
           ) : null}
-          <h1 className="display-l mt-2 text-ink">{title}</h1>
-          {body ? <p className="body-m mx-auto mt-3 max-w-[320px] text-stone">{body}</p> : null}
+          <h1
+            className={`serif mt-2 font-light text-ink ${
+              tone === 'success' ? 'text-[44px] leading-[1.05] md:text-[48px]' : 'text-[32px] md:text-[34px]'
+            }`}
+          >
+            {title}
+          </h1>
+          {body ? <p className="mx-auto mt-3 max-w-[320px] text-[15px] text-stone md:max-w-none">{body}</p> : null}
 
           {reassurance ? (
-            <div className="mt-7 w-full rounded-lg border border-hairline bg-paper p-4">
+            <div className="mt-7 w-full rounded-lg border border-hairline bg-paper p-4 md:rounded-[12px]">
               {REASSURANCE_ITEMS.map((item, i) => (
                 <div
                   key={item}
@@ -436,7 +547,7 @@ function ReturnHero({
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gold/15 text-gold">
                     <CheckCircleGlyph size={12} />
                   </span>
-                  <span className="body-s text-graphite">{item}</span>
+                  <span className="text-[12px] text-graphite md:text-[13px]">{item}</span>
                 </div>
               ))}
             </div>

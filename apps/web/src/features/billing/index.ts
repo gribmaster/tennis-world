@@ -18,6 +18,7 @@ export { ManageBillingButton } from './ManageBillingButton';
 export type { ManageBillingButtonProps } from './ManageBillingButton';
 
 export { BillingReturn } from './BillingReturn';
+export type { BillingReturnProps } from './BillingReturn';
 
 export {
   CheckoutStatusBanner,

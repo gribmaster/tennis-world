@@ -1,29 +1,21 @@
 import type { SVGProps } from 'react';
 
 // AuthIcons — the small icon set used by the auth screens, ported verbatim from the
-// `AuthIcons` object in files/signin.html / files/signup.html (mail / apple / google)
-// plus the shared "arrow" glyph used on the primary submit buttons.
+// `AuthIcons` object in files/signin.html / files/signup.html (mail / google) plus the
+// shared "arrow" glyph used on the primary submit buttons.
 //
 // PRESENTATIONAL only — no icon-library dependency (Decision #6); each is an inline
-// <svg> taking SVGProps so callers can size/colour them. The Apple/Google marks are
-// purely decorative here: the buttons they sit on are INERT placeholders (no OAuth in
-// Phase 1 — see SignInForm/SignUpForm and PHASE_1_PLACEHOLDER_CTA_AUDIT §5).
+// <svg> taking SVGProps so callers can size/colour them. The Google mark is purely
+// decorative here when the button is the MOCK-mode inert placeholder (no API to
+// redirect to); in `api` mode the Google button is a real navigation (see
+// SignInForm/SignUpForm). The Apple button was removed in TASK_62 (no Apple sign-in on
+// the API — see PHASE_1_PLACEHOLDER_CTA_AUDIT §5 and DESIGN_V2_COMPLETION_SUMMARY §7.7).
 
 export function MailIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden {...props}>
       <rect x="3" y="5" width="18" height="14" rx="2" />
       <path d="m4 7 8 6 8-6" />
-    </svg>
-  );
-}
-
-// Brand glyphs — coloured/filled marks, ported from the prototype. They are decorative
-// (the buttons are inert), so they stay aria-hidden.
-export function AppleIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden {...props}>
-      <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-2.003 1.59-3.067 1.59-.04-1.1.522-2.27 1.21-3.04.802-.9 2.156-1.58 3.034-1.63zM21.6 17.13c-.602 1.39-.892 2.01-1.674 3.24-1.09 1.71-2.625 3.84-4.527 3.86-1.69.02-2.137-1.1-4.442-1.09-2.304.01-2.79 1.11-4.485 1.09-1.901-.02-3.351-1.94-4.443-3.65C-1.99 14.93-.515 7.6 4.46 7.32c1.79-.1 3.04 1 4.085 1 1.04 0 2.62-1.13 4.43-1 .76.03 2.99.31 4.41 2.32-3.81 2.31-3.19 7.42-1.78 7.49z" />
     </svg>
   );
 }

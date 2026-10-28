@@ -17,7 +17,7 @@
 >
 > | Control | File | Form | Verdict |
 > |---|---|---|---|
-> | **"Continue with Apple"** | `features/auth/SignInForm.tsx`, `SignUpForm.tsx` | `<button type="button">`, no handler | **Still inert.** No Apple OAuth exists. Visually indistinguishable from the working Google button — flagged as an open item. |
+> | **"Continue with Apple"** | `features/auth/SignInForm.tsx`, `SignUpForm.tsx` | `<button type="button">`, no handler | **Removed in TASK_62** (no longer rendered — there is no Apple OAuth on the API, so the open item was resolved by removing the control, not implementing it). |
 > | **"Continue with Google"** — *`mock` mode only* | same two files | `<button type="button">`, no handler | **Real in `api` mode**: renders as `<a href={buildGoogleSignInUrl(...)}>`, a genuine full-page navigation to the API's OAuth start route. Inert only in `mock` mode, where there is no API to navigate to. |
 > | **Article-detail "Share"** | `features/journal-detail/ArticleByline.tsx` | `<button disabled aria-label="Share (coming soon)">` | **Still inert, deliberately.** No Web Share API, no clipboard, no analytics. |
 >
@@ -226,7 +226,7 @@ real future implementation so Phase 2–4 work has a single reference.
 | `<CreateCollectionTrigger>` (renders a `<button>`) | Saved → Collections "New Collection" | Opens the Create-Collection modal; on submit creates a folder via the **mock-only** `repositories.saved.createUserCollection` seam (in-memory — no backend/auth/persistence). **Feature 35.** |
 | `<SaveToCollectionMenu>` (renders a `<button>` + dropdown) | Court Detail CTA panel "Add to Collection" | Opens a dropdown of the user's folders (checkmark = court is in folder); toggling a row calls the **mock-only** `repositories.saved.toggleCourtInCollection` seam (in-memory) with optimistic local state — no fetch, no `router.refresh`. "New collection" reuses the Create-Collection modal and adds the current court to the new folder. **Feature 36.** |
 | `<UserCollectionRename>` (renders a `<button>` → inline edit field) | User-collection detail hero "Rename" | "Rename" swaps the title for an inline input (prefilled); **Save** calls the **mock-only** `repositories.saved.renameUserCollection` seam (in-memory), updates the title from the returned DTO, and `router.replace`s to the (possibly new) slug — no fetch, no `router.refresh`. **Feature 37.** |
-| `<button>` (inert, no handler) | `/signin` + `/signup` **"Continue with Apple" / "Continue with Google"** | Inert OAuth placeholders — render for parity; clicking does nothing (no OAuth in Phase 1). **Feature 30.** |
+| `<button>` (inert, no handler) | `/signin` + `/signup` **"Continue with Google"** (`mock` mode only) | Inert OAuth placeholder — renders for parity; clicking does nothing (no API to navigate to in mock mode). **Feature 30.** The "Continue with Apple" row that used to sit alongside it was **removed in TASK_62** — no Apple OAuth exists on the API. |
 | `<form onSubmit>` (UI-only) | `/signin` magic-link form; `/signup` name+email form | `preventDefault` + required-field guard, then flips to a **local success state** ("Check your inbox" / "Confirm your email"). NO fetch, NO API, NO session. **Feature 30.** |
 
 The Paywall / Consultation / Create-Collection triggers are the client islands; their host pages
