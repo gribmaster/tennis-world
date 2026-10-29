@@ -6,7 +6,7 @@ import { PendingCardLink } from '@/components/navigation';
 
 // Autoplay interval (TASK_67). The cross-fade (400ms) and the pill glide (350ms) both
 // fit comfortably inside it.
-const HERO_AUTOPLAY_MS = 1500;
+const HERO_AUTOPLAY_MS = 3500;
 
 // HomeHero — the v3 "Atlas" hero carousel (TASK_58). Replaces the v2 fixed-image band
 // entirely: a floating, inset card over the page background with 4 cross-fading court
