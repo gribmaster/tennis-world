@@ -147,7 +147,7 @@ export function Footer() {
     'block py-1.5 text-[13px] leading-[1.6] text-bone/65 transition-colors hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bone/50 rounded-sm';
 
   return (
-    <footer className="bg-ink text-bone">
+    <footer className="bg-ink text-bone hidden">
       {/* ── Mobile/tablet (< md): compact collapsed-by-default footer ── */}
       <div className="container-page py-5 md:hidden">
         {/* Row 1: brand + copyright */}

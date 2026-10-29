@@ -125,7 +125,7 @@ export function CollectionDetailShell({
             </div>
 
             {/* Desktop-only sticky map card, column 2. */}
-            <div className="hidden md:sticky md:top-[calc(var(--nav-offset)+20px)] md:block">
+            <div className="hidden md:sticky md:top-[calc(var(--nav-offset)+20px)] md:block md:mt-9">
               <div className="rounded-[16px] bg-paper p-6 shadow-[0_2px_16px_rgba(15,15,15,0.06)]">
                 <p className="serif text-[20px] font-normal text-ink">{title}</p>
                 <p className="mb-[18px] mt-2 text-[13px] leading-[1.5] text-stone">{text}</p>

@@ -32,7 +32,7 @@ export function CollectionCourtsGrid({
   const savedSet = new Set(savedCourtIds);
 
   return (
-    <section className="px-5 md:px-0 md:mt-9">
+    <section className="px-5 md:px-0">
       <h2 className="mb-3 text-[16px] font-semibold leading-tight text-ink md:mb-4 md:text-[17px]">
         Courts in this collection
       </h2>

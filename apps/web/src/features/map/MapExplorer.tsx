@@ -263,7 +263,7 @@ export function MapExplorer({
       <PageContainer className="pt-8 pb-[72px] md:pt-11">
         <div className="grid grid-cols-[1fr_148px] items-start gap-x-[14px] md:grid-cols-[1fr_380px] md:gap-x-8">
           {/* Row: search (mobile: spans both cols, first; desktop: col 2, bottom-aligned) */}
-          <div className="col-span-2 row-start-1 pt-4 md:col-span-1 md:col-start-2 md:row-start-1 md:self-end md:pt-0">
+          <div className="col-span-2 row-start-1 pt-4 md:col-span-1 md:col-start-2 md:row-start-1 md:self-end md:pt-0 mb-4">
             <MapSearchBar
               query={filters.q}
               onQueryChange={handleQueryChange}
@@ -274,7 +274,7 @@ export function MapExplorer({
           </div>
 
           {/* Heading + link line (mobile: col 1, row 2; desktop: col 1, row 1, bottom-aligned) */}
-          <div className="col-start-1 row-start-2 pt-[22px] md:row-start-1 md:self-end md:pt-0">
+          <div className="col-start-1 row-start-2 pt-[22px] md:row-start-1 md:self-end md:pt-0 md:mb-4">
             <h1 className="serif text-[30px] font-normal leading-[1.08] text-ink md:text-[44px] md:leading-[1.1]">
               {status === 'guest' ? 'Sign in to view the map' : `${count} ${count === 1 ? 'Court' : 'Courts'}`}
             </h1>

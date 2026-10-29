@@ -96,7 +96,7 @@ export default async function ProfilePage({
 
   return (
     <AppShell signedIn>
-      <PageContainer className="pt-8 pb-section-lg md:pt-11 md:pb-section-xl">
+      <PageContainer className="pt-8 pb-section-lg md:pt-11 md:pb-section-xl min-h-[70vh]">
         <div className="mx-auto max-w-[1120px]">
           {/* Page-local gear row — now a circle (TASK_61). The wordmark stays AppHeader's
               job; this row only adds the settings entry point. */}

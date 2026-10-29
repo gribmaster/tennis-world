@@ -274,7 +274,7 @@ export function HomeHero({ slides }: HomeHeroProps) {
 
           {/* Giant title — the page <h1>. Mobile: left-aligned, mid-height, no vertical
               centering transform. Desktop: centered both ways. */}
-          <h1 className="serif absolute left-[18px] right-[18px] top-1/2 text-[60px] font-medium leading-[0.95] tracking-[0.01em] text-white md:inset-x-0 md:-translate-y-1/2 md:text-center md:text-[76px] md:leading-[0.92]">
+          <h1 className="serif absolute left-[18px] right-[18px] top-1/2 text-[60px] font-medium leading-[0.95] tracking-[0.01em] text-white md:inset-x-0 md:-translate-y-1/2 text-center md:text-[76px] md:leading-[0.92]">
             ATLAS
           </h1>
         </PendingCardLink>
