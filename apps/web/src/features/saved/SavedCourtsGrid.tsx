@@ -6,8 +6,8 @@ import { SavedDreamListCta } from './SavedDreamListCta';
 // SavedCourtsGrid — the Courts tab of the Saved page.
 //
 // TASK_56 (v3): swaps the screen-local full-bleed card + its own "X" unsave button for
-// the shared v3 `CourtCard` with its bookmark save button — see "Card reuse: one
-// CourtCard, everywhere" in docs/TASK_56_V3_SHARED_COURT_CARD.md. Un-bookmarking a saved
+// the shared v3 `CourtCard` with its heart save button (TASK_69) — see "Card reuse: one
+// CourtCard, everywhere" in docs/TASK_56_V3_SHARED_COURT_CARD.md. Unsaving a saved
 // court here REMOVES the card (v3's behaviour, matching the old "X" unsave): the card's
 // `save.onSavedChange` callback drives the lifted `unsavedIds`/`onUnsavedChange` in
 // SavedTabs — `onSavedChange(false)` is an optimistic remove, `onSavedChange(true)` is

@@ -7,7 +7,7 @@
 export { CourtCard } from './CourtCard';
 export type { CourtCardProps } from './CourtCard';
 
-export { CourtCardSaveButton, BookmarkGlyph } from './CourtCardSaveButton';
+export { CourtCardSaveButton } from './CourtCardSaveButton';
 export type { CourtCardSaveButtonProps } from './CourtCardSaveButton';
 
 export { SurfaceChip } from './SurfaceChip';

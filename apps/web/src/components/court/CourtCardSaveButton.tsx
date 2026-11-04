@@ -11,8 +11,8 @@ import { HeartIcon, InlineSpinner } from '@/components/ui';
 // `UserCollectionCourtSaveHeart` each did (those are superseded by this component — see
 // CourtCard's own header comment on the "one heart per screen" convention ending) with
 // v3's guest "Sign in to save" tooltip. TASK_69: the glyph itself is the shared
-// `HeartIcon` (court-detail's heart), not v3's bookmark — the owner wants one heart for
-// every "save a court" control, card included.
+// `HeartIcon` (court-detail's heart) — the owner wants one heart for every "save a
+// court" control, card included.
 //
 // BEHAVIOUR — identical to the superseded hearts, and the CLAUDE.md §4 rule-2 triad:
 //   • local pending state + `disabled` + `aria-busy` + `<InlineSpinner label="Saving…" />`,
@@ -36,30 +36,6 @@ import { HeartIcon, InlineSpinner } from '@/components/ui';
 // protected POST/DELETE /v1/me/saved-courts in `api` mode (httpOnly cookie via
 // `credentials:'include'`), or a server action in staging demo mode so the demo secret
 // stays server-side. This island never fetches reads; `initialSaved` comes from the page.
-
-/**
- * v3's `Ico.save` — a bookmark, not a heart (TASK_69: this component's own save control
- * now renders the shared `HeartIcon` instead). Kept as a named export only because
- * `features/collections/CollectionSaveHeart.tsx` reuses it for its `glyph="bookmark"`
- * variant (saving an editorial *collection*, not a court) instead of drawing a third copy.
- */
-export function BookmarkGlyph({ size }: { size: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
 
 export interface CourtCardSaveButtonProps {
   courtId: string;

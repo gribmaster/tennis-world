@@ -9,9 +9,9 @@ import { CollectionSaveHeart } from './CollectionSaveHeart';
 // column on mobile, 2-up at md+ (desktop ~line 760, mobile ~line 1105 of the respective
 // prototype files). Still every collection, not a sliced subset.
 //
-// ── SAVE / BOOKMARK CONTROL (Task 42, restyled TASK_60) ─────────────────────────────────
-// `CollectionSaveHeart` renders `glyph="bookmark"` here (v3's `Ico.save`) in a small bone
-// circle over the row's right edge — a REAL, database-backed bookmark
+// ── SAVE / ADD-TO-COLLECTION CONTROL (Task 42, restyled TASK_60, icon renamed TASK_71) ──
+// `CollectionSaveHeart` renders `glyph="collection"` here (v3's `Ico.save`) in a small bone
+// circle over the row's right edge — a REAL, database-backed save
 // (`POST/DELETE /v1/me/saved-collections`), never the prototype's inert button. It is a
 // SIBLING of `CuratedCollectionCard`'s own `PendingCardLink`, not inside the card itself.
 //
@@ -19,7 +19,7 @@ import { CollectionSaveHeart } from './CollectionSaveHeart';
 // `app/collections/page.tsx`, the screen's single repository boundary.
 //
 // PENDING STATES (CLAUDE.md §4 rule 1): each card navigates as a whole ⇒ `PendingCardLink`,
-// inside CuratedCollectionCard. The bookmark is a database-backed action ⇒ the rule-2
+// inside CuratedCollectionCard. The save control is a database-backed action ⇒ the rule-2
 // triad, inside `CollectionSaveHeart`.
 
 export interface CuratedCollectionsListProps {
@@ -59,7 +59,7 @@ export function CuratedCollectionsList({
               collectionLabel={collection.name}
               initialSaved={savedCollectionIds.has(collection.id)}
               signedIn={signedIn}
-              glyph="bookmark"
+              glyph="collection"
               className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-pill bg-bone transition-colors disabled:opacity-60 md:right-3.5 md:h-9 md:w-9"
               idleColorClassName="text-ink hover:text-saved"
             />

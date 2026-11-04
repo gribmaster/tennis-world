@@ -12,6 +12,9 @@ export type { InlineSpinnerProps } from './InlineSpinner';
 export { HeartIcon } from './HeartIcon';
 export type { HeartIconProps } from './HeartIcon';
 
+export { AddToCollectionIcon } from './AddToCollectionIcon';
+export type { AddToCollectionIconProps } from './AddToCollectionIcon';
+
 export { UserAvatar } from './UserAvatar';
 export type { UserAvatarProps } from './UserAvatar';
 

@@ -4,8 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getMutationSavedRepository } from '@/lib/repositories.client';
 import { AuthRequiredError } from '@/lib/repositories';
-import { HeartIcon, InlineSpinner } from '@/components/ui';
-import { BookmarkGlyph } from '@/components/court/CourtCardSaveButton';
+import { AddToCollectionIcon, HeartIcon, InlineSpinner } from '@/components/ui';
 
 // CollectionSaveHeart — the circular save/unsave control overlaid on an editorial
 // collection card or row (Task 42), mirroring the now-deleted `HomeCourtSaveHeart.tsx`
@@ -14,10 +13,11 @@ import { BookmarkGlyph } from '@/components/court/CourtCardSaveButton';
 // TASK_60 (v3): the mutation logic below is BYTE-FOR-BYTE unchanged — the optimistic
 // flip, the `AuthRequiredError` rollback/redirect, the `.finally()` reset, the guest
 // sign-in routing and the §4 triad. What TASK_60 added is purely presentational:
-//   • `glyph`: `'heart'` (default, every pre-existing call site) or `'bookmark'` — v3's
-//     `Ico.save`, used by the restyled "Curated for You" rows. Reuses the EXISTING
-//     `BookmarkGlyph` the shared `CourtCardSaveButton` already draws (a named export
-///    only — that component itself is untouched) instead of a third copy of the glyph.
+//   • `glyph`: `'heart'` (default, every pre-existing call site) or `'collection'` — v3's
+//     `Ico.save`, used by the restyled "Curated for You" rows. TASK_71 renamed this from
+//     `'bookmark'` and switched it to the shared `AddToCollectionIcon` (the stacked-cards
+//     icon court detail's "Add to Collection" button uses) now that the owner wants one
+//     "add to collection" glyph everywhere instead of a plain bookmark.
 //   • `className`: when given, REPLACES the default box classes (position/size/
 //     background) — the colour classes below are always layered on top, computed from
 //     `saved`, never baked into the caller's override.
@@ -128,9 +128,9 @@ export interface CollectionSaveHeartProps {
   signedIn?: boolean;
   /** Called with the new saved state right after the optimistic flip (and on rollback). */
   onSavedChange?: (saved: boolean) => void;
-  /** `'heart'` (default) or v3's bookmark (`Ico.save`) — TASK_60's Curated rows. */
-  glyph?: 'heart' | 'bookmark';
-  /** Pixel size of the HEART glyph only; the bookmark renders its own responsive 14/15px pair (matching `CourtCardSaveButton`). Defaults to 16 (every pre-existing call site). */
+  /** `'heart'` (default) or v3's add-to-collection icon (`Ico.save`) — TASK_60's Curated rows. */
+  glyph?: 'heart' | 'collection';
+  /** Pixel size of the glyph (heart or collection icon alike). Defaults to 16 (every pre-existing call site). */
   size?: number;
   /** Replaces the default box (position/size/background) classes. Colour is always computed here, never part of this override. */
   className?: string;
@@ -193,15 +193,8 @@ export function CollectionSaveHeart({
         // Inherits currentColor (TASK_60) so it reads correctly on the dark-glass,
         // bone and glass-paper circles alike — no hardcoded spinner colour.
         <InlineSpinner label="Saving…" />
-      ) : glyph === 'bookmark' ? (
-        <>
-          <span className="md:hidden">
-            <BookmarkGlyph size={14} />
-          </span>
-          <span className="hidden md:inline-flex">
-            <BookmarkGlyph size={15} />
-          </span>
-        </>
+      ) : glyph === 'collection' ? (
+        <AddToCollectionIcon size={size} />
       ) : (
         <HeartIcon filled={isSaved} size={size} />
       )}

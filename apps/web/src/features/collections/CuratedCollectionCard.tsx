@@ -5,14 +5,14 @@ import { PendingCardLink } from '@/components/navigation';
 // CuratedCollectionCard — the row used in "Curated for You" (`CuratedCollectionsList`).
 //
 // TASK_60 (v3) SUPERSEDES Task 40's brief ("look exactly like `SavedCollectionRow`'s
-// photo tile"): v3 draws "Curated for You" as a row — thumbnail + text + bookmark — not
+// photo tile"): v3 draws "Curated for You" as a row — thumbnail + text + save control — not
 // a photo card, so this component is rebuilt to that shape (desktop
 // tennis_world_desktop_standalone4.html ~line 762, mobile tennis_world_v17_standalone.html
 // ~line 1107). It is the whole `PendingCardLink` now (thumbnail + text together), not a
-// photo tile with a bookmark laid over it — the bookmark still renders as a SIBLING, in
+// photo tile with a save control laid over it — that control still renders as a SIBLING, in
 // the parent `<li>` (`CuratedCollectionsList`), positioned over this row's right edge via
 // `pr-[56px]`/`pr-[64px]` reserving its slot. See `CollectionSaveHeart.tsx` for that
-// control's behaviour.
+// control's behaviour (TASK_71: its icon is the shared `AddToCollectionIcon`, not a bookmark).
 //
 // Unlike `CollectionCard` (Featured strip / Saved tab), this row DOES print
 // `description` (TASK_60 decision 1 — it is the v3 `sub` line for every surface except
