@@ -1,5 +1,5 @@
 import type { CourtSummaryDTO } from '@tennis/contracts';
-import { CourtMap, courtToMarker } from '@/features/map';
+import { CourtMap, courtToMarker, type MapMarker } from '@/features/map';
 import { ConsultationTrigger } from '@/features/consultation';
 import { SavedEmptyState } from './SavedEmptyState';
 
@@ -36,7 +36,15 @@ export interface SavedWishlistMapProps {
 }
 
 export function SavedWishlistMap({ courts, viewerIsEntitled = false }: SavedWishlistMapProps) {
-  if (courts.length === 0) {
+  // Approximate-geo markers only — one per saved court, navigable to its detail page.
+  // TASK_72: a saved LOCKED court is excluded here for a non-entitled viewer (and any
+  // court with no approx geo at all), exactly like every other map surface — the
+  // Courts tab grid still lists it as a masked card; only the map omits its pin.
+  const markers = courts
+    .map((court) => courtToMarker(court, undefined, viewerIsEntitled))
+    .filter((marker): marker is MapMarker => marker !== null);
+
+  if (markers.length === 0) {
     return (
       <SavedEmptyState
         title="Nothing to map yet."
@@ -45,9 +53,6 @@ export function SavedWishlistMap({ courts, viewerIsEntitled = false }: SavedWish
       />
     );
   }
-
-  // Approximate-geo markers only — one per saved court, navigable to its detail page.
-  const markers = courts.map((court) => courtToMarker(court, undefined, viewerIsEntitled));
 
   return (
     <div>

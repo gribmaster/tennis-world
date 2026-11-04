@@ -7,10 +7,13 @@ import { AccessType, CourtStatus, CourtTag, IndoorOutdoor, Surface } from './enu
 // Two coordinate concerns are kept strictly separate (Architecture Plan §9 Risk
 // #17): `mapCoords` is the [x%, y%] screen position for the stylized Phase-1 map
 // canvas and is NEVER a geographic location. `lat`/`lng` (exact) and
-// `approxLat`/`approxLng` (~10km offset, always public) are real-geo and back the
-// server-side coordinate-masking boundary. Exact lat/lng are OPTIONAL on the wire
-// because they are omitted for non-entitled requests (Phase 4); approx fields and
-// mapCoords are always present.
+// `approxLat`/`approxLng` (~10km offset) are real-geo and back the server-side
+// coordinate-masking boundary. Exact lat/lng are OPTIONAL on the wire because they
+// are omitted for non-entitled requests (Phase 4). `approxLat`/`approxLng` are ALSO
+// optional (TASK_72) — present for an unlocked court for every viewer, and for a
+// locked (`isLocked`) court only when the viewer carries an active entitlement;
+// absent entirely (not `null`, not `0`) for a locked court viewed by a guest or free
+// account. `mapCoords` is unaffected and always present.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** [x%, y%] position on the stylized map canvas. Not geographic. */
@@ -48,9 +51,11 @@ export const CourtSummarySchema = z.object({
   tags: z.array(CourtTag),
   heroImageUrl: z.string(),
   mapCoords: MapCoordsSchema,
-  // Always-public approximate geo. Exact lat/lng are not part of the summary.
-  approxLat: z.number(),
-  approxLng: z.number(),
+  // Approximate geo — OPTIONAL (TASK_72): omitted for a locked court viewed by a
+  // non-entitled viewer (see redactCourtGeo on the API). Exact lat/lng are not part
+  // of the summary at all.
+  approxLat: z.number().optional(),
+  approxLng: z.number().optional(),
 });
 export type CourtSummaryDTO = z.infer<typeof CourtSummarySchema>;
 

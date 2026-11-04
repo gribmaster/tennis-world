@@ -19,10 +19,18 @@ import { orderCourtTags } from './court-tags';
 // coordinates. If a future feature needs exact geo it MUST add a separate private
 // select; it must never widen these public ones (see the `satisfies` guards).
 //
-// The mappers always include the always-public `approxLat`/`approxLng` and the
-// decorative `mapCoords` ([mapX, mapY] — screen %, never geo, Risk #17). The
-// detail mapper (CourtDTO) leaves `lat`/`lng` undefined in Phase 2 (no entitlement
-// system yet → every request is non-entitled).
+// The mappers always include the decorative `mapCoords` ([mapX, mapY] — screen %,
+// never geo, Risk #17). The detail mapper (CourtDTO) leaves `lat`/`lng` undefined
+// in Phase 2 (no entitlement system yet → every request is non-entitled).
+//
+// APPROX-GEO REDACTION (TASK_72) — `approxLat`/`approxLng` are always-public ONLY
+// for an unlocked court. For `court.isLocked`, they are withheld from a viewer who
+// is not currently entitled: not sent as `null`/`0`, the keys are simply ABSENT
+// from the response. `redactCourtGeo` is the ONE function that applies this rule,
+// and `toCourtSummaryDTO`/`toCourtDTO` take `viewerEntitled` as a REQUIRED
+// parameter (not optional, not a separate post-processing step) specifically so a
+// new producer cannot compile without deciding what to pass — see each call site
+// (`courts.service.ts`, `me/saved-courts.service.ts`, `me/collections.mapper.ts`).
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Public selects (lat/lng intentionally absent) ────────────────────────────
@@ -115,8 +123,15 @@ function heroUrl(images: { url: string }[]): string {
   return images[0]?.url ?? '';
 }
 
-export function toCourtSummaryDTO(row: CourtSummaryRow): CourtSummaryDTO {
-  return {
+export function toCourtSummaryDTO(
+  row: CourtSummaryRow,
+  viewerEntitled: boolean,
+): CourtSummaryDTO {
+  // Typed explicitly (rather than inlined into redactCourtGeo's generic call) so
+  // `mapCoords` is checked against the contract's `[number, number]` tuple here —
+  // a generic call site would otherwise widen the two-element array literal to
+  // `number[]` before inference ever sees the tuple.
+  const dto: CourtSummaryDTO = {
     id: row.id,
     slug: row.slug,
     name: row.name,
@@ -132,10 +147,27 @@ export function toCourtSummaryDTO(row: CourtSummaryRow): CourtSummaryDTO {
     tags: orderCourtTags(row.tags),
     heroImageUrl: heroUrl(row.images),
     mapCoords: [row.mapX, row.mapY],
-    // Always-public approximate geo only — exact lat/lng are never selected.
+    // Exact lat/lng are never selected; approx geo is redacted below when locked.
     approxLat: row.approxLat,
     approxLng: row.approxLng,
   };
+  return redactCourtGeo(dto, viewerEntitled);
+}
+
+/**
+ * TASK_72 — the one place `approxLat`/`approxLng` are withheld. For
+ * `dto.isLocked && !viewerEntitled`, the two keys are OMITTED from the returned
+ * object entirely (not set to `undefined`/`null` — genuinely absent, so a
+ * recursive key scan of the serialized JSON finds nothing). Every other field is
+ * untouched. Unlocked courts and entitled viewers always keep both keys.
+ */
+function redactCourtGeo<T extends { isLocked: boolean; approxLat?: number; approxLng?: number }>(
+  dto: T,
+  viewerEntitled: boolean,
+): T {
+  if (!dto.isLocked || viewerEntitled) return dto;
+  const { approxLat: _approxLat, approxLng: _approxLng, ...rest } = dto;
+  return rest as T;
 }
 
 function toCourtImageDTO(img: {
@@ -153,10 +185,11 @@ function toCourtImageDTO(img: {
   };
 }
 
-export function toCourtDTO(row: CourtDetailRow): CourtDTO {
+export function toCourtDTO(row: CourtDetailRow, viewerEntitled: boolean): CourtDTO {
   const images = row.images;
   const hero = images.find((i) => i.isHero);
-  return {
+  // Typed explicitly for the same tuple-inference reason as toCourtSummaryDTO above.
+  const dto: CourtDTO = {
     id: row.id,
     slug: row.slug,
     name: row.name,
@@ -180,6 +213,7 @@ export function toCourtDTO(row: CourtDetailRow): CourtDTO {
     // Exact lat/lng are intentionally OMITTED in Phase 2 (no entitlement gating).
     // They are not even selected from the DB, so there is nothing to attach.
   };
+  return redactCourtGeo(dto, viewerEntitled);
 }
 
 /** locked > featured > open (matches the mock `pinState`). */

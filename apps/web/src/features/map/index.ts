@@ -34,7 +34,7 @@ export { useGeolocation } from './useGeolocation';
 export type { GeolocationError, GeolocationErrorKind, UseGeolocationResult } from './useGeolocation';
 export { MapLocateControl } from './MapLocateControl';
 export type { MapLocateControlProps } from './MapLocateControl';
-export { courtToMarker } from './map-markers';
+export { courtToMarker, courtHasPublicGeo } from './map-markers';
 export type { MapMarker, MapMarkerState } from './map-markers';
 export { getGoogleMapsConfig } from './map-config';
 export type { GoogleMapsConfig } from './map-config';

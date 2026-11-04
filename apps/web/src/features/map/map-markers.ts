@@ -12,6 +12,12 @@ import { courtDisplay } from '@/components/court/court-display';
 // The field names `lat`/`lng` on MapMarker are the map layer's OWN neutral vocabulary
 // (Leaflet speaks lat/lng); they are NOT the DTO's exact `lat`/`lng`. Public callers
 // MUST fill them from `approxLat`/`approxLng` (see `courtToMarker`).
+//
+// NO-GEO COURTS (TASK_72): `approxLat`/`approxLng` are now OPTIONAL on `CourtSummaryDTO`
+// — the API withholds them for a locked court viewed by a non-entitled visitor. A
+// court with nothing to plot is simply not placed: `courtToMarker` returns `null`
+// (never a fabricated/zero point), and `courtHasPublicGeo` is the one shared guard
+// every map/distance surface uses to decide whether a court belongs on a map at all.
 
 /** Visual treatment for a marker (drives the custom divIcon color/halo). */
 export type MapMarkerState = 'open' | 'locked' | 'featured' | 'exact';
@@ -54,11 +60,32 @@ function courtState(court: Pick<CourtSummaryDTO, 'isLocked' | 'isFeatured'>): Ma
 }
 
 /**
- * Build a marker for a public court, positioned from its APPROXIMATE geo. This is the
- * single conversion the public map surfaces (/map, Wishlist, locked Court Detail) use
- * — so "markers come from approxLat/approxLng, never exact lat/lng" is enforced in one
- * place. An optional `stateBySlug` (from the map-pins read) lets the /map explorer
- * reuse the API's authoritative pin state; otherwise it's derived from the court flags.
+ * Whether a court belongs on a public map surface at all for this viewer (TASK_72):
+ * a locked court is excluded for a non-entitled viewer (defence in depth — the API
+ * already omits its coordinates, but a locked court must never be plotted even in
+ * `mock` mode, which always carries full approx geo), and ANY court with no approx
+ * geo at all is excluded regardless of lock state (belt-and-braces — there is simply
+ * nothing to plot). This is the ONE guard every map/distance surface in this feature
+ * uses, so the rule can't drift between `courtToMarker`, the "nearby courts" distance
+ * list, and the wishlist map.
+ */
+export function courtHasPublicGeo(
+  court: Pick<CourtSummaryDTO, 'isLocked' | 'approxLat' | 'approxLng'>,
+  viewerIsEntitled: boolean,
+): boolean {
+  if (court.isLocked && !viewerIsEntitled) return false;
+  return court.approxLat !== undefined && court.approxLng !== undefined;
+}
+
+/**
+ * Build a marker for a public court, positioned from its APPROXIMATE geo — or `null`
+ * when the court has nothing to plot (`courtHasPublicGeo` is false), so a locked
+ * court for a non-entitled viewer is never fabricated a position (TASK_72). This is
+ * the single conversion the public map surfaces (/map, Wishlist, locked Court Detail)
+ * use — so "markers come from approxLat/approxLng, never exact lat/lng" is enforced
+ * in one place. An optional `stateBySlug` (from the map-pins read) lets the /map
+ * explorer reuse the API's authoritative pin state; otherwise it's derived from the
+ * court flags.
  *
  * `viewerIsEntitled` (Task 26, default `false`) is forwarded to `courtDisplay` so the
  * marker's name is unmasked for a viewer this page has determined carries an active
@@ -68,13 +95,14 @@ export function courtToMarker(
   court: CourtSummaryDTO,
   stateBySlug?: Map<string, MapMarkerState>,
   viewerIsEntitled = false,
-): MapMarker {
+): MapMarker | null {
+  if (!courtHasPublicGeo(court, viewerIsEntitled)) return null;
   return {
     id: court.id,
     slug: court.slug,
     name: courtDisplay(court, viewerIsEntitled).name,
-    lat: court.approxLat,
-    lng: court.approxLng,
+    lat: court.approxLat as number,
+    lng: court.approxLng as number,
     state: stateBySlug?.get(court.slug) ?? courtState(court),
     heroImageUrl: court.heroImageUrl,
   };

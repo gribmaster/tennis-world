@@ -19,6 +19,7 @@ import { MapCourtGrid } from './MapCourtGrid';
 import {
   courtToMarker,
   pinStateToMarkerState,
+  type MapMarker,
   type MapMarkerState,
 } from './map-markers';
 
@@ -226,8 +227,15 @@ export function MapExplorer({
   }, [pins]);
 
   // Markers come from the SAME filtered set as the grid — plotted at approximate geo.
+  // TASK_72: a locked court for a non-entitled viewer (or any court missing approx
+  // geo) has no marker at all — `courtToMarker` returns `null` and it is filtered
+  // out here, so it is absent from the pins, the clustering, and the map modal's
+  // "nearest court" search, while still appearing as a masked card in the grid below.
   const visibleMarkers = useMemo(
-    () => visibleCourts.map((court) => courtToMarker(court, stateBySlug, viewerIsEntitled)),
+    () =>
+      visibleCourts
+        .map((court) => courtToMarker(court, stateBySlug, viewerIsEntitled))
+        .filter((marker): marker is MapMarker => marker !== null),
     [visibleCourts, stateBySlug, viewerIsEntitled],
   );
 

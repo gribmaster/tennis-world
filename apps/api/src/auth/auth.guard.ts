@@ -10,7 +10,7 @@ import { AuthService } from './auth.service';
 import { AUTH_CONFIG, type AuthConfig } from './auth.config';
 import type { AuthContext, RequestWithAuth } from './auth.types';
 import { Inject } from '@nestjs/common';
-import { safeEqual } from './crypto.util';
+import { extractToken, tryDemoAuth } from './auth-request.util';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AuthGuard (prompt task 10) — the REUSABLE guard the future /v1/me/* surface will
@@ -34,9 +34,6 @@ import { safeEqual } from './crypto.util';
 // It is inert (skipped entirely) whenever the config is null. ⚠️  See docs/STAGING_DEMO_AUTH.md.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Header carrying the staging demo-auth secret (Feature 76). Lower-case: Node lowercases header keys. */
-const DEMO_AUTH_HEADER = 'x-tennis-demo-auth';
-
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
@@ -48,19 +45,24 @@ export class AuthGuard implements CanActivate {
     const req = context.switchToHttp().getRequest<Request & RequestWithAuth>();
 
     // STAGING-ONLY demo branch (Feature 76) — checked first, but ONLY active when the
-    // config opted in (null in production → this whole block is skipped). A correct secret
-    // authenticates as the demo user; a WRONG secret when demo mode is on is a hard 401
-    // (don't fall through to the JWT path with an attacker-supplied demo header present).
-    if (this.config.stagingDemoAuth) {
-      const demoResult = await this.tryDemoAuth(req);
-      if (demoResult !== 'absent') {
-        return demoResult; // authenticated (true) or rejected (throws) — never falls through
-      }
-      // 'absent' → no demo header at all; fall through to the normal cookie/bearer path so
-      // magic-link auth still works alongside demo auth on staging.
+    // config opted in (null in production → tryDemoAuth short-circuits to 'absent'). A
+    // correct secret authenticates as the demo user; a WRONG secret when demo mode is on
+    // is a hard 401 (don't fall through to the JWT path with an attacker-supplied demo
+    // header present).
+    const demoResult = await tryDemoAuth(req, this.config, (email) =>
+      this.auth.resolveDemoUser(email),
+    );
+    if (demoResult === 'invalid') {
+      throw new UnauthorizedException('Invalid demo authentication.');
     }
+    if (demoResult !== 'absent') {
+      req.auth = demoResult;
+      return true;
+    }
+    // 'absent' → no demo header (or demo mode off); fall through to the normal
+    // cookie/bearer path so magic-link auth still works alongside demo auth on staging.
 
-    const token = this.extractToken(req);
+    const token = extractToken(req, this.config);
     if (!token) {
       throw new UnauthorizedException('Authentication required.');
     }
@@ -73,48 +75,6 @@ export class AuthGuard implements CanActivate {
       // Invalid signature / expired / malformed — uniform 401, no detail leak.
       throw new UnauthorizedException('Invalid or expired session.');
     }
-  }
-
-  /**
-   * STAGING-ONLY (Feature 76). Inspect the demo-auth header:
-   *   - no header            → `'absent'` (caller falls through to cookie/bearer auth).
-   *   - header === secret    → attach the demo user to `req.auth`, return `true`.
-   *   - header ≠ secret      → throw 401 (a present-but-wrong demo secret is an attempt,
-   *                            not a fall-through). Uses a constant-time compare so a
-   *                            wrong header can't be brute-forced by timing.
-   * Only reached when `config.stagingDemoAuth` is non-null.
-   */
-  private async tryDemoAuth(
-    req: Request & RequestWithAuth,
-  ): Promise<true | 'absent'> {
-    const demo = this.config.stagingDemoAuth!;
-    const provided = req.headers[DEMO_AUTH_HEADER];
-    // Header may arrive as string | string[] | undefined; only a single string is valid.
-    const value = typeof provided === 'string' ? provided : undefined;
-    if (value === undefined || value.length === 0) {
-      return 'absent';
-    }
-    if (!safeEqual(value, demo.secret)) {
-      throw new UnauthorizedException('Invalid demo authentication.');
-    }
-    const payload = await this.auth.resolveDemoUser(demo.email);
-    req.auth = { userId: payload.sub, email: payload.email };
-    return true;
-  }
-
-  /** Cookie first (web), then `Authorization: Bearer` (mobile/API). */
-  private extractToken(req: Request): string | undefined {
-    // cookie-parser populates `req.cookies`; typed loosely (no global augmentation).
-    const cookies = (req as Request & { cookies?: Record<string, string> })
-      .cookies;
-    const fromCookie = cookies?.[this.config.cookieName];
-    if (fromCookie) return fromCookie;
-
-    const header = req.headers.authorization;
-    if (header?.startsWith('Bearer ')) {
-      return header.slice('Bearer '.length).trim() || undefined;
-    }
-    return undefined;
   }
 }
 

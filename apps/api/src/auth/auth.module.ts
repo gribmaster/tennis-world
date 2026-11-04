@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuthGuard } from './auth.guard';
+import { OptionalAuthGuard } from './optional-auth.guard';
 import { MailerService } from './mailer.service';
 import { AUTH_CONFIG, loadAuthConfig } from './auth.config';
 import { EntitlementsModule } from '../entitlements/entitlements.module';
@@ -23,6 +24,9 @@ import { GOOGLE_AUTH_CONFIG, loadGoogleAuthConfig } from './google-auth.config';
 //   - AuthGuard   : the reusable cookie-OR-bearer guard. EXPORTED (with AuthService)
 //                   so Features 53/54/55 can guard /v1/me/* — not attached to any
 //                   route here.
+//   - OptionalAuthGuard (TASK_72): the never-throws viewer-resolution step for a
+//                   PUBLIC route that must redact by viewer (e.g. CourtsController) —
+//                   EXPORTED alongside AuthGuard, also not attached to any route here.
 //
 // JwtModule.register({}) registers a bare JwtService; the secret + expiry are passed
 // PER-CALL from AuthConfig (so a future key rotation/algorithm change is one config
@@ -51,8 +55,9 @@ import { GOOGLE_AUTH_CONFIG, loadGoogleAuthConfig } from './google-auth.config';
     AuthService,
     MailerService,
     AuthGuard,
+    OptionalAuthGuard,
     GoogleAuthService,
   ],
-  exports: [AuthService, AuthGuard, AUTH_CONFIG],
+  exports: [AuthService, AuthGuard, OptionalAuthGuard, AUTH_CONFIG],
 })
 export class AuthModule {}

@@ -159,6 +159,36 @@ function stripExactCoords(detail: unknown): unknown {
   return rest;
 }
 
+// ── A SECOND intentional normalization (TASK_72): approx coordinates on a LOCKED
+// court, for the anonymous viewer this harness always compares as ──────────────────
+//
+// `HttpCourtRepository` is constructed below with NO auth, so every HTTP read in
+// this file is anonymous. The API now withholds `approxLat`/`approxLng` for a
+// LOCKED court from a non-entitled viewer (`redactCourtGeo`) — but the mock
+// repository (Phase 1, no entitlement concept) always includes them, for every
+// court, regardless of `isLocked`. Project the mock side through the SAME rule so
+// the comparison stays like-for-like: this narrows ONLY `approxLat`/`approxLng`,
+// and ONLY on a court whose `isLocked` is true. It cannot hide a real leak —
+// `assertApproxMaskingRule` below independently proves the API actually withholds
+// them for a locked court and actually includes them for an unlocked one.
+function redactApproxForAnonymous<T>(court: T): T {
+  if (!court || typeof court !== 'object') return court;
+  const rec = court as Record<string, unknown>;
+  if (!rec.isLocked) return court;
+  const { approxLat: _approxLat, approxLng: _approxLng, ...rest } = rec;
+  return rest as T;
+}
+
+function redactApproxForAnonymousList<T>(courts: readonly T[]): T[] {
+  return courts.map(redactApproxForAnonymous);
+}
+
+/** Mirrors the API's `GET /v1/courts/map` TASK_72 behavior: a locked court's pin is
+ *  excluded entirely for a non-entitled (here: anonymous) viewer. */
+function redactMapPinsForAnonymous<T extends { state: string }>(pins: readonly T[]): T[] {
+  return pins.filter((p) => p.state !== 'locked');
+}
+
 // ── Coordinate-masking helpers (prompt task 4) ───────────────────────────────────
 
 /** Recursively collect every object-key name appearing anywhere in `value`. */
@@ -185,18 +215,24 @@ function assertNoExactCoords(name: string, payload: unknown): void {
   );
 }
 
-/** Assert every element carries the always-public approx geo + map coords. */
-function assertApproxPresent(name: string, summaries: ReadonlyArray<Record<string, unknown>>): void {
-  const missing = summaries.filter(
-    (c) =>
-      typeof c.approxLat !== 'number' ||
-      typeof c.approxLng !== 'number' ||
-      !Array.isArray(c.mapCoords),
-  );
+/**
+ * Assert every element carries `mapCoords`, and that `approxLat`/`approxLng` follow
+ * TASK_72's masking rule for the anonymous viewer this harness reads as: present for
+ * an unlocked court, ABSENT (not `null`/`0`) for a locked one.
+ */
+function assertApproxMaskingRule(
+  name: string,
+  summaries: ReadonlyArray<Record<string, unknown>>,
+): void {
+  const bad = summaries.filter((c) => {
+    if (!Array.isArray(c.mapCoords)) return true;
+    const hasApprox = typeof c.approxLat === 'number' && typeof c.approxLng === 'number';
+    return c.isLocked ? hasApprox : !hasApprox;
+  });
   expectTrue(
-    `${name}: approxLat/approxLng + mapCoords present`,
-    summaries.length > 0 && missing.length === 0,
-    missing.length ? `${missing.length} element(s) missing approx/map fields` : 'empty set',
+    `${name}: mapCoords present; approxLat/approxLng present iff unlocked (anonymous viewer)`,
+    summaries.length > 0 && bad.length === 0,
+    bad.length ? `${bad.length} element(s) violate the masking rule` : 'empty set',
   );
 }
 
@@ -249,47 +285,54 @@ async function preflight(): Promise<void> {
 async function compareCourts(): Promise<void> {
   console.log('\nCourts — MockCourtRepository vs HttpCourtRepository');
 
-  // list() variants — filter values are taken from real mock data.
-  expectEqual('courts.list()', await mockCourts.list(), await httpCourts.list());
+  // list() variants — filter values are taken from real mock data. TASK_72: every
+  // mock list is projected through `redactApproxForAnonymous` so a locked court's
+  // approx geo is narrowed out exactly like the (anonymous) HTTP side.
+  expectEqual(
+    'courts.list()',
+    redactApproxForAnonymousList(await mockCourts.list()),
+    await httpCourts.list(),
+  );
   expectEqual(
     'courts.list({ featured: true, limit: 6 })',
-    await mockCourts.list({ featured: true, limit: 6 }),
+    redactApproxForAnonymousList(await mockCourts.list({ featured: true, limit: 6 })),
     await httpCourts.list({ featured: true, limit: 6 }),
   );
   expectEqual(
     "courts.list({ collection: 'coastal-courts' })",
-    await mockCourts.list({ collection: 'coastal-courts' }),
+    redactApproxForAnonymousList(await mockCourts.list({ collection: 'coastal-courts' })),
     await httpCourts.list({ collection: 'coastal-courts' }),
   );
   expectEqual(
     "courts.list({ surface: 'Clay' })",
-    await mockCourts.list({ surface: 'Clay' }),
+    redactApproxForAnonymousList(await mockCourts.list({ surface: 'Clay' })),
     await httpCourts.list({ surface: 'Clay' }),
   );
   expectEqual(
     "courts.list({ access: 'Club' })",
-    await mockCourts.list({ access: 'Club' }),
+    redactApproxForAnonymousList(await mockCourts.list({ access: 'Club' })),
     await httpCourts.list({ access: 'Club' }),
   );
   // search(q) routes through list({ q }) in both implementations.
   expectEqual(
     "courts.search('Como')",
-    await mockCourts.search('Como'),
+    redactApproxForAnonymousList(await mockCourts.search('Como')),
     await httpCourts.search('Como'),
   );
   expectEqual(
     "courts.list({ q: 'lake' })",
-    await mockCourts.list({ q: 'lake' }),
+    redactApproxForAnonymousList(await mockCourts.list({ q: 'lake' })),
     await httpCourts.list({ q: 'lake' }),
   );
 
   // getBySlug — hit + miss(→null). The mock detail carries exact lat/lng that the
   // API deliberately masks; strip them from the mock side before comparing (the
-  // ONLY intentional normalization — see stripExactCoords). Masking is asserted
-  // separately below, so this cannot hide a leak.
+  // first intentional normalization — see stripExactCoords), then apply the SAME
+  // approx-geo projection as above (a no-op here: this fixture is unlocked). Masking
+  // is asserted separately below, so neither normalization can hide a leak.
   expectEqual(
     "courts.getBySlug('grand-hotel-tremezzo') [exact lat/lng stripped from mock]",
-    stripExactCoords(await mockCourts.getBySlug('grand-hotel-tremezzo')),
+    redactApproxForAnonymous(stripExactCoords(await mockCourts.getBySlug('grand-hotel-tremezzo'))),
     await httpCourts.getBySlug('grand-hotel-tremezzo'),
   );
   expectEqual(
@@ -298,25 +341,30 @@ async function compareCourts(): Promise<void> {
     await httpCourts.getBySlug('not-a-real-court'),
   );
 
-  // getMapPins.
-  expectEqual('courts.getMapPins()', await mockCourts.getMapPins(), await httpCourts.getMapPins());
+  // getMapPins — TASK_72: the API excludes a locked court's pin entirely for a
+  // non-entitled (here: anonymous) viewer; filter the mock side the same way.
+  expectEqual(
+    'courts.getMapPins()',
+    redactMapPinsForAnonymous(await mockCourts.getMapPins()),
+    await httpCourts.getMapPins(),
+  );
 
   // getRelated — `tremezzo` is a real court id; `como` is NOT a court id (the mock
   // keys getRelated off id, so it returns [] — the HTTP repo must too). Plus a
   // smaller limit to exercise the slice.
   expectEqual(
     "courts.getRelated('tremezzo', 4)",
-    await mockCourts.getRelated('tremezzo', 4),
+    redactApproxForAnonymousList(await mockCourts.getRelated('tremezzo', 4)),
     await httpCourts.getRelated('tremezzo', 4),
   );
   expectEqual(
     "courts.getRelated('como', 4) → [] (no such court id)",
-    await mockCourts.getRelated('como', 4),
+    redactApproxForAnonymousList(await mockCourts.getRelated('como', 4)),
     await httpCourts.getRelated('como', 4),
   );
   expectEqual(
     "courts.getRelated('tremezzo', 2)",
-    await mockCourts.getRelated('tremezzo', 2),
+    redactApproxForAnonymousList(await mockCourts.getRelated('tremezzo', 2)),
     await httpCourts.getRelated('tremezzo', 2),
   );
 
@@ -331,9 +379,9 @@ async function compareCourts(): Promise<void> {
   assertNoExactCoords('courts.getMapPins', apiMap);
   assertNoExactCoords('courts.getRelated', apiRelated);
 
-  assertApproxPresent('courts.list', apiList as Record<string, unknown>[]);
-  assertApproxPresent('courts.getRelated', apiRelated as Record<string, unknown>[]);
-  if (apiDetail) assertApproxPresent('courts.getBySlug', [apiDetail as Record<string, unknown>]);
+  assertApproxMaskingRule('courts.list', apiList as Record<string, unknown>[]);
+  assertApproxMaskingRule('courts.getRelated', apiRelated as Record<string, unknown>[]);
+  if (apiDetail) assertApproxMaskingRule('courts.getBySlug', [apiDetail as Record<string, unknown>]);
 
   // ── Shape: HTTP detail + map + list invariants (prompt task 5) ─────────────────
   if (apiDetail) {

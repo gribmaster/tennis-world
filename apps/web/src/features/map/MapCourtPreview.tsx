@@ -8,6 +8,7 @@ import { PendingCardLink } from '@/components/navigation';
 import { courtCategoryTags, courtDisplay } from '@/components/court/court-display';
 import { repositories } from '@/lib/repositories';
 import { haversineDistanceKm } from './geo-distance';
+import { courtHasPublicGeo } from './map-markers';
 
 // MapCourtPreview — the mobile "tap a pin" preview card (Task 27/28/29, Feature 86:
 // `MapScreen`'s `selectPin`/bottom-sheet interaction in
@@ -180,18 +181,26 @@ export function MapCourtPreview({
   }, [expanded, isMaskedForViewer, court.slug]);
 
   // ── "More courts nearby" — in-memory, no fetch ─────────────────────────────────────
+  // TASK_72: this card is only ever opened for a court that passed `courtHasPublicGeo`
+  // (MapExpandedModal only sets `selectedCourt` from an actually-plotted marker), so
+  // `court` itself always has approx geo in practice — guarded anyway rather than
+  // asserted, so a defensive `[]` is the worst case instead of a crash. Each
+  // CANDIDATE neighbour is filtered through the SAME shared guard (courtHasPublicGeo)
+  // so a locked-for-this-viewer court is never offered as "nearby", matching its
+  // absence from the map itself.
   const nearby = useMemo(() => {
+    if (court.approxLat === undefined || court.approxLng === undefined) return [];
     const origin = { lat: court.approxLat, lng: court.approxLng };
     return visibleCourts
-      .filter((c) => c.slug !== court.slug)
+      .filter((c) => c.slug !== court.slug && courtHasPublicGeo(c, viewerIsEntitled))
       .map((c) => ({
         court: c,
-        distanceKm: haversineDistanceKm(origin, { lat: c.approxLat, lng: c.approxLng }),
+        distanceKm: haversineDistanceKm(origin, { lat: c.approxLat as number, lng: c.approxLng as number }),
       }))
       .filter((entry) => Number.isFinite(entry.distanceKm))
       .sort((a, b) => a.distanceKm - b.distanceKm)
       .slice(0, NEARBY_LIMIT);
-  }, [visibleCourts, court]);
+  }, [visibleCourts, court, viewerIsEntitled]);
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 rounded-t-xl bg-paper pb-[env(safe-area-inset-bottom)] shadow-card md:hidden">

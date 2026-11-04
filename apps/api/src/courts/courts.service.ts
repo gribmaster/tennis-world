@@ -26,6 +26,14 @@ import {
 // Coordinate masking is enforced by the PUBLIC selects in courts.mapper.ts, which
 // never select `Court.lat`/`lng` — so exact geo never enters this process for a
 // public read.
+//
+// APPROX-GEO REDACTION (TASK_72): every method here takes `viewerEntitled` and
+// forwards it to the mapper (`toCourtSummaryDTO`/`toCourtDTO`), which withholds
+// `approxLat`/`approxLng` for a locked court when the viewer is not entitled — see
+// courts.mapper.ts's `redactCourtGeo`. `viewerEntitled` is resolved by the
+// controller from the optional-viewer step (CourtsController), never read here.
+// `getMapPins` additionally EXCLUDES locked courts from the result entirely for a
+// non-entitled viewer (a pin with no position has no meaning).
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PUBLISHED = 'published' as const;
@@ -35,7 +43,7 @@ export class CourtsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** GET /v1/courts — filtered list of published court summaries. */
-  async list(query: CourtListQuery): Promise<CourtSummaryDTO[]> {
+  async list(query: CourtListQuery, viewerEntitled: boolean): Promise<CourtSummaryDTO[]> {
     const where: Prisma.CourtWhereInput = { status: PUBLISHED };
 
     // Denormalized country/region are stored as FK names — filter by the related
@@ -91,11 +99,11 @@ export class CourtsService {
       ...(query.limit !== undefined ? { take: query.limit } : {}),
     });
 
-    return rows.map(toCourtSummaryDTO);
+    return rows.map((row) => toCourtSummaryDTO(row, viewerEntitled));
   }
 
   /** GET /v1/courts/:slug — full detail, or 404 if no published court matches. */
-  async getBySlug(slug: string): Promise<CourtDTO> {
+  async getBySlug(slug: string, viewerEntitled: boolean): Promise<CourtDTO> {
     const row = await this.prisma.court.findFirst({
       where: { slug, status: PUBLISHED },
       select: courtDetailSelect,
@@ -103,13 +111,22 @@ export class CourtsService {
     if (!row) {
       throw new NotFoundException(`Court "${slug}" not found.`);
     }
-    return toCourtDTO(row);
+    return toCourtDTO(row, viewerEntitled);
   }
 
-  /** GET /v1/courts/map — decorative pins for the stylized canvas (no geo). */
-  async getMapPins(): Promise<MapPinDTO[]> {
+  /**
+   * GET /v1/courts/map — decorative pins for the stylized canvas (no geo). TASK_72:
+   * for a non-entitled viewer, a locked court's pin is excluded from the result
+   * entirely (filtered in the WHERE clause, not just the mapper) — a pin with no
+   * position has no meaning once the viewer can't see that court's geo anywhere
+   * else either. Entitled viewers get every pin, unchanged.
+   */
+  async getMapPins(viewerEntitled: boolean): Promise<MapPinDTO[]> {
     const rows = await this.prisma.court.findMany({
-      where: { status: PUBLISHED },
+      where: {
+        status: PUBLISHED,
+        ...(viewerEntitled ? {} : { isLocked: false }),
+      },
       select: mapPinSelect,
       orderBy: { seedOrder: 'asc' },
     });
@@ -130,7 +147,11 @@ export class CourtsService {
    * public endpoint keys off **slug** because slug is the route key. We resolve
    * slug → court first (404 if the slug is unknown), then rank by the same fields.
    */
-  async getRelated(slug: string, limit = 4): Promise<CourtSummaryDTO[]> {
+  async getRelated(
+    slug: string,
+    viewerEntitled: boolean,
+    limit = 4,
+  ): Promise<CourtSummaryDTO[]> {
     // Resolve the anchor court (need its country/surface; published only).
     // We compare on the denormalized country NAME exactly as the mock does.
     const anchor = await this.prisma.court.findFirst({
@@ -160,6 +181,6 @@ export class CourtsService {
       // score DESC, then seedOrder ASC — equivalent to the mock's stable sort.
       .sort((a, b) => b.score - a.score || a.index - b.index)
       .slice(0, limit)
-      .map((e) => toCourtSummaryDTO(e.row));
+      .map((e) => toCourtSummaryDTO(e.row, viewerEntitled));
   }
 }

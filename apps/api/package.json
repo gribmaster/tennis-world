@@ -20,6 +20,7 @@
     "ci:clean-auth-fixtures": "tsx scripts/ci-clean-auth-fixtures.ts",
     "verify:effective-entitlement": "tsx scripts/verify-effective-entitlement.ts",
     "verify:exact-location": "tsx scripts/verify-exact-location.ts",
+    "verify:court-geo-redaction": "tsx scripts/verify-court-geo-redaction.ts",
     "verify:billing-checkout": "tsx scripts/verify-billing-checkout.ts",
     "verify:billing-rate-limit": "tsx scripts/verify-billing-rate-limit.ts",
     "verify:stripe-webhook": "tsx scripts/verify-stripe-webhook.ts",

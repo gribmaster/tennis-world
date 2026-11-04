@@ -28,6 +28,12 @@ import { toCourtSummaryDTO } from '../courts/courts.mapper';
 // Courts module's PUBLIC `toCourtSummaryDTO` — the rows are fetched with
 // `courtSummarySelect`, which omits lat/lng, so a folder's `courts`/covers are
 // structurally incapable of carrying exact geo (same guarantee as saved-courts).
+//
+// APPROX-GEO REDACTION (TASK_72): `toCourtSummaryDTO` also takes the folder owner's
+// REAL `viewerEntitled` (the service resolves it via `EntitlementsService`), so a
+// locked member court's `approxLat`/`approxLng` are withheld for a free-member owner
+// exactly as on every other surface. `viewerEntitled` is threaded as a required
+// parameter through every mapper in this file so a new call site cannot skip it.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** How many member-court hero images make up a folder's cover thumbnail stack. */
@@ -84,9 +90,17 @@ export interface UserCollectionRow {
 
 // ── Mappers ───────────────────────────────────────────────────────────────────
 
-/** Member courts → public summaries, in membership (sortOrder) order. */
-function memberSummaries(row: UserCollectionRow): CourtSummaryDTO[] {
-  return row.courts.map((m) => toCourtSummaryDTO(m.court));
+/**
+ * Member courts → public summaries, in membership (sortOrder) order.
+ *
+ * `viewerEntitled` (TASK_72) is REQUIRED, not optional — the folder owner's own
+ * real entitlement (resolved by the service via `EntitlementsService.isEntitled`,
+ * since every `/me/collections` read is already authenticated as that user), so a
+ * locked member court's `approxLat`/`approxLng` are withheld from a free-member
+ * owner the same way they are on every other surface.
+ */
+function memberSummaries(row: UserCollectionRow, viewerEntitled: boolean): CourtSummaryDTO[] {
+  return row.courts.map((m) => toCourtSummaryDTO(m.court, viewerEntitled));
 }
 
 /**
@@ -95,8 +109,11 @@ function memberSummaries(row: UserCollectionRow): CourtSummaryDTO[] {
  * length, covers = the first COVER_COUNT member hero images (undefined when empty,
  * matching the mock's `toDTO`). Requires the row to carry its `courts` membership.
  */
-export function toUserCollectionDTO(row: UserCollectionRow): UserCollectionDTO {
-  const courts = memberSummaries(row);
+export function toUserCollectionDTO(
+  row: UserCollectionRow,
+  viewerEntitled: boolean,
+): UserCollectionDTO {
+  const courts = memberSummaries(row, viewerEntitled);
   const coverImageUrls = courts.slice(0, COVER_COUNT).map((c) => c.heroImageUrl);
   return {
     id: row.id,
@@ -115,9 +132,10 @@ export function toUserCollectionDTO(row: UserCollectionRow): UserCollectionDTO {
  */
 export function toUserCollectionWithCourtsDTO(
   row: UserCollectionRow,
+  viewerEntitled: boolean,
 ): UserCollectionWithCourtsDTO {
   return {
-    ...toUserCollectionDTO(row),
-    courts: memberSummaries(row),
+    ...toUserCollectionDTO(row, viewerEntitled),
+    courts: memberSummaries(row, viewerEntitled),
   };
 }

@@ -393,6 +393,8 @@ after any change in this area.
   `DEV_FORCE_MEMBERSHIP` instead (above) and restart the API — no CLI, no payment.
 - A `400` from the webhook means the wrong secret is set (likely the Dashboard endpoint
   secret, not the CLI's) or the API wasn't restarted after updating it.
+- Approximate coordinates of locked courts are never sent to or plotted for non-entitled
+  viewers; enforced in `redactCourtGeo` (API) and `courtHasPublicGeo` (web).
 
 ---
 

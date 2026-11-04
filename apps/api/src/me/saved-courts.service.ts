@@ -10,6 +10,7 @@ import {
   courtSummarySelect,
   toCourtSummaryDTO,
 } from '../courts/courts.mapper';
+import { EntitlementsService } from '../entitlements/entitlements.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SavedCourtsService — the authenticated user's individual saved courts (Feature
@@ -37,7 +38,10 @@ const PUBLISHED = 'published' as const;
 
 @Injectable()
 export class SavedCourtsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly entitlements: EntitlementsService,
+  ) {}
 
   /**
    * GET /v1/me/saved-courts — the authed user's saved courts as public summaries.
@@ -50,14 +54,20 @@ export class SavedCourtsService {
    * `getSavedCourts` likewise filters to `status === 'published'`).
    *
    * The `court` join uses the PUBLIC summary select — no lat/lng can leak.
+   * APPROX-GEO REDACTION (TASK_72): `viewerEntitled` is this user's REAL entitlement
+   * (always available here — the route is already authenticated), so a locked
+   * saved court's `approxLat`/`approxLng` are withheld for a free user.
    */
   async listSavedCourts(userId: string): Promise<CourtSummaryDTO[]> {
-    const rows = await this.prisma.savedCourt.findMany({
-      where: { userId, court: { status: PUBLISHED } },
-      orderBy: { savedAt: 'desc' },
-      select: { court: { select: courtSummarySelect } },
-    });
-    return rows.map((row) => toCourtSummaryDTO(row.court));
+    const [rows, viewerEntitled] = await Promise.all([
+      this.prisma.savedCourt.findMany({
+        where: { userId, court: { status: PUBLISHED } },
+        orderBy: { savedAt: 'desc' },
+        select: { court: { select: courtSummarySelect } },
+      }),
+      this.entitlements.isEntitled(userId),
+    ]);
+    return rows.map((row) => toCourtSummaryDTO(row.court, viewerEntitled));
   }
 
   /**
@@ -75,10 +85,13 @@ export class SavedCourtsService {
     // would also reject an unknown id, but we want a clean 404, not a 500, and we
     // must forbid saving an unpublished court — the public product never surfaces
     // one.) Fetch the public summary in the same read so we can return it.
-    const court = await this.prisma.court.findFirst({
-      where: { id: courtId, status: PUBLISHED },
-      select: courtSummarySelect,
-    });
+    const [court, viewerEntitled] = await Promise.all([
+      this.prisma.court.findFirst({
+        where: { id: courtId, status: PUBLISHED },
+        select: courtSummarySelect,
+      }),
+      this.entitlements.isEntitled(userId),
+    ]);
     if (!court) {
       throw new NotFoundException(`Court "${courtId}" not found.`);
     }
@@ -105,7 +118,7 @@ export class SavedCourtsService {
       throw err;
     }
 
-    return toCourtSummaryDTO(court);
+    return toCourtSummaryDTO(court, viewerEntitled);
   }
 
   /**

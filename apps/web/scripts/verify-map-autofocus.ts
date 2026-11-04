@@ -622,12 +622,19 @@ async function main(): Promise<void> {
       'court is computed from the court data already loaded)',
     !/repositories|repository/i.test(stripComments(mapExplorer)) &&
       !/repositories|repository/i.test(stripComments(mapExpandedModal)) &&
-      /repositories\.courts\.list\(\)/.test(mapPage),
+      // TASK_72: the page reads courts through the request-scoped `protectedRepos`
+      // (so an entitled viewer's session reaches the viewer-aware API redaction)
+      // rather than the cookie-less `repositories` singleton — same single read,
+      // renamed variable, not a new endpoint.
+      /protectedRepos\.courts\.list\(\)/.test(stripComments(mapPage)),
   );
   expectTrue(
     'the map page still reads exactly the two court sources it always did (no new endpoint)',
-    /repositories\.courts\.getMapPins\(\)/.test(mapPage) &&
-      (stripComments(mapPage).match(/repositories\.\w+\./g) ?? []).length === 2,
+    /protectedRepos\.courts\.getMapPins\(\)/.test(stripComments(mapPage)) &&
+      // TASK_72: the renamed `protectedRepos` is now shared with the unrelated
+      // saved-court-ids read further down the page, so this isolates COURT reads
+      // specifically rather than every `protectedRepos.*` call on the page.
+      (stripComments(mapPage).match(/protectedRepos\.courts\.\w+\(\)/g) ?? []).length === 2,
   );
   expectTrue(
     'geo-distance stays a pure module (no React/DOM/map-library import and no client ' +

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { AppShell } from '@/components/layout';
 import { parseCourtFilterSearchParams } from '@/components/filters';
 import { MapExplorer } from '@/features/map';
-import { repositories, AuthRequiredError } from '@/lib/repositories';
+import { AuthRequiredError } from '@/lib/repositories';
 import { getRepositoriesForRequest } from '@/lib/repositories.server';
 import { getViewerAuthState } from '@/lib/session.server';
 
@@ -18,13 +18,22 @@ import { getViewerAuthState } from '@/lib/session.server';
 // by the URL-seeded filter state (Feature 76's `?q=`, widened in Task 54 to every chip
 // dimension) — the URL only seeds the client's initial filter state; it is not a
 // server-side filter:
-//   • repositories.courts.list()       → CourtSummaryDTO[] (card grid + filter source)
-//   • repositories.courts.getMapPins() → MapPinDTO[]       (map marker positions/state)
+//   • protectedRepos.courts.list()       → CourtSummaryDTO[] (card grid + filter source)
+//   • protectedRepos.courts.getMapPins() → MapPinDTO[]       (map marker positions/state)
 //
 // Feature 74 (engine migrated to Google Maps in Feature 88): markers are plotted on a
 // REAL map from each court's APPROXIMATE geo (`approxLat`/`approxLng`) — exact `lat`/
 // `lng` are not part of these DTOs and never reach the client (Architecture Plan §9
 // Risk #17). No payments here; the `pins` read supplies only pin state.
+//
+// VIEWER-AWARE COURT READS (TASK_72): `courts.list()`/`getMapPins()` now go through
+// the request-scoped `protectedRepos` (same instance `getViewerAuthState()` already
+// builds for the saved-court ids below) instead of the cookie-less singleton, so an
+// entitled visitor's session reaches the API and a locked court's approximate
+// position is NOT silently withheld from them. A guest/free visitor still gets the
+// same redacted response the public endpoint always returns for a non-entitled
+// caller — this is not a new round-trip, the courts module already carried `auth`
+// for its one protected read (`getExactLocation`) and simply forwards it further now.
 //
 // SAVED-COURT IDS (TASK_57): a PROTECTED read, mirroring the same degrade-on-
 // AuthRequiredError block `app/collections/[slug]/page.tsx` / `app/page.tsx` already
@@ -62,9 +71,14 @@ export default async function MapPage({
   // `/map?q=<country name>` and parses to exactly the same result as before.
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // Request-scoped, cookie-carrying repos (TASK_72) — one instance shared by the
+  // court reads below AND the saved-court-ids read further down, so the viewer's
+  // session is read from the incoming cookie exactly once per request.
+  const protectedRepos = await getRepositoriesForRequest();
+
   const [courts, pins, { signedIn, viewerIsEntitled }, params] = await Promise.all([
-    repositories.courts.list(),
-    repositories.courts.getMapPins(),
+    protectedRepos.courts.list(),
+    protectedRepos.courts.getMapPins(),
     // Header user icon (/profile vs /signin) AND per-viewer entitlement (Task 26) — the
     // same protected `/v1/me` read `isSignedIn()` already made, now also read for
     // `membership` so locked-court masking on this screen respects the real viewer.
@@ -79,7 +93,6 @@ export default async function MapPage({
   let savedCourtIds: string[] = [];
   if (signedIn) {
     try {
-      const protectedRepos = await getRepositoriesForRequest();
       const saved = await protectedRepos.saved.getSavedCourts();
       savedCourtIds = saved.map((court) => court.id);
     } catch (err) {

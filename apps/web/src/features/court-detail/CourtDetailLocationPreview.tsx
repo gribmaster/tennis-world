@@ -127,10 +127,15 @@ export interface CourtDetailLocationPreviewProps {
   locked: boolean;
   /** Court name — the marker's accessible label. */
   courtName: string;
-  /** Always-public approximate latitude — centers the (locked or fallback) map. */
-  approxLat: number;
-  /** Always-public approximate longitude. */
-  approxLng: number;
+  /**
+   * Approximate latitude — centers the (locked or fallback) map. OPTIONAL (TASK_72):
+   * absent for a locked court viewed by a non-entitled viewer (the API withholds it
+   * entirely). The component never fabricates a position when it's missing — see
+   * the `marker` computation below.
+   */
+  approxLat?: number;
+  /** Approximate longitude — see `approxLat`. */
+  approxLng?: number;
   /**
    * The court's public hero photo (Task 20) — threaded into the single marker this
    * component builds by hand so its pin matches every other map surface's photo-pin
@@ -167,10 +172,15 @@ export function CourtDetailLocationPreview({
   heroImageUrl,
 }: CourtDetailLocationPreviewProps) {
   const entitled = !locked && exactLocation !== null;
+  const hasApprox = approxLat !== undefined && approxLng !== undefined;
 
   // The single marker to plot. Entitled → the EXACT point (premium, protected read).
-  // Otherwise → the APPROXIMATE point (public). Locked state renders no marker (the
-  // map sits blurred behind the CTA), so we only build one when not locked.
+  // Otherwise → the APPROXIMATE point, when there is one (TASK_72: a locked court for
+  // a non-entitled viewer never has one — the API withholds it). Locked state renders
+  // no marker at all (the map sits blurred behind the CTA); an unlocked court with no
+  // approx geo (should not happen in practice — see the prop doc) falls back to the
+  // same "no marker" rendering as locked, below, rather than plotting a fabricated
+  // point.
   const marker: MapMarker | null = locked
     ? null
     : entitled
@@ -183,15 +193,17 @@ export function CourtDetailLocationPreview({
           state: 'exact',
           heroImageUrl,
         }
-      : {
-          id: 'approx',
-          slug: '',
-          name: courtName,
-          lat: approxLat,
-          lng: approxLng,
-          state: 'featured',
-          heroImageUrl,
-        };
+      : hasApprox
+        ? {
+            id: 'approx',
+            slug: '',
+            name: courtName,
+            lat: approxLat,
+            lng: approxLng,
+            state: 'featured',
+            heroImageUrl,
+          }
+        : null;
 
   // ── v2: the prototype's two-column Location block (TASK_59 resizes + simplifies it) ──
   if (variant === 'v2') {
@@ -211,27 +223,32 @@ export function CourtDetailLocationPreview({
           {/* Left: the map box. TASK_59: 100px tall mobile, 140px desktop (was a single
               200px→clamp(…,480px) rule that no longer matches either prototype). */}
           <div className="h-[100px] overflow-hidden rounded-[10px] border border-hairline md:h-[140px] md:rounded-[14px]">
-            {locked ? (
-              <div className="relative h-full w-full">
-                {/* No live map — see LockedMapPlaceholder above (Feature 88 §6.1). No
-                    coordinate, exact or approximate, is present in this state. */}
-                <div aria-hidden className="absolute inset-0 scale-105 blur-[6px]">
-                  <LockedMapPlaceholder />
-                </div>
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-bone/60 text-stone backdrop-blur-[2px]">
-                  <LockGlyph />
-                  <span className="text-[10px]">Unlock to reveal</span>
-                </div>
-              </div>
-            ) : (
+            {marker ? (
               // Unlocked: entitled → exact marker; otherwise → approximate marker.
               <CourtMap
-                markers={marker ? [marker] : []}
-                center={[marker!.lat, marker!.lng]}
+                markers={[marker]}
+                center={[marker.lat, marker.lng]}
                 zoom={entitled ? 17 : 6}
                 interactive
                 className="h-full w-full"
               />
+            ) : (
+              <div className="relative h-full w-full">
+                {/* No live map — see LockedMapPlaceholder above (Feature 88 §6.1). No
+                    coordinate, exact or approximate, is present in this state. Also
+                    covers (TASK_72) the non-locked edge case of a court with no
+                    approx geo at all — same neutral backdrop, no lock iconography,
+                    since that court isn't actually locked. */}
+                <div aria-hidden className="absolute inset-0 scale-105 blur-[6px]">
+                  <LockedMapPlaceholder />
+                </div>
+                {locked ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-bone/60 text-stone backdrop-blur-[2px]">
+                    <LockGlyph />
+                    <span className="text-[10px]">Unlock to reveal</span>
+                  </div>
+                ) : null}
+              </div>
             )}
           </div>
 
@@ -313,34 +330,38 @@ export function CourtDetailLocationPreview({
       <p className="eyebrow mb-4 text-stone">Location</p>
 
       <div className="relative aspect-[16/9] overflow-hidden rounded-md border border-hairline">
-        {locked ? (
-          <>
-            {/* No live map — see LockedMapPlaceholder above (Feature 88 §6.1). No
-                coordinate, exact or approximate, is present in this state. */}
-            <div aria-hidden className="absolute inset-0 scale-105 blur-[6px]">
-              <LockedMapPlaceholder />
-            </div>
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-bone/50 px-6 text-center text-graphite backdrop-blur-[2px]">
-              <LockGlyph />
-              <p className="body-m">Unlock to reveal exact location</p>
-              {/* Opens the shared Paywall modal (presentational only — no Stripe here). */}
-              <PaywallTrigger
-                source="court-detail-location"
-                className="btn btn-premium mt-1 !h-11 !px-5"
-              >
-                Unlock Full Access
-              </PaywallTrigger>
-            </div>
-          </>
-        ) : (
+        {marker ? (
           // Unlocked: entitled → exact marker; otherwise → approximate marker.
           <CourtMap
-            markers={marker ? [marker] : []}
-            center={[marker!.lat, marker!.lng]}
+            markers={[marker]}
+            center={[marker.lat, marker.lng]}
             zoom={entitled ? 17 : 6}
             interactive
             className="h-full w-full"
           />
+        ) : (
+          <>
+            {/* No live map — see LockedMapPlaceholder above (Feature 88 §6.1). No
+                coordinate, exact or approximate, is present in this state. Also
+                covers (TASK_72) the non-locked edge case of no approx geo at all —
+                same backdrop, no lock CTA, since that court isn't actually locked. */}
+            <div aria-hidden className="absolute inset-0 scale-105 blur-[6px]">
+              <LockedMapPlaceholder />
+            </div>
+            {locked ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-bone/50 px-6 text-center text-graphite backdrop-blur-[2px]">
+                <LockGlyph />
+                <p className="body-m">Unlock to reveal exact location</p>
+                {/* Opens the shared Paywall modal (presentational only — no Stripe here). */}
+                <PaywallTrigger
+                  source="court-detail-location"
+                  className="btn btn-premium mt-1 !h-11 !px-5"
+                >
+                  Unlock Full Access
+                </PaywallTrigger>
+              </div>
+            ) : null}
+          </>
         )}
       </div>
 

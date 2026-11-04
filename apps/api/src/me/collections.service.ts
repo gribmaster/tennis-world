@@ -10,6 +10,7 @@ import type {
 } from '@tennis/contracts';
 import { PrismaService } from '../prisma/prisma.service';
 import { courtSummarySelect } from '../courts/courts.mapper';
+import { EntitlementsService } from '../entitlements/entitlements.service';
 import {
   ensureUniqueSlug,
   slugifyCollectionName,
@@ -72,7 +73,10 @@ void (true as _AssertRowParity);
 
 @Injectable()
 export class CollectionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly entitlements: EntitlementsService,
+  ) {}
 
   // ── Reads ────────────────────────────────────────────────────────────────
 
@@ -84,12 +88,15 @@ export class CollectionsService {
    * (create appends). Returns `[]` when the user has no folders.
    */
   async listCollections(userId: string): Promise<UserCollectionDTO[]> {
-    const rows = await this.prisma.userCollection.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'asc' },
-      ...collectionWithCourtsArgs,
-    });
-    return rows.map((row) => toUserCollectionDTO(row));
+    const [rows, viewerEntitled] = await Promise.all([
+      this.prisma.userCollection.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'asc' },
+        ...collectionWithCourtsArgs,
+      }),
+      this.entitlements.isEntitled(userId),
+    ]);
+    return rows.map((row) => toUserCollectionDTO(row, viewerEntitled));
   }
 
   /**
@@ -102,14 +109,17 @@ export class CollectionsService {
     userId: string,
     slug: string,
   ): Promise<UserCollectionWithCourtsDTO> {
-    const row = await this.prisma.userCollection.findUnique({
-      where: { userId_slug: { userId, slug } },
-      ...collectionWithCourtsArgs,
-    });
+    const [row, viewerEntitled] = await Promise.all([
+      this.prisma.userCollection.findUnique({
+        where: { userId_slug: { userId, slug } },
+        ...collectionWithCourtsArgs,
+      }),
+      this.entitlements.isEntitled(userId),
+    ]);
     if (!row) {
       throw new NotFoundException(`Collection "${slug}" not found.`);
     }
-    return toUserCollectionWithCourtsDTO(row);
+    return toUserCollectionWithCourtsDTO(row, viewerEntitled);
   }
 
   /**
@@ -151,7 +161,10 @@ export class CollectionsService {
         data: { userId, name, slug },
         ...collectionWithCourtsArgs,
       });
-      return toUserCollectionDTO(row);
+      // A brand-new folder has no members yet, so entitlement can't affect this
+      // response — resolved anyway to keep every mapper call on the same required
+      // parameter, never a shortcut a future change to this method could forget.
+      return toUserCollectionDTO(row, await this.entitlements.isEntitled(userId));
     } catch (err) {
       // P2003 = FK violation: the authed user row was deleted since the token was
       // minted → stale auth context (same staleness rule MeService/SavedCourtsService
@@ -189,12 +202,15 @@ export class CollectionsService {
     }
 
     const slug = await this.deriveUniqueSlug(userId, name, existing.slug);
-    const row = await this.prisma.userCollection.update({
-      where: { id },
-      data: { name, slug },
-      ...collectionWithCourtsArgs,
-    });
-    return toUserCollectionDTO(row);
+    const [row, viewerEntitled] = await Promise.all([
+      this.prisma.userCollection.update({
+        where: { id },
+        data: { name, slug },
+        ...collectionWithCourtsArgs,
+      }),
+      this.entitlements.isEntitled(userId),
+    ]);
+    return toUserCollectionDTO(row, viewerEntitled);
   }
 
   /**
@@ -241,7 +257,7 @@ export class CollectionsService {
       update: {},
     });
 
-    return this.requireCollectionWithCourts(collectionId);
+    return this.requireCollectionWithCourts(userId, collectionId);
   }
 
   /**
@@ -262,7 +278,7 @@ export class CollectionsService {
     await this.prisma.userCollectionCourt.deleteMany({
       where: { userCollectionId: collectionId, courtId },
     });
-    return this.requireCollectionWithCourts(collectionId);
+    return this.requireCollectionWithCourts(userId, collectionId);
   }
 
   // ── Internals ──────────────────────────────────────────────────────────────
@@ -308,18 +324,22 @@ export class CollectionsService {
 
   /** Re-read a folder (by id) as the with-courts DTO after a membership mutation. */
   private async requireCollectionWithCourts(
+    userId: string,
     collectionId: string,
   ): Promise<UserCollectionWithCourtsDTO> {
-    const row = await this.prisma.userCollection.findUnique({
-      where: { id: collectionId },
-      ...collectionWithCourtsArgs,
-    });
+    const [row, viewerEntitled] = await Promise.all([
+      this.prisma.userCollection.findUnique({
+        where: { id: collectionId },
+        ...collectionWithCourtsArgs,
+      }),
+      this.entitlements.isEntitled(userId),
+    ]);
     if (!row) {
       // Practically unreachable — we just verified ownership — but keeps the return
       // type honest if the row vanished between calls.
       throw new NotFoundException(`Collection "${collectionId}" not found.`);
     }
-    return toUserCollectionWithCourtsDTO(row);
+    return toUserCollectionWithCourtsDTO(row, viewerEntitled);
   }
 
   /** Map a create-time FK violation (deleted user) to 401; rethrow anything else. */

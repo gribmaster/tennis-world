@@ -9,6 +9,14 @@
 // API already masks exact lat/lng server-side (the public selects never read
 // `Court.lat`/`lng`), so no coordinate field is ever added on this side.
 //
+// APPROX-GEO REDACTION (TASK_72): every read now forwards `this.auth` so the API's
+// viewer-aware redaction (`redactCourtGeo`) sees the REAL caller when one exists — a
+// server component using the cookie-less singleton (`new HttpCourtRepository()`, no
+// arg) always reads as anonymous, which is the deliberately safe default; a
+// request-scoped instance (`getRepositoriesForRequest()`, used by `/map` and
+// `/courts/[slug]`) carries the viewer's session so an entitled visitor still sees a
+// locked court's approximate position.
+//
 // RESPONSE TYPING (prompt task 2 — "validate with contracts if practical"):
 // responses are returned via type assertion to the contract DTOs rather than
 // re-validated with zod at runtime. The API is the single source of truth and
@@ -51,12 +59,17 @@ import {
 
 export class HttpCourtRepository implements CourtRepository {
   /**
-   * AUTH (Feature 64): the PUBLIC reads (list/getBySlug/search/getMapPins/getRelated)
-   * need no identity and IGNORE this. The single PROTECTED read — `getExactLocation`,
-   * backing `GET /v1/me/courts/:slug/exact-location` — forwards it so the AuthGuard can
-   * authenticate the viewer (server component → `{cookie}`, browser island →
-   * `{auth:'include'}`, script → `{bearerToken}`). Defaults to `{}` so the existing
-   * public wiring (`new HttpCourtRepository()`) is unchanged.
+   * AUTH (Feature 64, widened TASK_72): every read here now forwards this transport.
+   * The public reads (list/getBySlug/search/getMapPins/getRelated) don't need identity
+   * to SUCCEED — they 200 either way — but the API uses it to decide whether a locked
+   * court's `approxLat`/`approxLng` are included (`redactCourtGeo`, viewer-aware via
+   * `OptionalAuthGuard`), so an entitled viewer must still forward their session for a
+   * public read to show real coordinates. Default `{}` keeps a caller with no auth
+   * context (the bare module-level singleton) working exactly as before: every court
+   * is treated as anonymous, which is the safe/redacted default. The one PROTECTED
+   * read, `getExactLocation`, forwards the SAME transport for the AuthGuard
+   * (server component → `{cookie}`, browser island → `{auth:'include'}`, script →
+   * `{bearerToken}`).
    */
   constructor(private readonly auth: HttpAuthOptions = {}) {}
 
@@ -74,12 +87,12 @@ export class HttpCourtRepository implements CourtRepository {
       q: filter.q,
       limit: filter.limit,
     });
-    return getJson<CourtSummaryDTO[]>(`/courts${query}`);
+    return getJson<CourtSummaryDTO[]>(`/courts${query}`, this.auth);
   }
 
   /** GET /v1/courts/:slug — 404 maps to `null` (interface contract). */
   async getBySlug(slug: string): Promise<CourtDTO | null> {
-    return getJsonOrNull<CourtDTO>(`/courts/${encodeURIComponent(slug)}`);
+    return getJsonOrNull<CourtDTO>(`/courts/${encodeURIComponent(slug)}`, this.auth);
   }
 
   /** GET /v1/courts?q=query — free-text search (same endpoint as `list`). */
@@ -87,10 +100,10 @@ export class HttpCourtRepository implements CourtRepository {
     return this.list({ q: query });
   }
 
-  /** GET /v1/courts/map — decorative pins (no geo). `bbox`/`zoom` are accepted for
+  /** GET /v1/courts/map — pins (state only; no geo). `bbox`/`zoom` are accepted for
    *  interface stability but unused by the API (no-PostGIS), so they are not sent. */
   async getMapPins(_bbox?: BBox, _zoom?: number): Promise<MapPinDTO[]> {
-    return getJson<MapPinDTO[]>('/courts/map');
+    return getJson<MapPinDTO[]>('/courts/map', this.auth);
   }
 
   /**
@@ -107,6 +120,7 @@ export class HttpCourtRepository implements CourtRepository {
     const query = buildQuery({ limit });
     return getJson<CourtSummaryDTO[]>(
       `/courts/${encodeURIComponent(slug)}/related${query}`,
+      this.auth,
     );
   }
 

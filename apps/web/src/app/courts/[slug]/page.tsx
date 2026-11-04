@@ -124,14 +124,22 @@ export default async function CourtDetailPage({
 }) {
   const { slug } = await params;
 
-  const court = await repositories.courts.getBySlug(slug);
+  // Request-scoped, cookie-carrying repos (TASK_72) — resolved BEFORE the court read
+  // (not just for the Add-to-Collection block below) so `court`/`related` carry the
+  // viewer's real session too: an entitled visitor must still see a locked court's
+  // approximate position, and this page's own `locked` branch below depends on a
+  // locked court's `approxLat`/`approxLng` being genuinely absent for a non-entitled
+  // viewer (see `renderLocked`'s location block) rather than merely unused by it.
+  const protectedRepos = await getRepositoriesForRequest();
+
+  const court = await protectedRepos.courts.getBySlug(slug);
   if (!court) {
     // Renders the default framework 404 — no custom not-found page needed (Task 8).
     notFound();
   }
 
   // `getRelated` keys off the court id (not slug); fetched after the court resolves.
-  const related = await repositories.courts.getRelated(court.id, 4);
+  const related = await protectedRepos.courts.getRelated(court.id, 4);
 
   // Add-to-Collection menu data (Feature 36), fetched HERE on the server. These are
   // PROTECTED reads (the user's wishlist folders + which of them contain this court). In
@@ -139,7 +147,6 @@ export default async function CourtDetailPage({
   // which we DEGRADE to empty + `signedIn:false` (NEVER redirect — this page is public).
   // The CTA panel forwards `signedIn` to the menu, which then prompts sign-in instead of
   // mutating. A non-auth error still throws (a real fault must not look like "logged out").
-  const protectedRepos = await getRepositoriesForRequest();
   let savedCollections: UserCollectionDTO[] = [];
   let memberCollectionIds: string[] = [];
   let initialSaved = false;
