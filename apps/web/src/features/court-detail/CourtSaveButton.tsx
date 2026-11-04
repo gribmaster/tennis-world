@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getMutationSavedRepository } from '@/lib/repositories.client';
 import { AuthRequiredError } from '@/lib/repositories';
-import { InlineSpinner } from '@/components/ui';
+import { HeartIcon, InlineSpinner } from '@/components/ui';
 
 // CourtSaveButton — the standalone Save / Unsave (heart) control for Court Detail.
 //
@@ -44,25 +44,6 @@ import { InlineSpinner } from '@/components/ui';
 // 52×52 square in the footer. `presentation="label"` (the default) keeps the original
 // glyph + "Save Court" / "Saved" text. Either way the §4 triad is identical: `disabled`,
 // `aria-busy`, and an `InlineSpinner` swapped 1:1 for the glyph so the box never resizes.
-
-/** Heart glyph — same visual language as CourtCard's; `filled` toggles the saved look. */
-function HeartGlyph({ filled }: { filled: boolean }) {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill={filled ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      strokeWidth="2.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
-  );
-}
 
 /** The lifted save state: exactly what the button needs to render and act. */
 export interface CourtSaveState {
@@ -221,7 +202,7 @@ export function CourtSaveButton({
       {pending ? (
         <InlineSpinner label="Saving…" />
       ) : (
-        <HeartGlyph filled={effectiveSignedIn && saved} />
+        <HeartIcon filled={effectiveSignedIn && saved} />
       )}
       {presentation === 'label' ? label : null}
     </button>

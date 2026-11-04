@@ -4,13 +4,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { getMutationSavedRepository } from '@/lib/repositories.client';
 import { AuthRequiredError } from '@/lib/repositories';
-import { InlineSpinner } from '@/components/ui';
+import { HeartIcon, InlineSpinner } from '@/components/ui';
 
-// CourtCardSaveButton — the ONE shared bookmark save/unsave control for the v3
-// `CourtCard` (TASK_56). Merges what `HomeCourtSaveHeart` / `CollectionCourtSaveHeart` /
+// CourtCardSaveButton — the ONE shared save/unsave control for the v3 `CourtCard`
+// (TASK_56). Merges what `HomeCourtSaveHeart` / `CollectionCourtSaveHeart` /
 // `UserCollectionCourtSaveHeart` each did (those are superseded by this component — see
 // CourtCard's own header comment on the "one heart per screen" convention ending) with
-// v3's bookmark visuals and its guest "Sign in to save" tooltip.
+// v3's guest "Sign in to save" tooltip. TASK_69: the glyph itself is the shared
+// `HeartIcon` (court-detail's heart), not v3's bookmark — the owner wants one heart for
+// every "save a court" control, card included.
 //
 // BEHAVIOUR — identical to the superseded hearts, and the CLAUDE.md §4 rule-2 triad:
 //   • local pending state + `disabled` + `aria-busy` + `<InlineSpinner label="Saving…" />`,
@@ -36,10 +38,10 @@ import { InlineSpinner } from '@/components/ui';
 // stays server-side. This island never fetches reads; `initialSaved` comes from the page.
 
 /**
- * v3's `Ico.save` — a bookmark, not a heart. Exported (TASK_60) so
- * `features/collections/CollectionSaveHeart.tsx` can render the same glyph for its
- * `glyph="bookmark"` variant instead of drawing a third copy. This component's own
- * behaviour is otherwise unchanged.
+ * v3's `Ico.save` — a bookmark, not a heart (TASK_69: this component's own save control
+ * now renders the shared `HeartIcon` instead). Kept as a named export only because
+ * `features/collections/CollectionSaveHeart.tsx` reuses it for its `glyph="bookmark"`
+ * variant (saving an editorial *collection*, not a court) instead of drawing a third copy.
  */
 export function BookmarkGlyph({ size }: { size: number }) {
   return (
@@ -164,15 +166,8 @@ export function CourtCardSaveButton({
         {pending ? (
           <InlineSpinner label="Saving…" className="text-bone" />
         ) : (
-          <span className="md:hidden">
-            <BookmarkGlyph size={14} />
-          </span>
+          <HeartIcon filled={isSaved} size={16} />
         )}
-        {!pending ? (
-          <span className="hidden md:inline-flex">
-            <BookmarkGlyph size={15} />
-          </span>
-        ) : null}
       </button>
 
       {!signedIn && tooltipOpen ? (

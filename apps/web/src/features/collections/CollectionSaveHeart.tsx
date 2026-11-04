@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getMutationSavedRepository } from '@/lib/repositories.client';
 import { AuthRequiredError } from '@/lib/repositories';
-import { InlineSpinner } from '@/components/ui';
+import { HeartIcon, InlineSpinner } from '@/components/ui';
 import { BookmarkGlyph } from '@/components/court/CourtCardSaveButton';
 
 // CollectionSaveHeart — the circular save/unsave control overlaid on an editorial
@@ -36,25 +36,6 @@ import { BookmarkGlyph } from '@/components/court/CourtCardSaveButton';
 //
 // REPOSITORY: `getMutationSavedRepository()` — the same accessor `CourtSaveButton` uses,
 // since `SavedRepository` carries both court and collection mutation methods.
-
-/** Heart glyph — same path/visual language as the original `HomeCourtSaveHeart` (now deleted). `size` added (TASK_60) so the Collection Detail hero/bar (18px) and every pre-existing 16px call site share one glyph. */
-function HeartGlyph({ filled, size = 16 }: { filled: boolean; size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill={filled ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      strokeWidth="2.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
-  );
-}
 
 /** The lifted save state — same shape as `CourtSaveButton`'s `CourtSaveState`. */
 export interface CollectionSaveState {
@@ -222,7 +203,7 @@ export function CollectionSaveHeart({
           </span>
         </>
       ) : (
-        <HeartGlyph filled={isSaved} size={size} />
+        <HeartIcon filled={isSaved} size={size} />
       )}
     </button>
   );

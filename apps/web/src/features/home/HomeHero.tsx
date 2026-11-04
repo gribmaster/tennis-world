@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { PendingCardLink } from '@/components/navigation';
 
-// Autoplay interval (TASK_67). The cross-fade (400ms) and the pill glide (350ms) both
-// fit comfortably inside it.
+// Autoplay interval (TASK_67). The cross-fade (400ms) and the dot-strip slide (350ms,
+// TASK_68) both fit comfortably inside it.
 const HERO_AUTOPLAY_MS = 3500;
 
 // HomeHero — the v3 "Atlas" hero carousel (TASK_58). Replaces the v2 fixed-image band
@@ -35,10 +35,24 @@ const HERO_AUTOPLAY_MS = 3500;
 //
 // ARROWS + AUTOPLAY (TASK_67): prev/next arrow buttons are additional siblings of the
 // `PendingCardLink`, same reasoning as the pill/dots above. Autoplay schedules one
-// `setTimeout` per slide (effect keyed on `[index, enabled]`), so any index change —
-// arrow, dot, pill, or autoplay itself — restarts the 1500ms countdown. `enabled` folds
-// in reduced-motion, page visibility, viewport intersection, "all images loaded", and a
-// `paused` flag driven by pointer/focus interaction on the card (see handlers below).
+// `setTimeout` per slide (effect keyed on `[pos, enabled]` — TASK_70's ring position,
+// see below), so any change — arrow, dot, pill, or autoplay itself — restarts the
+// 3500ms countdown. `enabled` folds in reduced-motion, page visibility, viewport
+// intersection, "all images loaded", and a `paused` flag driven by pointer/focus
+// interaction on the card (see handlers below).
+//
+// PILL + DOTS (TASK_68): the place pill never moves — it sits at the row's fixed
+// horizontal centre at every index, at every width. Only the dot strip slides under it.
+//
+// ENDLESS DOT RING (TASK_70): the strip always shows exactly `SIDE = min(3, N - 1)`
+// dots on each side of the pill, never fewer — on slide 1 the left side repeats the
+// same other slides the right side would show later, rather than sitting empty. State
+// is an UNBOUNDED ring position `pos` (not a 0..N-1 index); `index = pos mod N` is
+// derived for everything that renders a single slide (photo, pill label, card link).
+// Dots are virtual, keyed by absolute position `pos + d` rather than by slide, so the
+// same slide can appear as two distinct dot elements (one on each side) at once. Every
+// control moves `pos` by a signed delta (arrows/pill/autoplay: ±1; a dot: its own
+// offset `d`), so the strip always glides that many slots with no wrap-around "hop".
 
 export interface HomeHeroSlide {
   /** Court slug — the hero card navigates to `/courts/{slug}`. */
@@ -102,36 +116,51 @@ function ChevronGlyph({ direction }: { direction: 'left' | 'right' }) {
 }
 
 /**
- * One pagination dot — absolutely positioned inside the sliding row at `x` (a CSS
- * `calc()` expression referencing the row's `--slot`/`--pill-w` custom properties; see
- * the row's comment below). The dot under the active slide stays mounted (never
- * removed) so the pill can glide back off it without a remount flash — it just goes
- * `opacity: 0`, `pointer-events: none`, and drops out of the tab order (TASK_66).
+ * One pagination dot — absolutely positioned at `x` (a CSS `calc()` expression
+ * referencing the row's `--slot`/`--pill-w` custom properties; see the row's comment
+ * below). TASK_70: dots are now *virtual*, keyed by an absolute ring position, not by
+ * slide — the same slide can appear as two different dot elements at once (once on
+ * each side). `interactive` is false for the two outermost "staging" dots
+ * (`|d| = SIDE + 1`, opacity 0, just outside the visible row, fading in/out as the
+ * strip advances) AND for the dot parked at the pill's dead centre (`d = 0`, opacity 0,
+ * fully covered by the pill's opaque/blurred body) — that centre dot stays mounted
+ * across the whole cycle purely so the elements on either side of it have something to
+ * transition smoothly FROM/TO instead of popping in/out unmounted (see the row's
+ * comment for why). `ariaHidden` covers those two plus every left-side dot (a
+ * pointer/touch-only duplicate of a slide also reachable via a right-side dot, so it is
+ * dropped from the Tab order to avoid a duplicate stop).
  */
 function PaginationDot({
   x,
-  hidden,
+  opacity,
+  ariaHidden,
+  interactive,
   onClick,
   label,
+  slideIndex,
 }: {
   x: string;
-  hidden: boolean;
+  opacity: number;
+  ariaHidden: boolean;
+  interactive: boolean;
   onClick: () => void;
   label: string;
+  slideIndex: number;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={label}
-      aria-hidden={hidden || undefined}
-      tabIndex={hidden ? -1 : undefined}
+      aria-hidden={ariaHidden || undefined}
+      tabIndex={ariaHidden ? -1 : undefined}
+      data-slide={slideIndex}
       style={{
         transform: `translateX(${x})`,
-        opacity: hidden ? 0 : 1,
-        pointerEvents: hidden ? 'none' : undefined,
+        opacity,
+        pointerEvents: interactive ? undefined : 'none',
       }}
-      className="group absolute left-0 top-0 flex h-full w-[var(--slot)] items-center justify-center [transition:transform_350ms_cubic-bezier(0.4,0,0.2,1),opacity_200ms_ease] motion-reduce:[transition:none]"
+      className="group absolute left-0 top-0 flex h-full w-[var(--slot)] items-center justify-center [transition-property:transform,opacity] [transition-duration:350ms,200ms] [transition-timing-function:cubic-bezier(0.4,0,0.2,1),ease] motion-reduce:[transition:none]"
     >
       <span
         aria-hidden
@@ -142,7 +171,11 @@ function PaginationDot({
 }
 
 export function HomeHero({ slides }: HomeHeroProps) {
-  const [index, setIndex] = useState(0);
+  // TASK_70: `pos` is an UNBOUNDED ring position (may be negative or exceed
+  // slides.length) — the actual slide shown is `index = pos mod N` (below). Every
+  // control moves `pos` by a signed delta instead of setting `index` directly, so the
+  // dot strip always glides the matching number of slots with no wrap-around "hop".
+  const [pos, setPos] = useState(0);
   const [paused, setPaused] = useState(false);
   // Conservative defaults so the server render and the first client render match
   // exactly (TASK_67 decision 8); effects below correct each one after mount.
@@ -185,19 +218,48 @@ export function HomeHero({ slides }: HomeHeroProps) {
   useEffect(() => {
     if (!enabled) return;
     const timer = setTimeout(() => {
-      setIndex((i) => (i + 1) % slides.length);
+      setPos((p) => p + 1);
     }, HERO_AUTOPLAY_MS);
     return () => clearTimeout(timer);
-  }, [index, enabled, slides.length]);
+  }, [pos, enabled]);
 
   if (slides.length === 0) return null;
 
-  const current = slides[Math.min(index, slides.length - 1)]!;
-  const advance = () => setIndex((i) => (i + 1) % slides.length);
-  const jumpTo = (i: number) => setIndex(i);
-  const goPrev = () => setIndex((i) => (i - 1 + slides.length) % slides.length);
-  const goNext = () => setIndex((i) => (i + 1) % slides.length);
-  const showDots = slides.length > 1;
+  const slideCount = slides.length;
+  const index = ((pos % slideCount) + slideCount) % slideCount;
+  const current = slides[index]!;
+  const advance = () => setPos((p) => p + 1);
+  const goPrev = () => setPos((p) => p - 1);
+  const goNext = () => setPos((p) => p + 1);
+  const showDots = slideCount > 1;
+
+  // Row geometry (TASK_70, decisions 2 & 5). Always SIDE dots on each side of the fixed
+  // pill — SIDE = min(3, N - 1) so a dot can never land back on the active slide — and
+  // the row reserves exactly that many slots on each side, so its width stays constant.
+  const SIDE = Math.min(3, slideCount - 1);
+  const dotX = (d: number) => {
+    if (d < 0) return `calc(${SIDE + d} * var(--slot))`;
+    if (d > 0) return `calc(${SIDE} * var(--slot) + var(--pill-w) + ${d - 1} * var(--slot))`;
+    return `calc(${SIDE} * var(--slot) + (var(--pill-w) - var(--slot)) / 2)`;
+  };
+  // Virtual dot offsets, left to right: -(SIDE+1) .. +(SIDE+1), INCLUDING 0.
+  //
+  // Decision 4 as literally written excludes v = pos (the active slide "has no dot").
+  // Tried that first; it produces a real pop, caught by this task's own "verify this
+  // actually shows no pop... and adjust the margin of extra rendered positions if it
+  // does" check (decision 4): the slot immediately right of the pill (d = +1) is NOT
+  // covered by the pill (the pill is many slots wide, but d = ±1 sit just outside its
+  // edge) — so when that dot becomes active, excluding v = pos unmounts it mid-air with
+  // no fade-out, and the dot vacating d = 0 would have to pop into existence at d = -1
+  // with no prior mounted state to transition from (no fade-in). Rendering d = 0 too —
+  // hidden at the pill's dead centre, fully covered by its opaque/blurred body, exactly
+  // like TASK_68's old "active dot" slot — keeps that element mounted across the whole
+  // cycle, so both transitions (d = +1 → 0 and 0 → -1) are ordinary opacity/transform
+  // animations on an already-mounted node instead of a mount/unmount pop.
+  const dotOffsets: number[] = [];
+  for (let d = -(SIDE + 1); d <= SIDE + 1; d++) {
+    dotOffsets.push(d);
+  }
 
   const markLoaded = (slug: string) => {
     setLoadedSlugs((prev) => (prev.has(slug) ? prev : new Set(prev).add(slug)));
@@ -280,69 +342,83 @@ export function HomeHero({ slides }: HomeHeroProps) {
         </PendingCardLink>
 
         {/* Prev/next arrows — SIBLINGS of the card link (CLAUDE.md §4 rule 10: purely
-            local UI, no Pending* primitive). Mobile: 30px circles in the bottom row,
-            flanking the pill/dots control, inset 6px from the card edge. Desktop: 48px
-            circles vertically centred at the card's left/right edges (TASK_67). */}
+            local UI, no Pending* primitive). Vertically centred on the card at every
+            width (TASK_68 — supersedes the TASK_67 bottom-row mobile placement, which
+            only existed to clear the left-aligned title; the title is centred now and
+            the wider dot row above no longer leaves room beside it). Mobile: 36px
+            circles, inset 8px from the card edge. Desktop: 48px circles, inset 24px. */}
         {showControls ? (
           <button
             type="button"
             onClick={goPrev}
             aria-label="Previous slide"
-            className="absolute bottom-[23px] left-[6px] z-10 flex h-[30px] w-[30px] items-center justify-center rounded-full border border-white/40 bg-white/20 text-white backdrop-blur-[10px] transition-colors hover:bg-white/30 md:bottom-auto md:left-6 md:top-1/2 md:h-12 md:w-12 md:-translate-y-1/2"
+            className="absolute left-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-white/20 text-white backdrop-blur-[10px] transition-colors hover:bg-white/30 md:left-6 md:h-12 md:w-12"
           >
             <ChevronGlyph direction="left" />
           </button>
         ) : null}
 
         {/* Place pill + dots — SIBLINGS of the card link (never inside the <a>), so
-            clicking either never navigates. One row for both breakpoints (TASK_66): the
-            pill sits at the active slide's position in a fixed-width, centred row, and
-            glides onto the next dot's position when the slide changes, while the dots
-            on either side slide aside to make room — nothing mounts/unmounts, so the
-            motion is smooth and compositor-only (`transform`/`opacity` only).
-            `--slot` is the 28px dot hit-target width; `--pill-w` is a fixed width sized
-            to the longest real place label ("Douro Valley") per breakpoint so the row
+            clicking either never navigates. One row for both breakpoints: the pill is
+            fixed at the row's horizontal centre (TASK_68 — it is never translated, so
+            its centre equals the card's centre at every index).
+            TASK_70: the dot strip is an ENDLESS RING, not a strip bounded by the first/
+            last slide — always exactly `SIDE` VISIBLE dots on each side of the pill,
+            keyed by an absolute ring position (`pos + d`, not by slide), so the same
+            slide can render as two different dot elements (one on each side) and the
+            strip never runs out of dots to show near either end. Advancing moves every
+            dot exactly one slot in the matching direction (via `transform`); nothing
+            mounts/unmounts mid-row — the two staging dots just outside the row
+            (`|d| = SIDE + 1`) AND the one dot parked at the pill's dead centre
+            (`d = 0`, covered by the pill) all render at `opacity: 0` so every element
+            that's about to become visible (or that just stopped being) already exists
+            to transition smoothly into/out of view instead of popping.
+            `--slot` is the dot hit-target width; `--pill-w` is a fixed width sized to
+            the longest real place label ("Douro Valley") per breakpoint so the row
             never changes width when the label changes.
             `pointer-events-none` on this full-width outer row (re-enabled on the
             centred inner group) so its invisible edges don't steal clicks from the
-            TASK_67 arrows, which sit in that same space outside the centred content. */}
+            arrows, which sit in that same space outside the centred content. */}
         <div className="pointer-events-none absolute inset-x-0 bottom-[18px] z-10 flex justify-center md:bottom-9">
           <div
             role="group"
             aria-label="Hero slides"
-            className="pointer-events-auto relative h-10 [--pill-w:168px] [--slot:28px] md:[--pill-w:172px]"
+            className="pointer-events-auto relative h-10 overflow-visible [--pill-w:152px] [--slot:24px] md:[--pill-w:172px] md:[--slot:28px]"
             style={{
               width:
-                slides.length > 1
-                  ? `calc(var(--pill-w) + ${slides.length - 1} * var(--slot))`
+                slideCount > 1
+                  ? `calc(var(--pill-w) + ${2 * SIDE} * var(--slot))`
                   : 'var(--pill-w)',
             }}
           >
             <button
               type="button"
               onClick={advance}
-              style={{ transform: `translateX(calc(${index} * var(--slot)))` }}
-              className="serif absolute left-0 top-0 flex h-full w-[var(--pill-w)] items-center justify-center rounded-pill border border-white/40 bg-white/20 px-6 text-[13px] uppercase tracking-[0.16em] text-white backdrop-blur-[10px] [transition:transform_350ms_cubic-bezier(0.4,0,0.2,1),opacity_200ms_ease] motion-reduce:[transition:none] md:px-[26px]"
+              style={{ left: `calc(${SIDE} * var(--slot))` }}
+              className="serif absolute top-0 z-10 flex h-full w-[var(--pill-w)] items-center justify-center rounded-pill border border-white/40 bg-white/20 px-4 text-[13px] uppercase tracking-[0.16em] text-white backdrop-blur-[10px] md:px-[26px]"
             >
               <span className="min-w-0 truncate">{current.place}</span>
             </button>
 
             {showDots
-              ? slides.map((slide, i) => {
-                  const hidden = i === index;
-                  const x =
-                    i < index
-                      ? `calc(${i} * var(--slot))`
-                      : i > index
-                        ? `calc(${i} * var(--slot) + (var(--pill-w) - var(--slot)))`
-                        : `calc(${index} * var(--slot))`;
+              ? dotOffsets.map((d) => {
+                  const v = pos + d;
+                  const slideIndexForV = ((v % slideCount) + slideCount) % slideCount;
+                  const absD = Math.abs(d);
+                  const isOuter = absD === SIDE + 1;
+                  const isCenter = d === 0;
+                  const opacity =
+                    isOuter || isCenter ? 0 : absD === 1 ? 1 : absD === 2 ? 0.75 : 0.5;
                   return (
                     <PaginationDot
-                      key={slide.slug}
-                      x={x}
-                      hidden={hidden}
-                      onClick={() => jumpTo(i)}
-                      label={`Go to slide ${i + 1}`}
+                      key={v}
+                      x={dotX(d)}
+                      opacity={opacity}
+                      ariaHidden={d <= 0 || isOuter}
+                      interactive={!isOuter && !isCenter}
+                      onClick={() => setPos(v)}
+                      label={`Go to slide ${slideIndexForV + 1}`}
+                      slideIndex={slideIndexForV}
                     />
                   );
                 })
@@ -355,7 +431,7 @@ export function HomeHero({ slides }: HomeHeroProps) {
             type="button"
             onClick={goNext}
             aria-label="Next slide"
-            className="absolute bottom-[23px] right-[6px] z-10 flex h-[30px] w-[30px] items-center justify-center rounded-full border border-white/40 bg-white/20 text-white backdrop-blur-[10px] transition-colors hover:bg-white/30 md:bottom-auto md:right-6 md:top-1/2 md:h-12 md:w-12 md:-translate-y-1/2"
+            className="absolute right-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-white/20 text-white backdrop-blur-[10px] transition-colors hover:bg-white/30 md:right-6 md:h-12 md:w-12"
           >
             <ChevronGlyph direction="right" />
           </button>

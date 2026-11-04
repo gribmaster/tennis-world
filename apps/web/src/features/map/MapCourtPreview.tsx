@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CourtSummaryDTO } from '@tennis/contracts';
-import { Badge, InlineSpinner } from '@/components/ui';
+import { Badge, HeartIcon, InlineSpinner } from '@/components/ui';
 import { PendingCardLink } from '@/components/navigation';
 import { courtCategoryTags, courtDisplay } from '@/components/court/court-display';
 import { repositories } from '@/lib/repositories';
@@ -68,25 +68,6 @@ function CloseGlyph() {
       aria-hidden
     >
       <path d="M18 6 6 18M6 6l12 12" />
-    </svg>
-  );
-}
-
-/** Same non-interactive heart glyph CourtCard's visual-only save affordance uses. */
-function HeartGlyph() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
     </svg>
   );
 }
@@ -399,7 +380,7 @@ export function MapCourtPreview({
           aria-hidden
           className="pointer-events-none absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-pill bg-ink/10 text-stone"
         >
-          <HeartGlyph />
+          <HeartIcon filled={false} size={14} />
         </span>
       ) : null}
     </div>
