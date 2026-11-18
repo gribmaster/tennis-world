@@ -18,6 +18,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseCoordinatesFromMapLink } from '../src/lib/maps-link-parser';
+import { createSerialQueue } from '../src/lib/serial-queue';
 import { slugify as adminSlugify } from '../src/lib/slugify';
 // Relative import of the API's OWN slugify, harness-only (never from app code) —
 // asserts the admin UI's auto-slug matches the API's rule byte for byte.
@@ -285,6 +286,94 @@ async function main(): Promise<void> {
   const secretish = /SECRET|KEY|TOKEN|PASSWORD/;
   const offendingNames = viteEnvNames.filter((n) => secretish.test(n));
   expectEqual('no VITE_* name contains SECRET/KEY/TOKEN/PASSWORD', offendingNames, []);
+
+  console.log('\n6. Serial upload queue (TASK_77)\n');
+
+  function delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  // Runs strictly in enqueue order, even with staggered delays that would
+  // otherwise let a later, faster task finish first.
+  {
+    const queue = createSerialQueue();
+    const order: number[] = [];
+    const tasks = [
+      queue.enqueue(async () => {
+        await delay(30);
+        order.push(1);
+        return 1;
+      }),
+      queue.enqueue(async () => {
+        await delay(10);
+        order.push(2);
+        return 2;
+      }),
+      queue.enqueue(async () => {
+        await delay(20);
+        order.push(3);
+        return 3;
+      }),
+    ];
+    const settled = await Promise.all(tasks);
+    expectEqual('queue runs tasks strictly in enqueue order', order, [1, 2, 3]);
+    expectEqual('each promise settles with its own task result', settled, [1, 2, 3]);
+  }
+
+  // Max observed concurrency is 1 — a shared counter never rises above 1
+  // while tasks with staggered delays are in flight.
+  {
+    const queue = createSerialQueue();
+    let active = 0;
+    let maxActive = 0;
+    const tasks = [15, 5, 10].map((ms) =>
+      queue.enqueue(async () => {
+        active += 1;
+        maxActive = Math.max(maxActive, active);
+        await delay(ms);
+        active -= 1;
+      }),
+    );
+    await Promise.all(tasks);
+    expectEqual('max observed concurrency is 1', maxActive, 1);
+  }
+
+  // A rejecting task rejects only its own promise and does not block later tasks.
+  {
+    const queue = createSerialQueue();
+    const order: string[] = [];
+    const p1 = queue.enqueue(async () => {
+      order.push('a');
+      throw new Error('task a failed');
+    });
+    const p2 = queue.enqueue(async () => {
+      await delay(5);
+      order.push('b');
+      return 'b';
+    });
+    let p1Rejected = false;
+    let p1Message: string | undefined;
+    try {
+      await p1;
+    } catch (err) {
+      p1Rejected = true;
+      p1Message = err instanceof Error ? err.message : undefined;
+    }
+    const p2Result = await p2;
+    expectTrue('a rejecting task rejects only its own promise', p1Rejected);
+    expectEqual('the rejection carries the task\'s own error', p1Message, 'task a failed');
+    expectEqual('later tasks still run after an earlier rejection', p2Result, 'b');
+    expectEqual('tasks still ran in enqueue order despite the rejection', order, ['a', 'b']);
+  }
+
+  // Enqueuing after the queue has already drained still works.
+  {
+    const queue = createSerialQueue();
+    const first = await queue.enqueue(async () => 'first');
+    expectEqual('enqueue works before any drain', first, 'first');
+    const second = await queue.enqueue(async () => 'second');
+    expectEqual('enqueue after the queue has drained still works', second, 'second');
+  }
 
   console.log(`\nTotal checks: ${results.length}   Passed: ${results.filter((r) => r.ok).length}   Failed: ${results.filter((r) => !r.ok).length}\n`);
 

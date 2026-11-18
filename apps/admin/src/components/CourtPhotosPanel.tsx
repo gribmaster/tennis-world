@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, Button, Card, Input, Modal, Upload, message } from 'antd';
 import type { UploadProps } from 'antd';
 import {
@@ -28,6 +28,7 @@ import {
 } from '../lib/images-api';
 import { resolveImageSrc } from '../lib/image-url';
 import { ApiError } from '../lib/api-error';
+import { createSerialQueue } from '../lib/serial-queue';
 
 interface CourtPhotosPanelProps {
   courtId: string;
@@ -39,10 +40,12 @@ interface CourtPhotosPanelProps {
 const WEB_BASE_URL = import.meta.env.VITE_WEB_BASE_URL;
 
 export function CourtPhotosPanel({ courtId, images, onChanged }: CourtPhotosPanelProps) {
-  const [uploading, setUploading] = useState(false);
+  const [pendingUploads, setPendingUploads] = useState(0);
+  const uploading = pendingUploads > 0;
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
   const [order, setOrder] = useState<string[] | null>(null);
   const [reordering, setReordering] = useState(false);
+  const uploadQueue = useRef(createSerialQueue());
 
   const sorted = [...images].sort((a, b) => a.sortOrder - b.sortOrder);
   const displayOrder = order ?? sorted.map((img) => img.id);
@@ -56,7 +59,12 @@ export function CourtPhotosPanel({ courtId, images, onChanged }: CourtPhotosPane
   // Uploads run SEQUENTIALLY, one at a time (TASK_74 §"Photos panel") — even
   // though TASK_75 makes the API safe under concurrent uploads, the UI stays
   // simple and each file's own success/failure stays easy to attribute.
-  const customRequest: UploadProps['customRequest'] = async (options) => {
+  // rc-upload invokes customRequest for every selected file immediately, so
+  // a shared queue (not just the `uploading` flag) is what keeps the actual
+  // upload requests serial and in selection order (TASK_77).
+  const hadSuccessSinceDrain = useRef(false);
+
+  const customRequest: UploadProps['customRequest'] = (options) => {
     const file = options.file as File;
     const preflightError = preflightCourtImage(file);
     if (preflightError) {
@@ -65,18 +73,27 @@ export function CourtPhotosPanel({ courtId, images, onChanged }: CourtPhotosPane
       return;
     }
 
-    setUploading(true);
-    try {
-      await uploadCourtImage(courtId, file);
-      options.onSuccess?.({});
-      onChanged();
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Upload failed.';
-      setUploadErrors((prev) => [...prev, `"${file.name}": ${msg}`]);
-      options.onError?.(err instanceof Error ? err : new Error(msg));
-    } finally {
-      setUploading(false);
-    }
+    setPendingUploads((n) => n + 1);
+    void uploadQueue.current.enqueue(async () => {
+      try {
+        await uploadCourtImage(courtId, file);
+        options.onSuccess?.({});
+        hadSuccessSinceDrain.current = true;
+      } catch (err) {
+        const msg = err instanceof ApiError ? err.message : 'Upload failed.';
+        setUploadErrors((prev) => [...prev, `"${file.name}": ${msg}`]);
+        options.onError?.(err instanceof Error ? err : new Error(msg));
+      } finally {
+        setPendingUploads((n) => {
+          const next = n - 1;
+          if (next === 0 && hadSuccessSinceDrain.current) {
+            hadSuccessSinceDrain.current = false;
+            onChanged();
+          }
+          return next;
+        });
+      }
+    });
   };
 
   async function handleMakeHero(imageId: string): Promise<void> {
