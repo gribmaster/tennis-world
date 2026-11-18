@@ -1,5 +1,7 @@
 # TASK 64 — Phase 3, part 1: admin API foundation (auth, roles, ops endpoints)
 
+> Narrowed by TASK_73 (admin auth + courts only). The sections below that TASK_73 does not implement are still the plan for later.
+
 **Model: Sonnet 5, reasoning effort: high.** This task adds a second, privileged auth surface and endpoints that grant paid access, so it is security-sensitive: read the code you are extending before you write anything, and do not improvise on auth.
 
 ## Goal

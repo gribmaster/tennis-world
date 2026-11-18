@@ -12,3 +12,4 @@ export * from './review';
 export * from './user';
 export * from './auth';
 export * from './billing';
+export * from './admin';

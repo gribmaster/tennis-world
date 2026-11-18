@@ -11,6 +11,7 @@ import { MeModule } from './me/me.module';
 import { BillingModule } from './billing/billing.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -25,6 +26,9 @@ import { PrismaModule } from './prisma/prisma.module';
     MeModule,
     BillingModule,
     WebhooksModule,
+    // TASK_73 — a DynamicModule (not the bare class): registers NO routes at
+    // all in production with no ADMIN_JWT_SECRET set. See admin.module.ts.
+    AdminModule.register(),
   ],
   controllers: [HealthController],
 })

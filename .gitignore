@@ -22,6 +22,10 @@ build/
 # prisma
 apps/api/prisma/*.db
 
+# TASK_73 — local admin-image storage driver (COURT_IMAGE_STORAGE=local, dev/CI
+# only) writes uploaded court photos here; never committed.
+apps/web/public/uploads/
+
 # logs
 *.log
 npm-debug.log*

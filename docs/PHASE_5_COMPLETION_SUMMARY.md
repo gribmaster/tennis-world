@@ -441,7 +441,10 @@ safe request-time 500, never a boot crash.
    `verify:web-billing`) — Stripe-free, deterministic, seeded fixtures. Small, high-value.
 2. **Redis-backed rate limiter** for multi-instance production (drop-in behind `hit()`).
 3. **Phase 3 admin** — `apps/admin` + `/v1/admin/*` for `manual_grant` / revoke (schema-ready),
-   feeding the same `EntitlementsService`.
+   feeding the same `EntitlementsService`. Admin API for courts done in TASK_73 (auth,
+   courts CRUD + publish gate, countries/regions, images); the admin UI (`apps/admin`) is
+   TASK_74. The `manual_grant`/revoke/consultations/users/review-moderation surface TASK_64
+   sketched is still unbuilt — see `docs/TASK_64_ADMIN_API_FOUNDATION.md`.
 4. **Promo-code redemption** — `POST /v1/billing/redeem` → `kind=promo_unlock` (admin-inserted rows
    first, then a redeem UI).
 5. **Mobile IAP** — App Store / Google Play receipt validation + server-to-server notifications on the

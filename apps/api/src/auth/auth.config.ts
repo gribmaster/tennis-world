@@ -117,13 +117,25 @@ export function loadAuthConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig
 
   // Empty/missing → dev fallback. Otherwise split on commas, trim, drop blanks.
   const originsRaw = env.API_CORS_ORIGINS?.trim();
-  const corsOrigins =
+  const baseCorsOrigins =
     originsRaw && originsRaw.length > 0
       ? originsRaw
           .split(',')
           .map((o) => o.trim())
           .filter((o) => o.length > 0)
       : DEV_FALLBACK_ORIGINS;
+
+  // TASK_73 — append the admin app's origin(s) (comma-separated) to the SAME
+  // allowlist, never replacing it. Empty/missing adds nothing.
+  const adminOriginsRaw = env.ADMIN_APP_URL?.trim();
+  const adminOrigins =
+    adminOriginsRaw && adminOriginsRaw.length > 0
+      ? adminOriginsRaw
+          .split(',')
+          .map((o) => o.trim())
+          .filter((o) => o.length > 0)
+      : [];
+  const corsOrigins = [...new Set([...baseCorsOrigins, ...adminOrigins])];
 
   const cookieDomain = env.AUTH_COOKIE_DOMAIN?.trim();
 

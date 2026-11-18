@@ -20,17 +20,20 @@ apps/
            Google OAuth), me (profile, saved-courts, collections, exact-location),
            courts, collections, countries, articles, consultations, reviews,
            entitlements, billing (Stripe checkout/portal), webhooks (Stripe),
-           health, prisma.
+           admin (TASK_73 — a separate privileged /v1/admin/* surface, see "Admin
+           API" below), health, prisma.
   web/     Next.js 15 App Router + React 19 + Tailwind. All user-facing UI.
            src/app (routes), src/features (screen features), src/components
            (ui / layout / navigation / court / filters), src/domain (repository
            interfaces + mock & http implementations), src/lib (repository factories,
            session, demo auth, server actions), scripts (verify:* harnesses).
-  admin/   PLACEHOLDER ONLY. No Refine, no build. Exists so the workspace graph and
-           CI are correct. MUST NOT be built out without an explicit request.
+  admin/   PLACEHOLDER ONLY (TASK_74). No Refine, no build. Exists so the workspace
+           graph and CI are correct. MUST NOT be built out without an explicit
+           request. Its backend half (apps/api/src/admin) is already real — see
+           "Admin API" below.
 packages/
   contracts/   @tennis/contracts — shared DTOs / enums / zod schemas. Single source
-               of truth for the API↔web contract. TS-source main (see §9).
+               of truth for the API↔web contract. TS-source main (see §10).
   mock-data/   @tennis/mock-data — the mock dataset; also the Phase-2 seed source.
   config/      @tennis/config — shared tsconfig / eslint / prettier bases.
 ```
@@ -53,7 +56,7 @@ All commands run from the repo root.
 | Run everything | `pnpm dev` |
 | Start local Postgres | `pnpm db:up` (stop: `pnpm db:down`) |
 | Prisma generate | `pnpm --filter @tennis/api prisma:generate` |
-| Create a migration | `pnpm --filter @tennis/api prisma:migrate` (⚠ see §8) |
+| Create a migration | `pnpm --filter @tennis/api prisma:migrate` (⚠ see §9) |
 | Apply migrations | `pnpm --filter @tennis/api prisma:migrate:deploy` |
 | Reset dev DB | `pnpm --filter @tennis/api prisma:migrate:reset` (destructive) |
 | Seed | `pnpm --filter @tennis/api db:seed` |
@@ -85,7 +88,10 @@ pnpm verify:stripe-e2e     # optional, real Stripe test mode (opt-in)
 
 `pnpm --filter @tennis/api …`: `verify:effective-entitlement`, `verify:exact-location`,
 `verify:billing-checkout`, `verify:billing-rate-limit`, `verify:stripe-webhook`,
-`verify:stripe-e2e`, `verify:staging-demo-auth`, `verify:google-oauth`.
+`verify:stripe-e2e`, `verify:staging-demo-auth`, `verify:google-oauth`,
+`verify:admin-courts` (TASK_73 + TASK_75, 198 checks — admin auth/CSRF/roles, courts CRUD
++ publish gate, countries/regions, images incl. both storage drivers, concurrent-upload
+row-lock proof, trust-proxy behavior; run with `COURT_IMAGE_STORAGE=local`).
 
 Most harnesses need a running API (and some a seeded DB); each script's header comment
 states its own prerequisites. Touching UI pending/back-navigation ⇒ run
@@ -132,7 +138,22 @@ authed harnesses; `stripe-e2e` is a separate, secret-gated, non-required job.
 Env files: root `.env`, `apps/api/.env`, `apps/web/.env.local`; templates are the
 matching `.env.example` files. `apps/api/src/main.ts` imports `dotenv/config` — Nest does
 not load `.env` on its own. Config is read through `loadAuthConfig` / `billing.config.ts`
-/ `google-auth.config.ts`, not `@nestjs/config`.
+/ `google-auth.config.ts`, not `@nestjs/config`. **Note for any script that spawns
+`node apps/api/dist/main.js` as a child process with a custom `env`:** `dotenv/config`
+resolves `.env` relative to that file's own directory (`apps/api/`), NOT the child's
+`cwd`, and only skips a key already present as an OWN property of `process.env` — an
+*absent* key (not even `''`) gets silently backfilled from the real `apps/api/.env` on
+disk. A test harness that wants a variable truly unset must still set it to `''`.
+
+**`TRUST_PROXY_HOPS`** (TASK_75, `auth/trust-proxy.config.ts`, integer, default **0**):
+how many `X-Forwarded-For` hops Express trusts when deriving `req.ip`
+(`app.set('trust proxy', hops)` in `main.ts`, only when > 0). Every IP-keyed in-memory
+limiter (admin login, magic-link, billing, reviews) reads `req.ip` — at 0 behind a real
+reverse proxy, `req.ip` is the proxy's address for every client, so those limiters key on
+one shared bucket. Set `TRUST_PROXY_HOPS=1` on Railway (one reverse-proxy hop); leave it
+**0 locally** (no proxy — trusting a header here would let a client's own
+`X-Forwarded-For` choose its rate-limit key). An invalid value (negative, non-integer, or
+> 5) refuses to boot.
 
 Web data source: `NEXT_PUBLIC_DATA_SOURCE` = `mock` | `api`, resolved in
 `apps/web/src/domain/index.ts`. That file is the ONLY place that picks a repository
@@ -163,6 +184,10 @@ Locally both point at the same docker-compose Postgres (no pooler distinction).
 - **MUST NOT** put a secret behind `NEXT_PUBLIC_*` — that ships it in the browser bundle.
   Server-only names have no prefix (e.g. `STAGING_DEMO_AUTH_SECRET`), and the split in
   `apps/web/.env.example` (public flag + private secret) is deliberate.
+- **`SUPABASE_SERVICE_ROLE_KEY` (TASK_73) is server-only**, same rule, same reasoning —
+  never `NEXT_PUBLIC_*`, never logged, never in any response. This is unrelated to §6's
+  "no Supabase Auth" rule: Supabase is used here ONLY as a Storage backend for admin-
+  uploaded court photos (`apps/api/src/admin/images`), never as an auth provider.
 - Never echo secret values into logs, commit messages, or this file.
 
 ---
@@ -398,7 +423,112 @@ after any change in this area.
 
 ---
 
-## 8. Database and Prisma rules
+## 8. Admin API
+
+TASK_73 — `apps/api/src/admin` (`AdminModule`, sub-folders `auth/`, `courts/`, `geo/`,
+`images/`). A minimal admin surface for publishing/editing courts; the UI
+(`apps/admin`) is a separate task (TASK_74) and does not exist yet.
+
+- **A completely SEPARATE identity**, never the user `AuthGuard`/`AuthService`/session
+  cookie. Admin rows live in `AdminUser` (`email`, `passwordHash`, `role`). The admin JWT
+  has its **own secret `ADMIN_JWT_SECRET`** and the verifier requires `aud: 'tennis-admin'`
+  (via the jsonwebtoken `audience` sign/verify option) — a user token on an admin route and
+  an admin token on a user route (`/v1/me`, `/v1/reviews`, …) are both 401.
+- **Cookie `tennis_admin_session`, `Path=/v1/admin`, `HttpOnly`**; `Secure`/`SameSite`/
+  `Domain` are read from the EXISTING `AuthConfig` (`loadAuthConfig()`, called directly as a
+  pure function — not via AuthModule's DI) so the two cookies share the same deployment
+  posture without sharing a module. Cookie-first, then `Authorization: Bearer`.
+- **CSRF**: every state-changing request authenticated BY COOKIE must carry
+  `X-Tennis-Admin: 1`, or 403 (`AdminCsrfGuard`). GET and bearer-authenticated requests are
+  exempt.
+- **Routes exist only when enabled**: `ADMIN_JWT_SECRET` set, OR `NODE_ENV !== 'production'`.
+  In production with no secret, `AdminModule.register()` (a `DynamicModule`, registered as
+  `AdminModule.register()` in `app.module.ts`, NOT the bare class) returns NO
+  controllers/providers at all — `/v1/admin/*` is a plain Express 404, and the rest of the
+  API still boots. In production, setting `ADMIN_JWT_SECRET` to the obvious dev sentinel
+  value refuses to boot.
+- **Passwords**: `crypto.scrypt`, format `scrypt$N$r$p$<saltB64>$<hashB64>`
+  (`admin/auth/admin-password.util.ts`), `timingSafeEqual` compare, ≥ 12 characters. An
+  unknown login email still burns one real scrypt derivation (against a precomputed dummy
+  hash) — no timing oracle for account enumeration.
+- **Only one role has access today**: `AdminUser.role === 'admin'`. Any other value can log
+  in and read `GET /v1/admin/auth/me` but gets 403 on everything else. Default-deny:
+  `AdminRolesGuard` 403s a route that has no `@AdminRoles(...)` metadata — a forgotten
+  decorator can never leave a route open. Compose auth + CSRF + roles with the one decorator
+  `@AdminOnly('admin')` (`admin/auth/admin-roles.guard.ts`); `GET /v1/admin/auth/me` is the one
+  exception (`AdminAuthGuard` only — any role).
+- **No self-signup, no endpoint creates an `AdminUser`.** The first admin (and any password
+  rotation) is minted by `pnpm --filter @tennis/api admin:create -- --email … --role admin`
+  / `admin:set-password` (`apps/api/scripts/admin-user.ts`). Password from `ADMIN_PASSWORD`
+  env or a no-echo TTY prompt — never a CLI argument. Refuses under
+  `NODE_ENV=production` without `--yes-i-am-sure`.
+- **Admin responses never contain `passwordHash`.** They MAY contain a court's exact
+  `lat`/`lng`/`mapLinkUrl` (`packages/contracts/src/admin.ts`'s `AdminCourtDetailDTO`) —
+  that is the point of the editing tool — but ONLY on `/v1/admin/*`, never on a public route;
+  the public court selects/mappers (`courts/courts.mapper.ts`) are untouched and stay
+  structurally incapable of leaking coordinates.
+- **Derived court fields are server-computed, never admin-typed**: `approxLat`/`approxLng`
+  (~10km jitter) and `mapX`/`mapY` (decorative) come from `slugify` / `approxFromExact` /
+  `mapCoordsFromSeed` in `courts/court-derived-fields.ts` — extracted verbatim from the
+  content importer (`scripts/import-courts-from-content.ts`, which now imports from the
+  same module) so both paths stay byte-for-byte identical. `approx*` is recomputed ONLY
+  when `lat`/`lng` change; `mapX`/`mapY` are set once at creation and never recomputed;
+  `seedOrder` is `max(seedOrder) + 1` at creation, inside the creating transaction, and
+  never changed afterward.
+- **Publish gate**: `status` may become `published` only with ≥ 1 image and EXACTLY ONE
+  hero, a non-empty `blurb`, and valid `lat`/`lng` — otherwise 422 with
+  `{ message, missing: string[] }`. Checked on create-as-published, on PATCH, and
+  (implicitly, as a 409 on the delete itself) when deleting a published court's last image.
+- **Slug is immutable once a court has ever been published** — a PATCH that changes the
+  slug of a `published` court is 409. Changing it on a draft is fine.
+- **Image hero invariant**: a court with ≥ 1 image has EXACTLY ONE `isHero` image at all
+  times, restored inside the same transaction as every mutation that could break it. You
+  set a hero by promoting another image (`PATCH .../images/:id { isHero: true }`) —
+  `isHero: false` is rejected (400). Deleting the hero promotes the lowest-`sortOrder`
+  remaining image; deleting the LAST image of a **published** court is 409 (unpublish
+  first). Legacy `/courts/<slug>/…` and `/placeholders/…` image urls are never touched by
+  delete — only a url carrying a storage driver's own prefix is removed from storage.
+- **Upload validation (never trust the client)**: magic-byte sniffing accepts only JPEG /
+  PNG / WebP (`admin/images/admin-image-sniff.util.ts`) — anything else, including an SVG,
+  a GIF, or an HTML file renamed `.jpg`, is 415. The client's `mimetype` and `originalname`
+  are ignored entirely; the stored object name is always `<random uuid>.<sniffed ext>`
+  (closes path-traversal and content-type-spoofing). Max 8 MB (`FileInterceptor`'s multer
+  `limits.fileSize`; NestJS's own multer-error translation already maps an exceeded limit to
+  413 — no custom exception filter needed). Rate-limited per admin, 30 uploads / 10 minutes.
+- **Two storage drivers**, selected by `COURT_IMAGE_STORAGE` = `supabase` | `local`
+  (`admin/images/admin-image-storage.ts` / `admin-image-storage.config.ts`). `local`
+  (dev/CI only, the default outside production) writes under
+  `apps/web/public/uploads/courts/<courtId>/` and is gitignored. **`local` is refused at
+  boot in production**, and production with the value unset is ALSO refused at boot — the
+  value MUST be set explicitly in production. `supabase` talks to the Storage REST API with
+  plain `fetch` (no `@supabase/supabase-js` dependency); an incomplete Supabase config fails
+  the UPLOAD endpoint with a clean 503 at request time, never at boot.
+- `SUPABASE_SERVICE_ROLE_KEY` is server-only (see §3) — never logged, never returned in any
+  response, even on a storage-driver error.
+- `mapLinkUrl` is user-visible (the entitled-viewer "Directions" link is built from it —
+  `courts.mapper.ts#toExactLocationDTO`), so it is validated strictly
+  (`admin/courts/admin-map-link.util.ts`): `https:` only, no embedded credentials, no
+  explicit port, ≤ 2000 chars, hostname EXACTLY one of `google.com` / `www.google.com`
+  (path `/maps` or `/maps/…`), `maps.google.com` (path `/`, `/maps`, or `/maps/…` — never
+  `/url`, which is Google's own open-redirect endpoint), `goo.gl` (path `/maps` or
+  `/maps/…`), `maps.app.goo.gl` (any path). `null`/empty clears.
+- Login rate limiting: in-memory, keyed by IP **and** separately by email, 5 failures / 15
+  min per key → 429 + `Retry-After`; a SUCCESSFUL login resets only that email's counter
+  (`admin/auth/admin-login-rate-limit.service.ts`). **`TRUST_PROXY_HOPS`** (default 0 — see
+  §3) directly determines what `req.ip` the IP half of this key sees: with the default 0
+  behind a real reverse proxy, every client shares one IP bucket and 5 failures from
+  anyone locks out everyone for 15 minutes; the per-EMAIL key is what still protects an
+  individual admin account when that setting is wrong.
+- One `Logger` line per successful admin mutation (adminId, action, target type/id, the
+  NAMES of changed fields, never their values) and per login success/failure (failures
+  carry the lower-cased email + IP, never the password) — never a token, password, or the
+  Supabase key.
+- `pnpm --filter @tennis/api verify:admin-courts` is this surface's test coverage (run with
+  `COURT_IMAGE_STORAGE=local`) — see §2.
+
+---
+
+## 9. Database and Prisma rules
 
 - The Prisma schema, migrations, and seed are **owned exclusively by `apps/api`**
   (`apps/api/prisma`). No other app or package may define models or run migrations.
@@ -422,7 +552,7 @@ after any change in this area.
 
 ---
 
-## 9. Scope discipline
+## 10. Scope discipline
 
 - **MUST NOT** do unrelated refactors, renames, or reformatting; touch only what the task
   requires.
@@ -448,7 +578,7 @@ after any change in this area.
 
 ---
 
-## 10. Git rules
+## 11. Git rules
 
 - **MUST NOT** commit secrets, `.env` files, database dumps, or anything under `backups/`.
 - Keep commits focused — one logical change per commit, with a descriptive message.
