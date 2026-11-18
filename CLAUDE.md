@@ -27,13 +27,16 @@ apps/
            (ui / layout / navigation / court / filters), src/domain (repository
            interfaces + mock & http implementations), src/lib (repository factories,
            session, demo auth, server actions), scripts (verify:* harnesses).
-  admin/   PLACEHOLDER ONLY (TASK_74). No Refine, no build. Exists so the workspace
-           graph and CI are correct. MUST NOT be built out without an explicit
-           request. Its backend half (apps/api/src/admin) is already real — see
-           "Admin API" below.
+  admin/   TASK_74 — Vite + React 18 + Refine + Ant Design. The internal admin app:
+           sign in, list/create/edit courts, add countries/regions inline, upload
+           and arrange photos, publish/unpublish. src/lib (apiFetch, authProvider,
+           dataProvider, the countries/regions/images helper calls, the maps-link
+           parser and slug helper), src/components, src/pages, scripts (the
+           verify:admin-ui harness). Talks to /v1/admin/* over HTTP only — no
+           Prisma, no database connection string. See "Admin app" below.
 packages/
   contracts/   @tennis/contracts — shared DTOs / enums / zod schemas. Single source
-               of truth for the API↔web contract. TS-source main (see §10).
+               of truth for the API↔web contract. TS-source main (see §11).
   mock-data/   @tennis/mock-data — the mock dataset; also the Phase-2 seed source.
   config/      @tennis/config — shared tsconfig / eslint / prettier bases.
 ```
@@ -53,10 +56,11 @@ All commands run from the repo root.
 | Install deps | `pnpm install` (CI: `pnpm install --frozen-lockfile`) |
 | Run web locally | `pnpm --filter @tennis/web dev` |
 | Run API locally | `pnpm --filter @tennis/api dev` |
+| Run admin app locally | `pnpm --filter @tennis/admin dev` (port 18002) |
 | Run everything | `pnpm dev` |
 | Start local Postgres | `pnpm db:up` (stop: `pnpm db:down`) |
 | Prisma generate | `pnpm --filter @tennis/api prisma:generate` |
-| Create a migration | `pnpm --filter @tennis/api prisma:migrate` (⚠ see §9) |
+| Create a migration | `pnpm --filter @tennis/api prisma:migrate` (⚠ see §10) |
 | Apply migrations | `pnpm --filter @tennis/api prisma:migrate:deploy` |
 | Reset dev DB | `pnpm --filter @tennis/api prisma:migrate:reset` (destructive) |
 | Seed | `pnpm --filter @tennis/api db:seed` |
@@ -92,6 +96,11 @@ pnpm verify:stripe-e2e     # optional, real Stripe test mode (opt-in)
 `verify:admin-courts` (TASK_73 + TASK_75, 198 checks — admin auth/CSRF/roles, courts CRUD
 + publish gate, countries/regions, images incl. both storage drivers, concurrent-upload
 row-lock proof, trust-proxy behavior; run with `COURT_IMAGE_STORAGE=local`).
+
+`pnpm --filter @tennis/admin …`: `verify:admin-ui` (TASK_74, 41 checks — the maps-link
+parser, the slug helper against the API's own `slugify`, the data-provider's request
+mapping, a source scan for token persistence/`dangerouslySetInnerHTML`, an env-var name
+scan). Pure logic only — needs no running API.
 
 Most harnesses need a running API (and some a seeded DB); each script's header comment
 states its own prerequisites. Touching UI pending/back-navigation ⇒ run
@@ -528,7 +537,47 @@ TASK_73 — `apps/api/src/admin` (`AdminModule`, sub-folders `auth/`, `courts/`,
 
 ---
 
-## 9. Database and Prisma rules
+## 9. Admin app
+
+TASK_74 — `apps/admin` (Vite + React 18 + `@refinedev/core`/`@refinedev/antd` +
+`@refinedev/react-router` + Ant Design 5). A thin internal client over exactly the
+`/v1/admin/*` endpoints in §8 — courts list/create/edit, countries/regions, photos,
+publish/unpublish. No Refine admin UI framework existed before this; do not confuse it
+with `apps/web` (public site) or the user auth system.
+
+- **HTTP-only to `/v1/admin/*`** (`VITE_API_BASE_URL`) — **MUST NOT** add
+  `@prisma/client`, a database connection string, or any import from `apps/api`/
+  `apps/web`. Types come from `@tennis/contracts` (`admin.ts` + the shared enums);
+  never hand-copy an enum's values into this app.
+- **Auth is the TASK_73 admin cookie session, not the user session.** Every
+  `fetch` goes through the single `apiFetch` wrapper in `src/lib/api-client.ts`:
+  `credentials: 'include'` always, `X-Tennis-Admin: 1` on every non-GET, and the
+  ONE place a 401 triggers a redirect to `/login` (registered by
+  `components/SessionBoundary.tsx`). **The access token a login response carries
+  is never stored** — no `localStorage`, no `sessionStorage`; the httpOnly cookie
+  is the session. `verify:admin-ui`'s source scan enforces this.
+- **Custom `dataProvider`**, not `@refinedev/simple-rest` — the API's
+  `{ items, page, pageSize, total }` list shape and `PATCH`-based writes don't fit
+  the generic adapter. Only the `courts` resource goes through Refine's data
+  hooks; countries/regions/images are plain helper calls (`geo-api.ts` /
+  `images-api.ts`) that bypass the resource system entirely.
+- **React 18.3 is pinned in this package** — `@refinedev/antd` 6/antd 5 don't
+  officially support React 19, and `apps/web` stays on 19. pnpm isolates the two;
+  **MUST NOT** hoist or change `apps/web`'s React version to "fix" this.
+- **Dev port 18002** (`vite --port 18002 --host 127.0.0.1`); the API's
+  `ADMIN_APP_URL` must be `http://127.0.0.1:18002` locally (appended to
+  `API_CORS_ORIGINS`, see §3).
+- The maps-link parser (`lib/maps-link-parser.ts`) is a **pure, offline** function —
+  no network call, no geocoding. A place pin (`!3d!4d`) wins over the viewport
+  centre (`@lat,lng`) when a URL contains both; a short link (`goo.gl`,
+  `maps.app.goo.gl`) always reports "unreadable".
+- The slug auto-fill (`lib/slugify.ts`) **MUST** stay byte-for-byte identical to
+  `apps/api/src/courts/court-derived-fields.ts`'s `slugify` — `verify:admin-ui`
+  imports the API's version relatively (harness-only) and asserts equality.
+- `pnpm --filter @tennis/admin verify:admin-ui` is this surface's test coverage
+  (pure logic, no running API needed) — see §2.
+
+## 10. Database and Prisma rules
 
 - The Prisma schema, migrations, and seed are **owned exclusively by `apps/api`**
   (`apps/api/prisma`). No other app or package may define models or run migrations.
@@ -552,7 +601,7 @@ TASK_73 — `apps/api/src/admin` (`AdminModule`, sub-folders `auth/`, `courts/`,
 
 ---
 
-## 10. Scope discipline
+## 11. Scope discipline
 
 - **MUST NOT** do unrelated refactors, renames, or reformatting; touch only what the task
   requires.
@@ -578,7 +627,7 @@ TASK_73 — `apps/api/src/admin` (`AdminModule`, sub-folders `auth/`, `courts/`,
 
 ---
 
-## 11. Git rules
+## 12. Git rules
 
 - **MUST NOT** commit secrets, `.env` files, database dumps, or anything under `backups/`.
 - Keep commits focused — one logical change per commit, with a descriptive message.

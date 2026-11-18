@@ -1,0 +1,15 @@
+{
+  "extends": "@tennis/config/tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "declaration": false,
+    "types": ["vite/client"],
+    "allowJs": false
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}

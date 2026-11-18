@@ -2,10 +2,39 @@
   "name": "@tennis/admin",
   "version": "0.0.0",
   "private": true,
-  "description": "Admin panel placeholder. Empty by design until Phase 3 (Decision #14) — Refine is NOT installed here yet. This package exists only so the workspace graph and CI are correct from day one.",
+  "type": "module",
+  "description": "Tennis World internal admin app (TASK_74) — Vite + React 18 + Refine + Ant Design, a thin HTTP client over /v1/admin/*. No Prisma, no database connection.",
   "scripts": {
-    "build": "echo \"[admin] placeholder — no build until Phase 3 (Decision #14)\"",
-    "lint": "echo \"[admin] placeholder — nothing to lint\"",
-    "typecheck": "echo \"[admin] placeholder — nothing to typecheck\""
+    "dev": "vite --port 18002 --host 127.0.0.1",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "preview": "vite preview --port 18002 --host 127.0.0.1",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "verify:admin-ui": "tsx scripts/verify-admin-ui.ts"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@refinedev/antd": "^6.0.3",
+    "@refinedev/core": "^5.0.12",
+    "@refinedev/react-router": "^2.0.4",
+    "@tennis/contracts": "workspace:*",
+    "antd": "^5.29.3",
+    "dayjs": "^1.11.23",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router": "^7.18.5"
+  },
+  "devDependencies": {
+    "@tennis/config": "workspace:*",
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^6.3.0",
+    "eslint": "^9.17.0",
+    "tsx": "^4.22.4",
+    "typescript": "^5.7.2",
+    "vite": "^8.3.8"
   }
 }
