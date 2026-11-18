@@ -8,11 +8,19 @@ import 'reflect-metadata';
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { loadAuthConfig } from './auth/auth.config';
+import { loadTrustProxyHops } from './auth/trust-proxy.config';
 
 async function bootstrap(): Promise<void> {
+  // TASK_75 decision 2 — read + validate FIRST, before anything else boots, so
+  // a misconfigured value crashes boot rather than running with the wrong
+  // trust posture for every IP-keyed limiter (admin login, magic-link,
+  // billing, reviews).
+  const trustProxyHops = loadTrustProxyHops();
+
   // `rawBody: true` (Feature 66) makes Nest capture the UNPARSED request body as a
   // Buffer on `req.rawBody`, IN ADDITION to the normal parsed `req.body`. Stripe
   // signature verification (`stripe.webhooks.constructEvent`) must run over the exact
@@ -26,7 +34,10 @@ async function bootstrap(): Promise<void> {
   // controller is the only place that reads it. This is the documented Nest mechanism,
   // not a route-specific parser hack (verified against @nestjs/platform-express 10.4.x:
   // `getBodyParserOptions` adds the raw-capturing `verify` when `rawBody === true`).
-  const app = await NestFactory.create(AppModule, { rawBody: true });
+  // Typed as NestExpressApplication so `.set('trust proxy', ...)` below is
+  // visible (Nest's documented way to reach Express-specific app settings) —
+  // no new dependency, @nestjs/platform-express is already installed.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
 
   // Versioned base path — /health plus the Phase-2 /courts endpoints respond.
   app.setGlobalPrefix('v1');
@@ -81,6 +92,14 @@ async function bootstrap(): Promise<void> {
     },
     credentials: true,
   });
+
+  // TASK_75 decision 2 — ONLY set when > 0 (the Express/Node default is already
+  // "trust nothing"), so a 0/unset value touches no behavior at all. Set to the
+  // real reverse-proxy hop count (e.g. 1 on Railway) so `req.ip` reflects the
+  // real client, not the proxy — every IP-keyed limiter reads `req.ip`.
+  if (trustProxyHops > 0) {
+    app.set('trust proxy', trustProxyHops);
+  }
 
   // Lets PrismaClient close cleanly on SIGINT/SIGTERM (PrismaService extends it).
   app.enableShutdownHooks();
