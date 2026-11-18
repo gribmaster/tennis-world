@@ -36,7 +36,7 @@ apps/
            Prisma, no database connection string. See "Admin app" below.
 packages/
   contracts/   @tennis/contracts — shared DTOs / enums / zod schemas. Single source
-               of truth for the API↔web contract. TS-source main (see §11).
+               of truth for the API↔web contract. TS-source main (see §9).
   mock-data/   @tennis/mock-data — the mock dataset; also the Phase-2 seed source.
   config/      @tennis/config — shared tsconfig / eslint / prettier bases.
 ```
@@ -60,7 +60,7 @@ All commands run from the repo root.
 | Run everything | `pnpm dev` |
 | Start local Postgres | `pnpm db:up` (stop: `pnpm db:down`) |
 | Prisma generate | `pnpm --filter @tennis/api prisma:generate` |
-| Create a migration | `pnpm --filter @tennis/api prisma:migrate` (⚠ see §10) |
+| Create a migration | `pnpm --filter @tennis/api prisma:migrate` (⚠ see §8) |
 | Apply migrations | `pnpm --filter @tennis/api prisma:migrate:deploy` |
 | Reset dev DB | `pnpm --filter @tennis/api prisma:migrate:reset` (destructive) |
 | Seed | `pnpm --filter @tennis/api db:seed` |
@@ -97,10 +97,11 @@ pnpm verify:stripe-e2e     # optional, real Stripe test mode (opt-in)
 + publish gate, countries/regions, images incl. both storage drivers, concurrent-upload
 row-lock proof, trust-proxy behavior; run with `COURT_IMAGE_STORAGE=local`).
 
-`pnpm --filter @tennis/admin …`: `verify:admin-ui` (TASK_74, 41 checks — the maps-link
-parser, the slug helper against the API's own `slugify`, the data-provider's request
-mapping, a source scan for token persistence/`dangerouslySetInnerHTML`, an env-var name
-scan). Pure logic only — needs no running API.
+`pnpm --filter @tennis/admin …`: `verify:admin-ui` (TASK_74 + TASK_77, 50 checks — the
+maps-link parser, the slug helper against the API's own `slugify`, the data-provider's
+request mapping, the serial upload queue, a source scan for token
+persistence/`dangerouslySetInnerHTML`, an env-var name scan). Pure logic only — needs no
+running API.
 
 Most harnesses need a running API (and some a seeded DB); each script's header comment
 states its own prerequisites. Touching UI pending/back-navigation ⇒ run
@@ -432,7 +433,71 @@ after any change in this area.
 
 ---
 
-## 8. Admin API
+## 8. Database and Prisma rules
+
+- The Prisma schema, migrations, and seed are **owned exclusively by `apps/api`**
+  (`apps/api/prisma`). No other app or package may define models or run migrations.
+- Every schema change **MUST** ship with a committed migration in
+  `apps/api/prisma/migrations`. Never edit an already-applied migration.
+- `prisma migrate dev` (`prisma:migrate`) aborts/hangs in this non-interactive shell. Author
+  migrations with `prisma migrate diff` and apply with `prisma migrate deploy`. Make
+  `NOT NULL` additions back-safe: add with a temporary `DEFAULT` → backfill → `DROP DEFAULT`.
+- **MUST NOT** run `prisma db push` (or `migrate reset`) against staging or production.
+- Production/staging migrations use **`prisma migrate deploy`** only, with `DIRECT_URL` set
+  to the session pooler (§3). Against a pooled Supabase connection `migrate deploy` /
+  `migrate status` can hang — if it does, apply the migration SQL manually and record it.
+- **MUST NOT** baseline, drop, or otherwise touch the `public` schema by accident. The
+  production application database uses the **`tennis`** schema; the repo templates and CI
+  use `?schema=public` for the local/CI Postgres, so never assume the deployed search path
+  matches a template. Confirm the target schema before running anything destructive.
+- **MUST NOT** run two production migration deployments at once — the migration engine
+  takes an advisory lock, and concurrent deploys (e.g. a Railway redeploy racing a manual
+  run) can leave a failed migration row behind.
+- Long bulk operations over pgbouncer need an explicit `$transaction` timeout (P2028).
+
+---
+
+## 9. Scope discipline
+
+- **MUST NOT** do unrelated refactors, renames, or reformatting; touch only what the task
+  requires.
+- **MUST NOT** add speculative features, abstractions, or config "for later".
+- **MUST NOT** upgrade or add packages unless the task genuinely requires it; versions are
+  pinned by `pnpm-lock.yaml` and `pnpm-workspace.yaml`'s build allowlist.
+- Preserve the current design language (`globals.css` `.btn-*` / typography utilities,
+  Tailwind tokens). No new design system, no visual redesign as a side effect.
+- Inspect existing abstractions before creating new ones: `src/components/navigation`,
+  `src/components/ui`, `src/domain/*` repositories, `packages/contracts` DTOs,
+  `apps/api/src/*` services. Reuse and compose.
+- Respect the boundaries: pages/components never construct repositories (use
+  `lib/repositories.ts`, `lib/repositories.server.ts`, `lib/repositories.client.ts`); only
+  `src/domain/**` may import `mock-*`/`http-*` modules (ESLint enforces this via
+  `apps/web/.eslintrc.json`). `apps/api` **MUST** import `@tennis/contracts` type-only —
+  its TS-source `main` cannot be `require`d by Node at runtime.
+- **MUST NOT** change API, auth, Stripe, database, or routing behavior outside the task's
+  scope — including response shapes, status codes, cookie attributes, and route paths.
+- Before committing: run the relevant typecheck and build (`pnpm typecheck`, `pnpm build`,
+  or the filtered equivalents) plus any `verify:*` harness covering the touched area.
+- Report what changed: list files changed and which checks/harnesses were run, with their
+  pass/fail counts. If something was skipped, say so.
+
+---
+
+## 10. Git rules
+
+- **MUST NOT** commit secrets, `.env` files, database dumps, or anything under `backups/`.
+- Keep commits focused — one logical change per commit, with a descriptive message.
+- **MUST NOT** rewrite history (rebase, amend of pushed commits, force push) without
+  explicit approval.
+- **Commit and push only when the user explicitly asks.** Do not stage unrelated
+  pre-existing working-tree changes into a commit.
+- After pushing, report the commit hash (and branch) back to the user.
+- **MUST** add new CLAUDE.md sections at the end; never insert before an existing number —
+  section numbers are cited from immutable migration SQL and across the repo.
+
+---
+
+## 11. Admin API
 
 TASK_73 — `apps/api/src/admin` (`AdminModule`, sub-folders `auth/`, `courts/`, `geo/`,
 `images/`). A minimal admin surface for publishing/editing courts; the UI
@@ -537,11 +602,11 @@ TASK_73 — `apps/api/src/admin` (`AdminModule`, sub-folders `auth/`, `courts/`,
 
 ---
 
-## 9. Admin app
+## 12. Admin app
 
 TASK_74 — `apps/admin` (Vite + React 18 + `@refinedev/core`/`@refinedev/antd` +
 `@refinedev/react-router` + Ant Design 5). A thin internal client over exactly the
-`/v1/admin/*` endpoints in §8 — courts list/create/edit, countries/regions, photos,
+`/v1/admin/*` endpoints in §11 — courts list/create/edit, countries/regions, photos,
 publish/unpublish. No Refine admin UI framework existed before this; do not confuse it
 with `apps/web` (public site) or the user auth system.
 
@@ -567,6 +632,12 @@ with `apps/web` (public site) or the user auth system.
 - **Dev port 18002** (`vite --port 18002 --host 127.0.0.1`); the API's
   `ADMIN_APP_URL` must be `http://127.0.0.1:18002` locally (appended to
   `API_CORS_ORIGINS`, see §3).
+- Photo uploads through `CourtPhotosPanel` run through a small FIFO
+  `createSerialQueue()` (`lib/serial-queue.ts`), not just the `uploading` flag —
+  Ant Design's `Upload` with `customRequest` fires one `customRequest` call per
+  selected file immediately, so the queue (not the flag) is what keeps the actual
+  upload requests serial and in selection order, which in turn keeps "first
+  selected file becomes hero" deterministic (TASK_77).
 - The maps-link parser (`lib/maps-link-parser.ts`) is a **pure, offline** function —
   no network call, no geocoding. A place pin (`!3d!4d`) wins over the viewport
   centre (`@lat,lng`) when a URL contains both; a short link (`goo.gl`,
@@ -576,63 +647,3 @@ with `apps/web` (public site) or the user auth system.
   imports the API's version relatively (harness-only) and asserts equality.
 - `pnpm --filter @tennis/admin verify:admin-ui` is this surface's test coverage
   (pure logic, no running API needed) — see §2.
-
-## 10. Database and Prisma rules
-
-- The Prisma schema, migrations, and seed are **owned exclusively by `apps/api`**
-  (`apps/api/prisma`). No other app or package may define models or run migrations.
-- Every schema change **MUST** ship with a committed migration in
-  `apps/api/prisma/migrations`. Never edit an already-applied migration.
-- `prisma migrate dev` (`prisma:migrate`) aborts/hangs in this non-interactive shell. Author
-  migrations with `prisma migrate diff` and apply with `prisma migrate deploy`. Make
-  `NOT NULL` additions back-safe: add with a temporary `DEFAULT` → backfill → `DROP DEFAULT`.
-- **MUST NOT** run `prisma db push` (or `migrate reset`) against staging or production.
-- Production/staging migrations use **`prisma migrate deploy`** only, with `DIRECT_URL` set
-  to the session pooler (§3). Against a pooled Supabase connection `migrate deploy` /
-  `migrate status` can hang — if it does, apply the migration SQL manually and record it.
-- **MUST NOT** baseline, drop, or otherwise touch the `public` schema by accident. The
-  production application database uses the **`tennis`** schema; the repo templates and CI
-  use `?schema=public` for the local/CI Postgres, so never assume the deployed search path
-  matches a template. Confirm the target schema before running anything destructive.
-- **MUST NOT** run two production migration deployments at once — the migration engine
-  takes an advisory lock, and concurrent deploys (e.g. a Railway redeploy racing a manual
-  run) can leave a failed migration row behind.
-- Long bulk operations over pgbouncer need an explicit `$transaction` timeout (P2028).
-
----
-
-## 11. Scope discipline
-
-- **MUST NOT** do unrelated refactors, renames, or reformatting; touch only what the task
-  requires.
-- **MUST NOT** add speculative features, abstractions, or config "for later".
-- **MUST NOT** upgrade or add packages unless the task genuinely requires it; versions are
-  pinned by `pnpm-lock.yaml` and `pnpm-workspace.yaml`'s build allowlist.
-- Preserve the current design language (`globals.css` `.btn-*` / typography utilities,
-  Tailwind tokens). No new design system, no visual redesign as a side effect.
-- Inspect existing abstractions before creating new ones: `src/components/navigation`,
-  `src/components/ui`, `src/domain/*` repositories, `packages/contracts` DTOs,
-  `apps/api/src/*` services. Reuse and compose.
-- Respect the boundaries: pages/components never construct repositories (use
-  `lib/repositories.ts`, `lib/repositories.server.ts`, `lib/repositories.client.ts`); only
-  `src/domain/**` may import `mock-*`/`http-*` modules (ESLint enforces this via
-  `apps/web/.eslintrc.json`). `apps/api` **MUST** import `@tennis/contracts` type-only —
-  its TS-source `main` cannot be `require`d by Node at runtime.
-- **MUST NOT** change API, auth, Stripe, database, or routing behavior outside the task's
-  scope — including response shapes, status codes, cookie attributes, and route paths.
-- Before committing: run the relevant typecheck and build (`pnpm typecheck`, `pnpm build`,
-  or the filtered equivalents) plus any `verify:*` harness covering the touched area.
-- Report what changed: list files changed and which checks/harnesses were run, with their
-  pass/fail counts. If something was skipped, say so.
-
----
-
-## 12. Git rules
-
-- **MUST NOT** commit secrets, `.env` files, database dumps, or anything under `backups/`.
-- Keep commits focused — one logical change per commit, with a descriptive message.
-- **MUST NOT** rewrite history (rebase, amend of pushed commits, force push) without
-  explicit approval.
-- **Commit and push only when the user explicitly asks.** Do not stage unrelated
-  pre-existing working-tree changes into a commit.
-- After pushing, report the commit hash (and branch) back to the user.

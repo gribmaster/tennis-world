@@ -19,7 +19,7 @@ TASK_73 passed its own harness (169/169) but review found one concurrency hole t
    - `goo.gl`: path is `/maps` or starts with `/maps/`;
    - `maps.app.goo.gl`: any path (Google's own Maps-only shortener).
    Everything else → 400 as before. Update the message text accordingly.
-4. **Stale comments:** the `AdminAuthController` header comment says `GET /v1/admin/me`; the real route is `GET /v1/admin/auth/me` (controller prefix `admin/auth`). **Keep the route as it is** (TASK_74 is being written against `/v1/admin/auth/me`); fix the comment, and fix the same wording in CLAUDE.md §8 and `docs/TASK_73_ADMIN_COURTS_API.md` if they say `/v1/admin/me`.
+4. **Stale comments:** the `AdminAuthController` header comment says `GET /v1/admin/me`; the real route is `GET /v1/admin/auth/me` (controller prefix `admin/auth`). **Keep the route as it is** (TASK_74 is being written against `/v1/admin/auth/me`); fix the comment, and fix the same wording in CLAUDE.md §11 and `docs/TASK_73_ADMIN_COURTS_API.md` if they say `/v1/admin/me`.
 
 ## Testing
 
