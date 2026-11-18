@@ -8,6 +8,15 @@
 // parser + integration (spawns two extra child API instances on :18095/:18096),
 // and the tightened mapLinkUrl host/path rule table.
 //
+// TASK_78 fix 3: the "region from another country" check now always uses its
+// OWN deterministic second fixture country+region (`ensureSecondFixtureCountryRegion`)
+// instead of picking "any other country" from the database, which could skip when
+// that pick had no regions. The summary line also prints `Skipped: N` and the
+// harness EXITS NON-ZERO if any check was skipped, unless `ALLOW_SKIPS=1` is set —
+// the three remaining `skip(` sites are boot-spawn checks (production-boot guard,
+// TRUST_PROXY_HOPS integration ×2) that may legitimately skip on a machine that
+// cannot spawn a second API instance; that must stay visible and opt-in, never silent.
+//
 // FIXTURES are namespaced with prefix `f73-`: AdminUser emails `f73-admin-*@tennis.test`,
 // a regular User `f73-user-*@tennis.test`, Court slugs `f73-*`, and a dedicated Country
 // (isoCode `XZ`, name `F73 Test Country`) + Region (`F73 Test Region`). Cleaned up in a
@@ -65,6 +74,14 @@ const SLUG_PREFIX = 'f73-';
 const FIXTURE_COUNTRY_ISO = 'XZ';
 const FIXTURE_COUNTRY_NAME = 'F73 Test Country';
 const FIXTURE_REGION_NAME = 'F73 Test Region';
+// A second fixture country+region (TASK_78 fix 3), deterministic — replaces the
+// old `prisma.country.findFirst(...)` "pick any other country" lookup, which
+// could skip the "region from another country" check on a database where that
+// pick happened to have no regions. Caught by the existing `name: { startsWith:
+// 'F73 ' }` wildcard in `cleanup()`, so no separate cleanup code is needed.
+const FIXTURE_COUNTRY2_ISO = 'XY';
+const FIXTURE_COUNTRY2_NAME = 'F73 Test Country 2';
+const FIXTURE_REGION2_NAME = 'F73 Test Region 2';
 
 function adminEmail(name: string): string {
   return `${EMAIL_PREFIX}admin-${name}${EMAIL_DOMAIN}`;
@@ -93,7 +110,14 @@ function record(name: string, ok: boolean, detail?: string): void {
 function expectTrue(name: string, ok: boolean, detail?: string): void {
   record(name, ok, ok ? undefined : detail);
 }
+interface SkipResult {
+  readonly name: string;
+  readonly reason: string;
+}
+const skips: SkipResult[] = [];
+
 function skip(name: string, reason: string): void {
+  skips.push({ name, reason });
   console.log(`  \x1b[33mSKIP\x1b[0m  ${name} — ${reason}`);
 }
 
@@ -255,6 +279,26 @@ async function ensureFixtureCountryRegion(): Promise<{ countryId: string; region
     existingRegion ??
     (await prisma.region.create({
       data: { countryId: country.id, name: FIXTURE_REGION_NAME, lat: 10, lng: 10 },
+    }));
+  return { countryId: country.id, regionId: region.id };
+}
+
+/** The deterministic "other" country/region for the region/country-mismatch
+ *  check (TASK_78 fix 3) — never depends on what else happens to exist in
+ *  this database. */
+async function ensureSecondFixtureCountryRegion(): Promise<{ countryId: string; regionId: string }> {
+  const country = await prisma.country.upsert({
+    where: { isoCode: FIXTURE_COUNTRY2_ISO },
+    create: { name: FIXTURE_COUNTRY2_NAME, isoCode: FIXTURE_COUNTRY2_ISO, continent: 'Europe' },
+    update: {},
+  });
+  const existingRegion = await prisma.region.findFirst({
+    where: { countryId: country.id, name: FIXTURE_REGION2_NAME },
+  });
+  const region =
+    existingRegion ??
+    (await prisma.region.create({
+      data: { countryId: country.id, name: FIXTURE_REGION2_NAME, lat: 20, lng: 20 },
     }));
   return { countryId: country.id, regionId: region.id };
 }
@@ -724,20 +768,13 @@ async function main(): Promise<void> {
       JSON.stringify(canonicalBody.tags),
     );
 
-    const otherCountry = await prisma.country.findFirst({ where: { isoCode: { not: FIXTURE_COUNTRY_ISO } } });
-    const otherRegion = otherCountry
-      ? await prisma.region.findFirst({ where: { countryId: otherCountry.id } })
-      : null;
-    if (otherRegion) {
-      const mismatchRes = await adminFetch('/admin/courts', {
-        method: 'POST',
-        token: main.token,
-        json: { ...baseCourtPayload(undefined, countryId, regionId), regionId: otherRegion.id },
-      });
-      expectTrue('region from another country → 400', mismatchRes.status === 400, `got ${mismatchRes.status}`);
-    } else {
-      skip('region from another country → 400', 'no second country/region found in this database');
-    }
+    const { regionId: otherRegionId } = await ensureSecondFixtureCountryRegion();
+    const mismatchRes = await adminFetch('/admin/courts', {
+      method: 'POST',
+      token: main.token,
+      json: { ...baseCourtPayload(undefined, countryId, regionId), regionId: otherRegionId },
+    });
+    expectTrue('region from another country → 400', mismatchRes.status === 400, `got ${mismatchRes.status}`);
 
     const extraFieldRes = await adminFetch('/admin/courts', {
       method: 'POST',
@@ -1026,6 +1063,112 @@ async function main(): Promise<void> {
       }
     }
     console.log(`  race outcomes (${RACE_RUNS} runs): ${JSON.stringify(outcomes)}`);
+  }
+
+  // ═══ TASK_78 Testing §1 — lost update (concurrent PATCH of different fields) ══════
+  console.log('\n── Lost update: concurrent PATCH of different fields ───────────────');
+  {
+    const LOST_UPDATE_RUNS = 8;
+    for (let run = 0; run < LOST_UPDATE_RUNS; run++) {
+      // eslint-disable-next-line no-await-in-loop
+      const createRes = await adminFetch('/admin/courts', {
+        method: 'POST',
+        token: main.token,
+        json: baseCourtPayload(`lost-update-${run}`, countryId, regionId),
+      });
+      const lostUpdateCourtId = (createRes.body as { id: string }).id;
+
+      const newName = `F73 Lost Update Name ${run}`;
+      const newBlurb = `Lost update blurb ${run}.`;
+
+      // Two admins (or two tabs) patching DIFFERENT fields at the same moment.
+      // Without re-reading inside the lock, both read the same pre-lock
+      // snapshot and the later writer overwrites the other's field with the
+      // stale value.
+      // eslint-disable-next-line no-await-in-loop
+      const [nameRes, blurbRes] = await Promise.all([
+        adminFetch(`/admin/courts/${lostUpdateCourtId}`, { method: 'PATCH', token: main.token, json: { name: newName } }),
+        adminFetch(`/admin/courts/${lostUpdateCourtId}`, { method: 'PATCH', token: main.token, json: { blurb: newBlurb } }),
+      ]);
+      expectTrue(
+        `lost-update run ${run + 1}/${LOST_UPDATE_RUNS}: both concurrent PATCHes return 200`,
+        nameRes.status === 200 && blurbRes.status === 200,
+        `name=${nameRes.status} blurb=${blurbRes.status}`,
+      );
+
+      // eslint-disable-next-line no-await-in-loop
+      const finalRes = await adminFetch(`/admin/courts/${lostUpdateCourtId}`, { token: main.token });
+      const finalBody = finalRes.body as { name: string; blurb: string };
+      expectTrue(
+        `lost-update run ${run + 1}/${LOST_UPDATE_RUNS}: final row has BOTH new name AND new blurb (no lost update)`,
+        finalBody.name === newName && finalBody.blurb === newBlurb,
+        `expected name=${JSON.stringify(newName)} blurb=${JSON.stringify(newBlurb)}, got name=${JSON.stringify(finalBody.name)} blurb=${JSON.stringify(finalBody.blurb)}`,
+      );
+    }
+  }
+
+  // ═══ TASK_78 Testing §2 — slug race (concurrent publish vs. slug change) ═════════
+  console.log('\n── Slug race: concurrent publish vs. slug change ───────────────────');
+  {
+    const SLUG_RACE_RUNS = 8;
+    const slugRaceOutcomes: string[] = [];
+    for (let run = 0; run < SLUG_RACE_RUNS; run++) {
+      // eslint-disable-next-line no-await-in-loop
+      const createRes = await adminFetch('/admin/courts', {
+        method: 'POST',
+        token: main.token,
+        json: { ...baseCourtPayload(`slug-race-${run}`, countryId, regionId), blurb: 'Slug race fixture blurb.' },
+      });
+      const created = createRes.body as { id: string; slug: string };
+      const raceCourtId = created.id;
+      const originalSlug = created.slug;
+
+      // One hero image so the publish gate is satisfiable.
+      // eslint-disable-next-line no-await-in-loop
+      await adminFetch(`/admin/courts/${raceCourtId}/images`, {
+        method: 'POST',
+        token: main.token,
+        form: uploadForm(TINY_JPEG, 'hero.jpg'),
+      });
+
+      const newSlug = slug(`slug-race-${run}-renamed`);
+      // eslint-disable-next-line no-await-in-loop
+      const [publishRes, slugRes] = await Promise.all([
+        adminFetch(`/admin/courts/${raceCourtId}`, { method: 'PATCH', token: main.token, json: { status: 'published' } }),
+        adminFetch(`/admin/courts/${raceCourtId}`, { method: 'PATCH', token: main.token, json: { slug: newSlug } }),
+      ]);
+
+      // eslint-disable-next-line no-await-in-loop
+      const finalDetailRes = await adminFetch(`/admin/courts/${raceCourtId}`, { token: main.token });
+      const finalBody = finalDetailRes.body as { slug: string; status: string };
+      const publishBody = publishRes.body as { slug?: string };
+      const outcome = `publish=${publishRes.status} slug=${slugRes.status} finalSlug=${finalBody.slug === newSlug ? 'new' : 'old'}`;
+      slugRaceOutcomes.push(outcome);
+
+      // The one invariant that must NEVER happen, regardless of lock timing:
+      // the slug-change returned 200 AND the publish response still carries
+      // the OLD slug AND the final status is published — i.e. the slug
+      // changed after the publish had already committed under it.
+      const brokenInvariant =
+        slugRes.status === 200 && publishBody.slug === originalSlug && finalBody.status === 'published';
+      expectTrue(
+        `slug-race run ${run + 1}/${SLUG_RACE_RUNS}: slug never changes after publication has committed (${outcome})`,
+        !brokenInvariant,
+        `publish=${JSON.stringify(publishRes.body)} slug=${JSON.stringify(slugRes.body)} final=${JSON.stringify(finalBody)}`,
+      );
+
+      // The two valid serial orders: {publish 200, slug 409, slug unchanged}
+      // or {slug 200, publish 200 with the new slug}.
+      const validOutcome =
+        (publishRes.status === 200 && slugRes.status === 409 && finalBody.slug === originalSlug) ||
+        (slugRes.status === 200 && publishRes.status === 200 && finalBody.slug === newSlug);
+      expectTrue(
+        `slug-race run ${run + 1}/${SLUG_RACE_RUNS}: outcome is one of the two valid serial orders (${outcome})`,
+        validOutcome,
+        `publish=${JSON.stringify(publishRes.body)} slug=${JSON.stringify(slugRes.body)} final=${JSON.stringify(finalBody)}`,
+      );
+    }
+    console.log(`  slug-race outcomes (${SLUG_RACE_RUNS} runs): ${JSON.stringify(slugRaceOutcomes)}`);
   }
 
   // ═══ Testing §8 — countries/regions ═════════════════════════════════════════════
@@ -1846,10 +1989,23 @@ async function runTrustProxyChecks(): Promise<void> {
 function summarize(): void {
   const failed = results.filter((r) => !r.ok);
   console.log('\n──────────────────────────────────────────────');
-  console.log(`Total checks: ${results.length}   Passed: ${results.length - failed.length}   Failed: ${failed.length}`);
+  console.log(
+    `Total checks: ${results.length}   Passed: ${results.length - failed.length}   Failed: ${failed.length}   Skipped: ${skips.length}`,
+  );
   if (failed.length) {
     console.log('\nFailing checks:');
     for (const f of failed) console.log(`  - ${f.name}`);
+  }
+  if (skips.length) {
+    console.log('\nSkipped checks:');
+    for (const s of skips) console.log(`  - ${s.name} — ${s.reason}`);
+  }
+  // Every remaining skip( ) site is a boot-spawn check that may legitimately
+  // skip on a machine that cannot spawn a second API instance — opt in to
+  // tolerating that with ALLOW_SKIPS=1 (TASK_78 fix 3: a skip must never pass
+  // silently as if it were a check that ran).
+  const allowSkips = process.env.ALLOW_SKIPS === '1';
+  if (failed.length || (skips.length && !allowSkips)) {
     console.log('\n\x1b[31mVERIFICATION FAILED\x1b[0m\n');
     process.exit(1);
   }

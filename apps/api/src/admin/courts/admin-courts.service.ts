@@ -135,59 +135,64 @@ export class AdminCourtsService {
   }
 
   async update(id: string, dto: UpdateCourtRequestDTO, adminId: string): Promise<AdminCourtDetailDTO> {
-    const existing = await this.prisma.court.findUnique({ where: { id }, select: adminCourtDetailSelect });
-    if (!existing) {
+    // Cheap pre-lock existence check for the early 404 ONLY — its result is
+    // never used for any decision below (TASK_78 fix 1). Everything the write
+    // depends on is re-read fresh, inside the lock, in the transaction.
+    const exists = await this.prisma.court.findUnique({ where: { id }, select: { id: true } });
+    if (!exists) {
       throw new NotFoundException(`Court "${id}" not found.`);
     }
 
-    const countryId = dto.countryId ?? existing.countryId;
-    const regionId = dto.regionId ?? existing.regionId;
-    if (dto.countryId !== undefined || dto.regionId !== undefined) {
-      await this.assertCountryRegion(countryId, regionId);
-    }
-
-    let slug = existing.slug;
-    if (dto.slug !== undefined && dto.slug !== existing.slug) {
-      if (existing.status === 'published') {
-        throw new ConflictException('Cannot change the slug of a published court.');
-      }
-      if (!URL_SAFE_SLUG_PATTERN.test(dto.slug) || dto.slug.length > 80) {
-        throw new BadRequestException(SLUG_RULE_MESSAGE);
-      }
-      slug = dto.slug;
-    }
-
-    const lat = dto.lat ?? existing.lat;
-    const lng = dto.lng ?? existing.lng;
-    this.assertNotZeroZero(lat, lng);
-
-    const latLngChanged = dto.lat !== undefined || dto.lng !== undefined;
-    const { approxLat, approxLng } = latLngChanged
-      ? approxFromExact(lat, lng, slug)
-      : { approxLat: existing.approxLat, approxLng: existing.approxLng };
-
-    const tags = dto.tags !== undefined ? validateAdminTags(dto.tags) : existing.tags;
-    const mapLinkUrl = dto.mapLinkUrl !== undefined ? validateMapLinkUrl(dto.mapLinkUrl) : existing.mapLinkUrl;
-    const blurb = dto.blurb ?? existing.blurb;
-    const status = dto.status ?? existing.status;
+    let resolvedSlug = dto.slug ?? id;
 
     try {
       const updated = await this.prisma.$transaction(async (tx) => {
         await lockCourtRow(tx, id);
 
-        if (status === 'published') {
-          // Re-read the court's images (and status) fresh, INSIDE the lock —
-          // `existing.images` above was read before the lock and a concurrent
-          // image delete/hero change could have invalidated it in between
-          // (TASK_76 decision 2: publish must never race a delete of the
-          // court's last/hero image).
-          const fresh = await tx.court.findUnique({
-            where: { id },
-            select: { status: true, images: { select: { isHero: true } } },
-          });
-          if (!fresh) {
-            throw new NotFoundException(`Court "${id}" not found.`);
+        // Re-read the whole court (incl. images) fresh, INSIDE the lock — a
+        // concurrent write (another field patch, an image delete/hero change,
+        // a publish) could have changed any of this between the pre-lock
+        // check above and here. Everything that depends on stored state is
+        // computed from `fresh`, never from a pre-lock snapshot (TASK_78 fix 1
+        // — lost-update + slug-race).
+        const fresh = await tx.court.findUnique({ where: { id }, select: adminCourtDetailSelect });
+        if (!fresh) {
+          throw new NotFoundException(`Court "${id}" not found.`);
+        }
+
+        const countryId = dto.countryId ?? fresh.countryId;
+        const regionId = dto.regionId ?? fresh.regionId;
+        if (dto.countryId !== undefined || dto.regionId !== undefined) {
+          await this.assertCountryRegion(countryId, regionId, tx);
+        }
+
+        let slug = fresh.slug;
+        if (dto.slug !== undefined && dto.slug !== fresh.slug) {
+          if (fresh.status === 'published') {
+            throw new ConflictException('Cannot change the slug of a published court.');
           }
+          if (!URL_SAFE_SLUG_PATTERN.test(dto.slug) || dto.slug.length > 80) {
+            throw new BadRequestException(SLUG_RULE_MESSAGE);
+          }
+          slug = dto.slug;
+        }
+        resolvedSlug = slug;
+
+        const lat = dto.lat ?? fresh.lat;
+        const lng = dto.lng ?? fresh.lng;
+        this.assertNotZeroZero(lat, lng);
+
+        const latLngChanged = dto.lat !== undefined || dto.lng !== undefined;
+        const { approxLat, approxLng } = latLngChanged
+          ? approxFromExact(lat, lng, slug)
+          : { approxLat: fresh.approxLat, approxLng: fresh.approxLng };
+
+        const tags = dto.tags !== undefined ? validateAdminTags(dto.tags) : fresh.tags;
+        const mapLinkUrl = dto.mapLinkUrl !== undefined ? validateMapLinkUrl(dto.mapLinkUrl) : fresh.mapLinkUrl;
+        const blurb = dto.blurb ?? fresh.blurb;
+        const status = dto.status ?? fresh.status;
+
+        if (status === 'published') {
           const missing = publishGateMissing({ blurb, lat, lng, images: fresh.images });
           if (missing.length > 0) {
             throw new UnprocessableEntityException({ message: 'Cannot publish: missing required fields.', missing });
@@ -198,7 +203,7 @@ export class AdminCourtsService {
           where: { id },
           data: {
             slug,
-            name: dto.name ?? existing.name,
+            name: dto.name ?? fresh.name,
             countryId,
             regionId,
             lat,
@@ -206,13 +211,13 @@ export class AdminCourtsService {
             approxLat,
             approxLng,
             mapLinkUrl,
-            surface: dto.surface ?? existing.surface,
-            setting: dto.setting ?? existing.setting,
-            access: dto.access ?? existing.access,
-            indoorOutdoor: dto.indoorOutdoor ?? existing.indoorOutdoor,
-            isScenic: dto.isScenic ?? existing.isScenic,
-            isFeatured: dto.isFeatured ?? existing.isFeatured,
-            isLocked: dto.isLocked ?? existing.isLocked,
+            surface: dto.surface ?? fresh.surface,
+            setting: dto.setting ?? fresh.setting,
+            access: dto.access ?? fresh.access,
+            indoorOutdoor: dto.indoorOutdoor ?? fresh.indoorOutdoor,
+            isScenic: dto.isScenic ?? fresh.isScenic,
+            isFeatured: dto.isFeatured ?? fresh.isFeatured,
+            isLocked: dto.isLocked ?? fresh.isLocked,
             status,
             blurb,
             tags,
@@ -231,14 +236,22 @@ export class AdminCourtsService {
       });
       return toAdminCourtDetailDTO(updated);
     } catch (err) {
-      throw this.mapSlugConflict(err, slug);
+      throw this.mapSlugConflict(err, resolvedSlug);
     }
   }
 
   /** `regionId` must exist and belong to `countryId` (decision 11) — 400, not 404
-   *  (this is request-body validation, not a resource lookup). */
-  private async assertCountryRegion(countryId: string, regionId: string): Promise<void> {
-    const region = await this.prisma.region.findUnique({
+   *  (this is request-body validation, not a resource lookup). `client` defaults
+   *  to the plain connection (used by `create()`); `update()` passes the `tx`
+   *  it's already holding the row lock on, so this check runs against the same
+   *  merged country/region ids it evaluates everything else from, inside the
+   *  transaction (TASK_78 fix 1). */
+  private async assertCountryRegion(
+    countryId: string,
+    regionId: string,
+    client: Prisma.TransactionClient = this.prisma,
+  ): Promise<void> {
+    const region = await client.region.findUnique({
       where: { id: regionId },
       select: { countryId: true },
     });
@@ -248,7 +261,7 @@ export class AdminCourtsService {
     if (region.countryId !== countryId) {
       throw new BadRequestException(`regionId "${regionId}" does not belong to countryId "${countryId}".`);
     }
-    const country = await this.prisma.country.findUnique({ where: { id: countryId }, select: { id: true } });
+    const country = await client.country.findUnique({ where: { id: countryId }, select: { id: true } });
     if (!country) {
       throw new BadRequestException(`Unknown countryId "${countryId}".`);
     }

@@ -93,11 +93,13 @@ pnpm verify:stripe-e2e     # optional, real Stripe test mode (opt-in)
 `pnpm --filter @tennis/api …`: `verify:effective-entitlement`, `verify:exact-location`,
 `verify:billing-checkout`, `verify:billing-rate-limit`, `verify:stripe-webhook`,
 `verify:stripe-e2e`, `verify:staging-demo-auth`, `verify:google-oauth`,
-`verify:admin-courts` (TASK_73 + TASK_75, 198 checks — admin auth/CSRF/roles, courts CRUD
-+ publish gate, countries/regions, images incl. both storage drivers, concurrent-upload
-row-lock proof, trust-proxy behavior; run with `COURT_IMAGE_STORAGE=local`).
+`verify:admin-courts` (TASK_73 + TASK_75 + TASK_78, 260 checks — admin auth/CSRF/roles,
+courts CRUD + publish gate, countries/regions, images incl. both storage drivers,
+concurrent-upload row-lock proof, lost-update/slug-race proof, trust-proxy behavior; run
+with `COURT_IMAGE_STORAGE=local`; the summary also reports `Skipped: N` and fails the run
+if `N > 0` unless `ALLOW_SKIPS=1`).
 
-`pnpm --filter @tennis/admin …`: `verify:admin-ui` (TASK_74 + TASK_77, 50 checks — the
+`pnpm --filter @tennis/admin …`: `verify:admin-ui` (TASK_74 + TASK_77 + TASK_78, 58 checks — the
 maps-link parser, the slug helper against the API's own `slugify`, the data-provider's
 request mapping, the serial upload queue, a source scan for token
 persistence/`dangerouslySetInnerHTML`, an env-var name scan). Pure logic only — needs no
@@ -555,6 +557,9 @@ TASK_73 — `apps/api/src/admin` (`AdminModule`, sub-folders `auth/`, `courts/`,
   (implicitly, as a 409 on the delete itself) when deleting a published court's last image.
 - **Slug is immutable once a court has ever been published** — a PATCH that changes the
   slug of a `published` court is 409. Changing it on a draft is fine.
+  Slug immutability applies while a court is **published**; unpublishing re-allows a
+  slug change (there is no "was ever published" column — renaming a once-public slug
+  breaks old links, so don't).
 - **Image hero invariant**: a court with ≥ 1 image has EXACTLY ONE `isHero` image at all
   times, restored inside the same transaction as every mutation that could break it. You
   set a hero by promoting another image (`PATCH .../images/:id { isHero: true }`) —
