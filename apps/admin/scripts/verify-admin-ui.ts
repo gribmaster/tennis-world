@@ -19,6 +19,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseCoordinatesFromMapLink } from '../src/lib/maps-link-parser';
 import { createSerialQueue } from '../src/lib/serial-queue';
+import { createUploadBatchTracker } from '../src/lib/upload-batch';
 import { slugify as adminSlugify } from '../src/lib/slugify';
 // Relative import of the API's OWN slugify, harness-only (never from app code) —
 // asserts the admin UI's auto-slug matches the API's rule byte for byte.
@@ -373,6 +374,152 @@ async function main(): Promise<void> {
     expectEqual('enqueue works before any drain', first, 'first');
     const second = await queue.enqueue(async () => 'second');
     expectEqual('enqueue after the queue has drained still works', second, 'second');
+  }
+
+  console.log('\n7. Upload batch tracker (TASK_78 fix 2)\n');
+
+  // onDrained fires exactly once per drained batch, carrying hadSuccess = true.
+  {
+    const calls: string[] = [];
+    const tracker = createUploadBatchTracker({
+      onPendingChange: (n) => calls.push(`pending:${n}`),
+      onDrained: (hadSuccess) => calls.push(`drained:${hadSuccess}`),
+    });
+    tracker.start();
+    tracker.start();
+    tracker.finish(true);
+    tracker.finish(true);
+    expectEqual(
+      'onDrained fires exactly once per drained batch, after the pending count hits 0',
+      calls,
+      ['pending:1', 'pending:2', 'pending:1', 'pending:0', 'drained:true'],
+    );
+  }
+
+  // finish(false) for every file in the batch -> onDrained never fires.
+  {
+    const calls: string[] = [];
+    const tracker = createUploadBatchTracker({
+      onPendingChange: (n) => calls.push(`pending:${n}`),
+      onDrained: (hadSuccess) => calls.push(`drained:${hadSuccess}`),
+    });
+    tracker.start();
+    tracker.start();
+    tracker.finish(false);
+    tracker.finish(false);
+    expectTrue(
+      'onDrained never fires when every file in the batch failed',
+      !calls.some((c) => c.startsWith('drained')),
+      JSON.stringify(calls),
+    );
+    expectEqual('onPendingChange still reports the drain to 0', calls, ['pending:1', 'pending:2', 'pending:1', 'pending:0']);
+  }
+
+  // Mixed success/failure -> fires once with hadSuccess = true.
+  {
+    const calls: string[] = [];
+    const tracker = createUploadBatchTracker({
+      onPendingChange: (n) => calls.push(`pending:${n}`),
+      onDrained: (hadSuccess) => calls.push(`drained:${hadSuccess}`),
+    });
+    tracker.start();
+    tracker.start();
+    tracker.start();
+    tracker.finish(false);
+    tracker.finish(true);
+    tracker.finish(false);
+    const drainedCalls = calls.filter((c) => c.startsWith('drained'));
+    expectEqual('mixed success/failure fires onDrained exactly once, with hadSuccess = true', drainedCalls, ['drained:true']);
+  }
+
+  // A second batch after a drain behaves independently (no leftover state).
+  {
+    const calls: string[] = [];
+    const tracker = createUploadBatchTracker({
+      onPendingChange: (n) => calls.push(`pending:${n}`),
+      onDrained: (hadSuccess) => calls.push(`drained:${hadSuccess}`),
+    });
+    tracker.start();
+    tracker.finish(true);
+    tracker.start();
+    tracker.finish(false);
+    const drainedCalls = calls.filter((c) => c.startsWith('drained'));
+    expectEqual(
+      'a second batch after a drain behaves independently (no leftover hadSuccess)',
+      drainedCalls,
+      ['drained:true'],
+    );
+  }
+
+  // Callbacks are never invoked re-entrantly (no call nests inside another's
+  // call stack) — assert call ORDER with a log that records enter/exit of
+  // each callback.
+  {
+    const log: string[] = [];
+    let depth = 0;
+    let maxDepth = 0;
+    function wrap(label: string, fn: (...args: never[]) => void) {
+      return (...args: never[]) => {
+        depth += 1;
+        maxDepth = Math.max(maxDepth, depth);
+        log.push(`enter:${label}`);
+        fn(...args);
+        log.push(`exit:${label}`);
+        depth -= 1;
+      };
+    }
+    const tracker = createUploadBatchTracker({
+      onPendingChange: wrap('onPendingChange', () => undefined),
+      onDrained: wrap('onDrained', () => undefined),
+    });
+    tracker.start();
+    tracker.finish(true);
+    expectTrue('no callback is ever invoked re-entrantly from inside another', maxDepth === 1, JSON.stringify(log));
+    expectEqual(
+      'onPendingChange(0) fully returns before onDrained is called',
+      log,
+      ['enter:onPendingChange', 'exit:onPendingChange', 'enter:onPendingChange', 'exit:onPendingChange', 'enter:onDrained', 'exit:onDrained'],
+    );
+  }
+
+  console.log('\n8. No side effects inside a setState updater (CourtPhotosPanel.tsx)\n');
+
+  {
+    const panelSource = readFileSync(
+      path.join(ADMIN_ROOT, 'src', 'components', 'CourtPhotosPanel.tsx'),
+      'utf8',
+    );
+    // Flag any `set\w+((arg) => ...)` whose own body — found by balancing
+    // parens from the call's opening `(` to its matching close, not a fixed
+    // char window (which would false-positive on unrelated code that happens
+    // to follow a short updater) — calls `onChanged(`.
+    const offenders: string[] = [];
+    const callOpenPattern = /set\w+\(/g;
+    let m: RegExpExecArray | null;
+    while ((m = callOpenPattern.exec(panelSource))) {
+      const openParenIndex = m.index + m[0].length - 1;
+      const argStart = panelSource.slice(openParenIndex + 1, openParenIndex + 50);
+      if (!/^\s*\(?\w*\)?\s*=>/.test(argStart)) continue; // not an updater function
+
+      let depth = 0;
+      let i = openParenIndex;
+      for (; i < panelSource.length; i++) {
+        if (panelSource[i] === '(') depth++;
+        else if (panelSource[i] === ')') {
+          depth--;
+          if (depth === 0) break;
+        }
+      }
+      const callText = panelSource.slice(openParenIndex, i + 1);
+      if (/onChanged\(/.test(callText)) {
+        offenders.push(panelSource.slice(m.index, m.index + 60));
+      }
+    }
+    expectTrue(
+      'no setState updater function body calls onChanged(...)',
+      offenders.length === 0,
+      offenders.join(' | '),
+    );
   }
 
   console.log(`\nTotal checks: ${results.length}   Passed: ${results.filter((r) => r.ok).length}   Failed: ${results.filter((r) => !r.ok).length}\n`);

@@ -29,6 +29,7 @@ import {
 import { resolveImageSrc } from '../lib/image-url';
 import { ApiError } from '../lib/api-error';
 import { createSerialQueue } from '../lib/serial-queue';
+import { createUploadBatchTracker } from '../lib/upload-batch';
 
 interface CourtPhotosPanelProps {
   courtId: string;
@@ -46,6 +47,14 @@ export function CourtPhotosPanel({ courtId, images, onChanged }: CourtPhotosPane
   const [order, setOrder] = useState<string[] | null>(null);
   const [reordering, setReordering] = useState(false);
   const uploadQueue = useRef(createSerialQueue());
+  const onChangedRef = useRef(onChanged);
+  onChangedRef.current = onChanged;
+  const uploadBatch = useRef(
+    createUploadBatchTracker({
+      onPendingChange: setPendingUploads,
+      onDrained: () => onChangedRef.current(),
+    }),
+  );
 
   const sorted = [...images].sort((a, b) => a.sortOrder - b.sortOrder);
   const displayOrder = order ?? sorted.map((img) => img.id);
@@ -62,8 +71,13 @@ export function CourtPhotosPanel({ courtId, images, onChanged }: CourtPhotosPane
   // rc-upload invokes customRequest for every selected file immediately, so
   // a shared queue (not just the `uploading` flag) is what keeps the actual
   // upload requests serial and in selection order (TASK_77).
-  const hadSuccessSinceDrain = useRef(false);
-
+  //
+  // The in-flight count and "any success in this batch" flag live in
+  // `uploadBatch` (a ref-held tracker), never in a `setPendingUploads`
+  // updater function — `onDrained` (which calls `onChanged`, re-rendering the
+  // parent) must never run from inside a state updater, since React may
+  // invoke updaters twice (StrictMode) and warns when one updates another
+  // component while rendering (TASK_78 fix 2).
   const customRequest: UploadProps['customRequest'] = (options) => {
     const file = options.file as File;
     const preflightError = preflightCourtImage(file);
@@ -73,25 +87,19 @@ export function CourtPhotosPanel({ courtId, images, onChanged }: CourtPhotosPane
       return;
     }
 
-    setPendingUploads((n) => n + 1);
+    uploadBatch.current.start();
     void uploadQueue.current.enqueue(async () => {
+      let success = false;
       try {
         await uploadCourtImage(courtId, file);
         options.onSuccess?.({});
-        hadSuccessSinceDrain.current = true;
+        success = true;
       } catch (err) {
         const msg = err instanceof ApiError ? err.message : 'Upload failed.';
         setUploadErrors((prev) => [...prev, `"${file.name}": ${msg}`]);
         options.onError?.(err instanceof Error ? err : new Error(msg));
       } finally {
-        setPendingUploads((n) => {
-          const next = n - 1;
-          if (next === 0 && hadSuccessSinceDrain.current) {
-            hadSuccessSinceDrain.current = false;
-            onChanged();
-          }
-          return next;
-        });
+        uploadBatch.current.finish(success);
       }
     });
   };
