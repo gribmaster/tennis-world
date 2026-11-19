@@ -23,3 +23,23 @@ onlyBuiltDependencies:
   - prisma
   - sharp
   - unrs-resolver
+
+# next declares react/react-dom as peers but not their @types companions, so
+# TypeScript's module resolution for next's own .d.ts files (e.g.
+# next/dist/styled-jsx/types/css.d.ts) falls through pnpm's shared hoist
+# folder (node_modules/.pnpm/node_modules) for the missing @types/react(-dom)
+# — and since apps/admin pins React 18, that shared slot can hold the 18.x
+# copy instead of apps/web's 19.x one. Declaring the same peers next already
+# declares for react/react-dom keeps next's own type lookups inside its own
+# dependency instance (apps/web's 19.x), never falling through to the shared
+# hoist (TASK_83).
+packageExtensions:
+  next@*:
+    peerDependencies:
+      "@types/react": "*"
+      "@types/react-dom": "*"
+    peerDependenciesMeta:
+      "@types/react":
+        optional: true
+      "@types/react-dom":
+        optional: true
