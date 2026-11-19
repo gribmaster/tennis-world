@@ -26,6 +26,10 @@ apps/api/prisma/*.db
 # only) writes uploaded court photos here; never committed.
 apps/web/public/uploads/
 
+# TASK_80 — copied from docs/court-import/ by apps/admin's predev/prebuild
+# script; docs/court-import/ is the single source of truth, never this copy.
+apps/admin/public/court-import/
+
 # logs
 *.log
 npm-debug.log*

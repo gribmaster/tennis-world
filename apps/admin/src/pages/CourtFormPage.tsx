@@ -34,6 +34,7 @@ import { listCountries } from '../lib/geo-api';
 import { buildCourtPatch, courtDetailToFormValues, type CourtFormValues } from '../lib/court-patch';
 import { slugify, URL_SAFE_SLUG_PATTERN } from '../lib/slugify';
 import { MAPS_LINK_UNREADABLE_MESSAGE, parseCoordinatesFromMapLink } from '../lib/maps-link-parser';
+import { googleMapsPinLink, osmLink } from '../lib/court-import';
 import type { AdminCountryDTO } from '@tennis/contracts';
 
 const SURFACES: Surface[] = ['Clay', 'Hard', 'Grass'];
@@ -68,6 +69,8 @@ export function CourtFormPage() {
   const navigate = useNavigate();
   const [form] = Form.useForm<CourtFormValues>();
   const { setWarnWhen } = useWarnAboutChange();
+  const watchedLat = Form.useWatch('lat', form);
+  const watchedLng = Form.useWatch('lng', form);
 
   useDocumentTitle(isEdit ? 'Edit court' : 'New court');
 
@@ -246,6 +249,22 @@ export function CourtFormPage() {
           <Form.Item name="lng" label="Longitude" rules={[{ required: true }]}>
             <InputNumber style={{ width: '100%' }} min={-180} max={180} />
           </Form.Item>
+          {(() => {
+            const osm = osmLink(watchedLat, watchedLng);
+            const googlePin = googleMapsPinLink(watchedLat, watchedLng);
+            if (!osm || !googlePin) return null;
+            return (
+              <p style={{ fontSize: 13, marginTop: -8 }}>
+                <a href={osm} target="_blank" rel="noopener noreferrer">
+                  Check on map (OpenStreetMap)
+                </a>
+                {' · '}
+                <a href={googlePin} target="_blank" rel="noopener noreferrer">
+                  Open in Google Maps
+                </a>
+              </p>
+            );
+          })()}
           <Form.Item label="Google Maps link">
             <Space.Compact style={{ width: '100%' }}>
               <Form.Item name="mapLinkUrl" noStyle>

@@ -9,6 +9,8 @@ import { AdminCsrfGuard } from './auth/admin-csrf.guard';
 import { AdminLoginRateLimitService } from './auth/admin-login-rate-limit.service';
 import { AdminCourtsController } from './courts/admin-courts.controller';
 import { AdminCourtsService } from './courts/admin-courts.service';
+import { AdminCourtImportService } from './courts/admin-court-import.service';
+import { AdminCourtImportRateLimitService } from './courts/admin-court-import-rate-limit.service';
 import { AdminGeoController } from './geo/admin-geo.controller';
 import { AdminGeoService } from './geo/admin-geo.service';
 import { AdminImagesController } from './images/admin-images.controller';
@@ -67,6 +69,8 @@ export class AdminModule {
         AdminCsrfGuard,
         AdminLoginRateLimitService,
         AdminCourtsService,
+        AdminCourtImportService,
+        AdminCourtImportRateLimitService,
         AdminGeoService,
         AdminImagesService,
         AdminImageUploadRateLimitService,

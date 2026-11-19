@@ -1,0 +1,38 @@
+{
+  "courts": [
+    {
+      "name": "Domaine des Etangs",
+      "country": { "name": "France", "isoCode": "FR", "continent": "Europe" },
+      "region": "Massignac",
+      "lat": 45.7756621,
+      "lng": 0.6434264,
+      "mapLinkUrl": "https://maps.app.goo.gl/qqzJ67ib9tRjwn6n9?g_st=ic",
+      "surface": "Hard",
+      "access": "Resort",
+      "indoorOutdoor": "Outdoor",
+      "setting": "A floating court on a private lake within a 13th-century château estate.",
+      "isScenic": true,
+      "tags": ["Lakeside"],
+      "blurb": "Domaine des Etangs is a 13th-century château set inside a vast private estate in the French countryside, surrounded by forests, pastures, ponds, and contemporary art. It feels less like a hotel and more like a quiet world built around nature and time.\n\nIts tennis court is the detail that makes the place unforgettable: a floating court set on the water. Instead of a classic country-club setting, tennis here feels almost surreal — red clay, still ponds, old stone, and the silence of a château estate. A location where sport becomes part of the landscape, not separate from it.",
+      "sources": ["https://maps.app.goo.gl/qqzJ67ib9tRjwn6n9?g_st=ic"],
+      "notes": "Coordinates and map link come from this project's own content/coordinates.json; surface/access/tags derived with the content importer's existing token-mapping rules (run its --dry-run mode against content/DOMAINE DES ETANGS/info.txt to reproduce)."
+    },
+    {
+      "name": "Monte-Carlo Country Club",
+      "country": { "name": "France", "isoCode": "FR", "continent": "Europe" },
+      "region": "Roquebrune-Cap-Martin",
+      "lat": 43.7516314,
+      "lng": 7.4407329,
+      "mapLinkUrl": "https://maps.app.goo.gl/FRTr7PPxs9KPt7JN9?g_st=ic",
+      "surface": "Clay",
+      "access": "Private",
+      "indoorOutdoor": "Outdoor",
+      "setting": "Terraced clay courts carved into a Riviera hillside above the Mediterranean.",
+      "isScenic": false,
+      "tags": ["Sea View"],
+      "blurb": "Monte-Carlo Country Club opened in 1928 on the edge of Monaco, though technically it sits just across the border in Roquebrune-Cap-Martin, France. That small geographical twist is part of its charm: it belongs to the Monaco myth, but its clay courts are carved into the French Riviera hillside above the Mediterranean.\n\nThe club became the permanent home of the Monte-Carlo tournament, now the Rolex Monte-Carlo Masters, one of the most elegant stops of the clay season. Its terraced courts, sea views and old Riviera atmosphere make tennis here feel less like a simple sport and more like a ritual of spring: red clay, white lines, cypress trees, and the Mediterranean just beyond the baseline.",
+      "sources": ["https://maps.app.goo.gl/FRTr7PPxs9KPt7JN9?g_st=ic"],
+      "notes": "Coordinates and map link come from this project's own content/coordinates.json; surface/access/tags derived with the content importer's existing token-mapping rules (run its --dry-run mode against \"content/MONTE - CARLO COUNTRY CLUB/info.txt\" to reproduce). NOTE: a court with this slug already exists in the seeded dataset under Monaco/Roquebrune — a dry run against that database reports a slug-already-exists error on this item; that is expected, not a bug in the file."
+    }
+  ]
+}

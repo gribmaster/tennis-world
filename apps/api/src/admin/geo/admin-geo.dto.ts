@@ -5,7 +5,9 @@ import type { Continent } from '@tennis/contracts';
 // Admin geo (countries/regions) request DTOs (TASK_73, "What to build" §4).
 // ─────────────────────────────────────────────────────────────────────────────
 
-const CONTINENTS = ['Europe', 'Asia', 'Americas', 'Africa', 'Oceania'] as const;
+// Exported so the court-import DTOs (TASK_79) can reuse this exact vocabulary
+// instead of retyping it (decision 5 in docs/TASK_79_COURT_IMPORT_API.md).
+export const CONTINENTS = ['Europe', 'Asia', 'Americas', 'Africa', 'Oceania'] as const;
 
 export class CreateCountryRequestDTO {
   @IsString()

@@ -28,10 +28,12 @@ import { COURT_TAGS } from '../../courts/court-tags';
 // objects can't be `require`d by the API at runtime (type-only import rule).
 // ─────────────────────────────────────────────────────────────────────────────
 
-const SURFACES = ['Clay', 'Hard', 'Grass'] as const;
-const ACCESS_TYPES = ['Resort', 'Club', 'Academy', 'Private'] as const;
-const INDOOR_OUTDOOR = ['Indoor', 'Outdoor'] as const;
-const COURT_STATUSES = ['draft', 'published'] as const;
+// Exported so the court-import DTOs (TASK_79) can reuse these exact vocabularies
+// instead of retyping them (decision 5 in docs/TASK_79_COURT_IMPORT_API.md).
+export const SURFACES = ['Clay', 'Hard', 'Grass'] as const;
+export const ACCESS_TYPES = ['Resort', 'Club', 'Academy', 'Private'] as const;
+export const INDOOR_OUTDOOR = ['Indoor', 'Outdoor'] as const;
+export const COURT_STATUSES = ['draft', 'published'] as const;
 
 export class CreateCourtRequestDTO {
   @IsString()

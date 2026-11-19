@@ -13,6 +13,11 @@ import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { loadAuthConfig } from './auth/auth.config';
 import { loadTrustProxyHops } from './auth/trust-proxy.config';
+import {
+  ADMIN_COURT_IMPORT_BODY_LIMIT_BYTES,
+  ADMIN_COURT_IMPORT_ROUTE,
+  createJsonBodyLimitMiddleware,
+} from './admin/courts/admin-court-import-body-limit';
 
 async function bootstrap(): Promise<void> {
   // TASK_75 decision 2 — read + validate FIRST, before anything else boots, so
@@ -92,6 +97,21 @@ async function bootstrap(): Promise<void> {
     },
     credentials: true,
   });
+
+  // TASK_79 — a route-scoped 1 MB JSON body limit for the court bulk-import
+  // endpoint ONLY (50 long blurbs don't fit the default 100 kB limit). MUST be
+  // registered before `app.listen()` — Nest's own global body-parser is only
+  // attached lazily inside `listen()` — see the comment in
+  // `admin-court-import-body-limit.ts` for exactly how this stays scoped to
+  // this one path and leaves every other route's limit untouched. Registered
+  // AFTER `cookieParser()`/`enableCors()` (TASK_81): on this middleware's error
+  // path (413/400) it calls `next(err)`, which skips every later non-error
+  // middleware including CORS — so if CORS ran after it, an error response
+  // would carry no `Access-Control-Allow-Origin` and the browser would hide
+  // the real error behind an opaque network failure. CORS has already set its
+  // headers on the response by the time this middleware runs, so they survive
+  // regardless of which path this middleware takes.
+  app.use(ADMIN_COURT_IMPORT_ROUTE, createJsonBodyLimitMiddleware(ADMIN_COURT_IMPORT_BODY_LIMIT_BYTES));
 
   // TASK_75 decision 2 — ONLY set when > 0 (the Express/Node default is already
   // "trust nothing"), so a 0/unset value touches no behavior at all. Set to the

@@ -1053,12 +1053,21 @@ async function main(): Promise<void> {
 
       // eslint-disable-next-line no-await-in-loop
       const freshRow = await prisma.court.findUnique({ where: { id: raceCourtId }, include: { images: true } });
+      // TASK_81 — always record this check (not only when the publish side of
+      // the race wins) so two consecutive runs report the SAME total check
+      // count. When the court did not end up published there is nothing to
+      // violate the invariant, so it passes trivially under a name that says so.
       if (freshRow?.status === 'published') {
         const heroCount = freshRow.images.filter((i) => i.isHero).length;
         expectTrue(
-          `race run ${run + 1}/${RACE_RUNS}: the published outcome has >= 1 image and exactly 1 hero`,
+          `race run ${run + 1}/${RACE_RUNS}: the published outcome (if any) has >= 1 image and exactly 1 hero`,
           freshRow.images.length >= 1 && heroCount === 1,
           `images=${JSON.stringify(freshRow.images)}`,
+        );
+      } else {
+        expectTrue(
+          `race run ${run + 1}/${RACE_RUNS}: the published outcome (if any) has >= 1 image and exactly 1 hero`,
+          true,
         );
       }
     }

@@ -49,9 +49,14 @@ export function CourtListPage() {
         <Typography.Title level={3} style={{ margin: 0 }}>
           Courts
         </Typography.Title>
-        <Link to="/courts/create">
-          <Button type="primary">New court</Button>
-        </Link>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Link to="/courts/import">
+            <Button>Import courts</Button>
+          </Link>
+          <Link to="/courts/create">
+            <Button type="primary">New court</Button>
+          </Link>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>

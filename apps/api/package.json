@@ -21,6 +21,7 @@
     "admin:create": "tsx scripts/admin-user.ts create",
     "admin:set-password": "tsx scripts/admin-user.ts set-password",
     "verify:admin-courts": "tsx scripts/verify-admin-courts.ts",
+    "verify:admin-court-import": "tsx scripts/verify-admin-court-import.ts",
     "verify:effective-entitlement": "tsx scripts/verify-effective-entitlement.ts",
     "verify:exact-location": "tsx scripts/verify-exact-location.ts",
     "verify:court-geo-redaction": "tsx scripts/verify-court-geo-redaction.ts",

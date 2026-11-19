@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tennismap.app/schemas/court-import.schema.json",
+  "title": "Tennis Map court import file",
+  "description": "The file an AI agent produces for a human to review and upload at Courts → Import in the Tennis Map admin. It is validated by POST /v1/admin/courts/import (dry run by default). Every court is created as a DRAFT, PREMIUM (isLocked) court with no photos — an admin adds photos and publishes by hand afterwards.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["courts"],
+  "properties": {
+    "courts": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "description": "1 to 50 courts. If you have more than 50, split them into several files/imports.",
+      "items": { "$ref": "#/$defs/court" }
+    }
+  },
+  "$defs": {
+    "court": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "country", "region", "lat", "lng", "surface", "access", "indoorOutdoor", "setting", "blurb", "sources"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120,
+          "pattern": "^[^<>]*$",
+          "description": "The court/venue's real name, as it is publicly known (e.g. the hotel or club name). Plain text — no HTML."
+        },
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "maxLength": 80,
+          "description": "Leave this out — the server generates a URL-safe slug from \"name\" automatically. Only set it if you were explicitly told a specific slug to use."
+        },
+        "country": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "isoCode", "continent"],
+          "description": "The country the court is in. If this country already exists in Tennis Map, these values are matched by isoCode and the existing country is reused — get the isoCode right.",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 80,
+              "description": "The country's common English name, e.g. \"France\", \"Monaco\", \"United Arab Emirates\"."
+            },
+            "isoCode": {
+              "type": "string",
+              "pattern": "^[A-Za-z]{2}$",
+              "description": "ISO 3166-1 alpha-2 country code, e.g. \"FR\", \"MC\", \"AE\". Case does not matter — the server upper-cases it. This is the field used to detect \"this country already exists\", so double-check it against an authoritative ISO list rather than guessing."
+            },
+            "continent": {
+              "type": "string",
+              "enum": ["Europe", "Asia", "Americas", "Africa", "Oceania"],
+              "description": "One of the five vocabulary values — use \"Americas\" for both North and South America, \"Oceania\" for Australia/NZ/Pacific."
+            }
+          }
+        },
+        "region": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80,
+          "description": "The city or local area the court is in, e.g. \"Roquebrune-Cap-Martin\", \"Dubai\". Not the country — that is a separate field. If this region does not already exist under this country, a new one is created using THIS COURT's own lat/lng as the region's map position."
+        },
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90,
+          "description": "Latitude in decimal degrees, WGS84, at most 7 decimal places. Must not be exactly 0 together with lng=0 (treated as \"no real location\"). Take this from the venue's own pin on Google Maps/OpenStreetMap — never the city centre."
+        },
+        "lng": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180,
+          "description": "Longitude in decimal degrees, WGS84, at most 7 decimal places. See \"lat\" for the sourcing rule."
+        },
+        "mapLinkUrl": {
+          "type": ["string", "null"],
+          "maxLength": 2000,
+          "description": "The venue's Google Maps link (https:// only — google.com/maps, maps.google.com, goo.gl/maps, or any maps.app.goo.gl link). This is the link shown to a logged-in member as \"Directions\", so it must be the REAL link for this venue, not a generic map search. Omit or set null if you don't have one."
+        },
+        "surface": {
+          "type": "string",
+          "enum": ["Clay", "Hard", "Grass"],
+          "description": "The court's playing surface. See AGENT_PROMPT.md for how to tell these apart from venue marketing copy."
+        },
+        "access": {
+          "type": "string",
+          "enum": ["Resort", "Club", "Academy", "Private"],
+          "description": "Who can play there. See AGENT_PROMPT.md for the exact meaning of each value."
+        },
+        "indoorOutdoor": {
+          "type": "string",
+          "enum": ["Indoor", "Outdoor"],
+          "description": "Whether the court is indoor or outdoor. If genuinely unknown, use \"Outdoor\" — it is the far more common case for the venues this project lists."
+        },
+        "setting": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "^[^<>]*$",
+          "description": "A SHORT phrase describing the court's setting, shown on its card, e.g. \"Hilltop clay courts above the sea\" or \"Terraced courts on a Riviera hillside\". Not a sentence, not marketing copy — a factual phrase."
+        },
+        "isScenic": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if the court has a notable scenic view/setting (sea, mountains, gardens, etc). Leave out unless clearly true."
+        },
+        "tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["Sea View", "Beach Club", "Mountains", "Lakeside", "Garden", "Historic", "Jungle", "Island", "Rooftop", "Countryside"]
+          },
+          "description": "Optional. A subset of the closed vocabulary listed here — see AGENT_PROMPT.md for what each tag means. Use only tags that clearly apply; do not guess. Never duplicate surface/access/indoorOutdoor/isScenic as a tag."
+        },
+        "blurb": {
+          "type": "string",
+          "minLength": 40,
+          "maxLength": 4000,
+          "pattern": "^[^<>]*$",
+          "description": "1 to 6 paragraphs (separate paragraphs with one BLANK LINE), evocative but factual, no marketing superlatives, no invented history. See the style notes and two worked examples in AGENT_PROMPT.md / example.json."
+        },
+        "isLocked": {
+          "type": "boolean",
+          "description": "Leave this out unless you were explicitly told otherwise — it defaults to true (premium/locked) for every imported court, which matches this project's default."
+        },
+        "isFeatured": {
+          "type": "boolean",
+          "description": "Leave this out — it defaults to false. This is an editorial decision made later in the admin, not by the agent."
+        },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10,
+          "items": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://",
+            "maxLength": 500
+          },
+          "description": "1 to 10 https:// URLs a human can open to check your work — the venue's official site first, then the page(s) you used for the description/coordinates. Not stored on the court; only used for review."
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Optional free-text note for the human reviewer, e.g. \"coordinates approximate — venue has no exact pin\". Not stored on the court; only used for review."
+        }
+      }
+    }
+  }
+}

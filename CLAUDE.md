@@ -97,7 +97,12 @@ pnpm verify:stripe-e2e     # optional, real Stripe test mode (opt-in)
 courts CRUD + publish gate, countries/regions, images incl. both storage drivers,
 concurrent-upload row-lock proof, lost-update/slug-race proof, trust-proxy behavior; run
 with `COURT_IMAGE_STORAGE=local`; the summary also reports `Skipped: N` and fails the run
-if `N > 0` unless `ALLOW_SKIPS=1`).
+if `N > 0` unless `ALLOW_SKIPS=1`), `verify:admin-court-import` (TASK_79, 115 checks — the
+bulk import endpoint: auth/CSRF, dry-run-is-default, happy path, all-or-nothing, dup/
+idempotency, the advisory-lock concurrency proof, the full per-field validation matrix,
+body-size/rate limits, create-vs-import parity, and a drift check between the agent kit
+in `docs/court-import/` and the live DTO/contract; same skip policy, run with
+`COURT_IMAGE_STORAGE=local`).
 
 `pnpm --filter @tennis/admin …`: `verify:admin-ui` (TASK_74 + TASK_77 + TASK_78, 58 checks — the
 maps-link parser, the slug helper against the API's own `slugify`, the data-provider's
@@ -128,6 +133,11 @@ absent, and only one of those skips (real-Stripe) is genuinely opt-in:
   second API instance started with the feature enabled (fake Google credentials are
   sufficient — no real Google call is made). See
   `docs/DESIGN_V2_COMPLETION_SUMMARY.md` §7.1 for the exact commands.
+- `DEV_FORCE_MEMBERSHIP`-sensitive: `verify:court-geo-redaction`, `verify:effective-entitlement`,
+  and `verify:web-profile` (its check C2, which compares two `activeUntil` values the
+  override recomputes per request) require `DEV_FORCE_MEMBERSHIP` to be
+  **unset/commented out** in `apps/api/.env` while they run, or they fail/misreport against
+  the forced entitlement instead of the real one — restore it afterward.
 - Genuinely opt-in: the real-Stripe checks (`RUN_STRIPE_CHECKOUT=1`, `verify:stripe-e2e`).
 
 CI (`.github/workflows/ci.yml`): `verify` job = install → prisma:generate → lint →
@@ -604,6 +614,91 @@ TASK_73 — `apps/api/src/admin` (`AdminModule`, sub-folders `auth/`, `courts/`,
   Supabase key.
 - `pnpm --filter @tennis/api verify:admin-courts` is this surface's test coverage (run with
   `COURT_IMAGE_STORAGE=local`) — see §2.
+
+### Court bulk import (TASK_79)
+
+`POST /v1/admin/courts/import` — `@AdminOnly('admin')` on the same
+`AdminCourtsController`, CSRF as every other admin mutation.
+
+- **Create-only, drafts only, no photos.** Every imported court is created
+  `status: 'draft'`. A `status` key anywhere in an item is an error — the
+  agent never decides publication. No `images`/`imageUrls` field exists.
+  An existing court is never updated: a slug that already exists is an
+  **error**, never a skip.
+- **`isLocked` defaults to `true`** for every imported court (matches the
+  content importer's default — all courts are premium by default);
+  `isFeatured` defaults to `false`. The template may override `isLocked` per
+  court.
+- **All or nothing, under an advisory lock.** If any item has an error,
+  **nothing is written** — no courts, no countries, no regions. The commit
+  runs in one `prisma.$transaction`; its first statement takes
+  `pg_advisory_xact_lock` on a constant key, serializing concurrent imports
+  (countries/regions have no unique constraint on name, so two parallel
+  imports could otherwise create duplicate regions — proven by temporarily
+  removing the lock: 4 of 5 concurrent-pair runs produced a duplicate region;
+  with the lock restored, 0 of 5). The whole DB-dependent validation
+  (country/region resolution, slug collision) is **re-run inside the lock**
+  for a commit, not trusted from an earlier dry-run read.
+- **Dry run is the default** (`dryRun` omitted ⇒ `true`); writing requires
+  an explicit `"dryRun": false`.
+- **Per-item validation, never a whole-request 400.** The body DTO is
+  `{ courts: unknown[], dryRun?: boolean }`, manually parsed (NOT a
+  `class-validator` class — see the "deliberately not a DTO" note below) with
+  `courts` 1–50 items. Each item is independently validated
+  (`plainToInstance(ImportCourtItemDTO, item)` + `validate(..., {
+  whitelist: true, forbidNonWhitelisted: true })` in
+  `AdminCourtImportService`, plus a few rules a decorator can't express —
+  tag vocabulary with an exact `tags[i]` path, 0/0, ≤7-decimal-place lat/lng,
+  blurb paragraph count), so one bad court yields a precise per-court error
+  list and never hides another item's result. An item that is `null`, a
+  string, an array, or a number is a clean item error, never a 500; so are
+  `__proto__`/`constructor`/`prototype` anywhere in an item.
+- **Deliberately NOT a `class-validator` DTO on `@Body()`.** The global
+  `ValidationPipe`'s `plainToInstance` crashes
+  (`TypeError: Cannot read properties of undefined (reading 'constructor')`)
+  while generically deep-cloning a nested plain object that carries an own
+  `constructor` key — exactly one of the keys this endpoint must reject as a
+  clean error. `AdminCourtImportController`'s handler types `@Body()` as
+  `Record<string, unknown>` (no metatype ⇒ the global pipe skips it entirely,
+  the same mechanism `main.ts` already documents for
+  `@Query() query: Record<string, unknown>`) and parses it manually
+  (`parseImportRequestBody` in `admin-court-import.dto.ts`), so `req.body`
+  reaches the service completely untouched and the forbidden-key check
+  actually fires.
+- **Route-scoped 1 MB JSON body limit**, this route only (50 long blurbs
+  don't fit the default 100 kB). Hand-rolled in
+  `admin-court-import-body-limit.ts` (no `express`/`body-parser` dependency —
+  neither is resolvable from `apps/api`'s own `node_modules` under pnpm's
+  strict per-package isolation) and mounted via
+  `app.use(ADMIN_COURT_IMPORT_ROUTE, …)` in `main.ts`, in the window between
+  `NestFactory.create()` returning and `app.listen()` — Nest's own global
+  body-parser is registered lazily inside `listen()`, so this one runs first
+  for this one path and every other admin route keeps the default limit.
+- **Single source of truth for the pure per-field rules** — slug
+  resolution and the 0/0 check live in `admin-court-pure.ts`, shared
+  verbatim by `AdminCourtsService.create()`/`update()` and the import;
+  `validateAdminTags` and `validateMapLinkUrl` (already-shared functions)
+  are reused as-is. A court created via import and one created via
+  `POST /v1/admin/courts` with equivalent input produce byte-identical
+  derived fields.
+- **Country/region resolution**: country matched by `isoCode` (existing →
+  reused, a mismatched given name/continent is a **warning**, never an
+  update); not existing but the same name under a **different** isoCode is
+  an **error**. Region matched by (country, name) case-insensitive; a new
+  region's `lat`/`lng` = **the court's own** `lat`/`lng` (not the country's
+  centroid). Two items proposing the same new country/region in one file
+  reuse a single planned creation.
+- Rate-limited in-memory per admin, independently of every other admin
+  limiter: commits 10 / 10 min, dry runs 60 / 10 min →
+  429 + `Retry-After` (`admin-court-import-rate-limit.service.ts`).
+- The agent-facing kit lives in `docs/court-import/`
+  (`court-import.schema.json`, `AGENT_PROMPT.md`, `example.json`,
+  `CLIENT_GUIDE.uk.md`) — single source of truth for what an AI agent and a
+  non-technical admin are told; `verify:admin-court-import` asserts it never
+  drifts from the live DTO/contract (enum lists, required fields, that
+  `example.json` dry-runs clean).
+- `pnpm --filter @tennis/api verify:admin-court-import` is this surface's
+  test coverage (run with `COURT_IMAGE_STORAGE=local`) — see §2.
 
 ---
 

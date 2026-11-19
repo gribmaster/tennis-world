@@ -1,0 +1,67 @@
+# TASK 80 — Court import, part 2: the "Import courts" page in the admin app
+
+**Model: Sonnet 5, reasoning effort: high.** Prerequisite: **TASK_79 is done and verified** (the `POST /v1/admin/courts/import` endpoint and the kit in `docs/court-import/`). Read `docs/TASK_79_COURT_IMPORT_API.md`, `packages/contracts/src/admin.ts` (the import report types), the API's import controller/DTO, and the existing admin app (`apps/admin/src/lib/api-client.ts`, `CourtListPage.tsx`, `CourtFormPage.tsx`, `ApiErrorAlert.tsx`) first. The UI must need **no API change**; if it does, stop and report.
+
+## Goal
+
+A page in `apps/admin` where an admin takes the JSON file the client's AI agent produced and imports it: **check it first, see exactly what will happen, then create the courts as drafts** — or see precisely what to send back to the agent to fix. Also the place where the client downloads the agent kit.
+
+**Out of scope:** any API change, photos, editing imported courts here (the existing edit page does that), publishing from the import page, importing from CSV/Excel/Google Sheets, saving imports/history, a diff/update of existing courts.
+
+## Decisions already made (do not re-litigate)
+
+1. **Two-step flow, always:** *Check* (dry run) → review → *Create*. The create button is **only enabled** when the latest check returned `ok: true` for **exactly the text currently in the editor** (any edit, new file, or paste invalidates the check and disables the button again — compare against the text that was checked, not a flag that can go stale).
+2. **All-or-nothing is shown as such.** If any court has an error, the page says plainly "Nothing will be imported until every court is valid", lists the errors per court, and offers **"Copy errors for the agent"** (see 5). There is no "import only the valid ones" control.
+3. **State lives in memory only** (component state). No `localStorage`/`sessionStorage`/cookies (the repo's no-persistence rule for this app still holds), no draft saving. A page reload loses the pasted JSON — acceptable; say so in a hint near the editor.
+4. **Same HTTP seam as the rest of the app:** every request goes through `apiFetch` (credentials, `X-Tennis-Admin`, the central 401 → `/login`). The import call is `POST /admin/courts/import` with `{ courts, dryRun }`. Never `fetch` directly.
+5. **"Copy errors for the agent"** builds a plain-text message the admin pastes back to the agent, e.g. "Court 3 (“Name”): `surface` must be one of: Clay, Hard, Grass. Court 5: `lat` has more than 7 decimals. Return the corrected JSON only." — generated from the report's `errors` (index is 1-based and also shows the name). Pure function, unit-tested.
+6. **The kit has one source of truth: `docs/court-import/`.** The admin app serves copies through a tiny copy step (`predev`/`prebuild` scripts, e.g. `scripts/copy-court-import-kit.mjs`) into `apps/admin/public/court-import/` (**gitignored**), so there is no second hand-maintained copy. If a source file is missing the copy step **fails the build** with a clear message.
+7. **No new dependency** beyond what `apps/admin` already has (Ant Design, React, Refine). Use the existing `Table`, `Upload`/file input, `Input.TextArea`, `Alert`, `Modal`, `Steps`/`Card`, `Tag`, `Collapse`.
+
+## What to build
+
+### 1. Entry points
+- A **"Import courts"** button next to "New court" on the courts list page; route `/courts/import` (declared before `/courts/:id/edit` so it can never be read as an id). Menu: no new menu item (the list page owns the entry).
+- Page title via the existing `useDocumentTitle`.
+
+### 2. Page layout (top to bottom, one column, max width ~1100 px)
+1. **"Before you start" card:** one sentence explaining the flow, and four download links (plain `<a href download>` to `/court-import/…`): the **schema** (`court-import.schema.json`), the **agent prompt** (`AGENT_PROMPT.md`), the **example** (`example.json`), the **guide in Ukrainian** (`CLIENT_GUIDE.uk.md`). Text: "Give the agent the prompt + the schema; it returns one JSON file."
+2. **Input card:** a file picker (`accept=".json,application/json"`, single file) **and** a monospace textarea (min 14 rows) for pasting; choosing a file loads its text into the textarea (so what you see is what is checked). Show the character count and the number of courts found. Client-side guards, with plain messages: file/text larger than 1 MB → "File is too large (max 1 MB)" (the server also enforces it); not valid JSON → show the parser's message with **line and column** when available; JSON that is a bare array is **wrapped** as `{ "courts": [...] }` automatically (and a one-line note says so); an object without a `courts` array → "The file must be an object with a `courts` list (or a plain list of courts)"; more than 50 courts → "At most 50 courts per import" (the server enforces it too). No request is sent for any of these.
+3. **Actions:** `Check` (primary) and `Clear`. Both disabled while a request is pending; the button shows a spinner **without changing its size** (this app's UX rule: no layout jump). `Check` is disabled when the textarea is empty or a client-side guard fails.
+4. **Result card** (only after a check):
+   - A summary line with counts from `summary` (total, valid, invalid, new countries, new regions, warnings) and one status banner: **green** "All N courts are valid — ready to create as drafts" / **red** "N courts have errors — nothing will be imported until all are fixed".
+   - A table, one row per court in file order: status icon (ok / warning / error — never colour alone, also text/aria-label), `#`, name, slug, country (+ a tag **"new"** when it will be created), region (+ "new"), `lat, lng` rendered as two links: **OpenStreetMap** (`https://www.openstreetmap.org/?mlat=LAT&mlon=LNG#map=14/LAT/LNG`) and, when the court has one, its **Google Maps** `mapLinkUrl` — both `target="_blank" rel="noopener noreferrer"`; surface / access / indoor-outdoor; tags; a `Locked` tag; and an expandable row showing the **errors** (with the `path`, e.g. `tags[1]`), **warnings**, the **sources** (clickable `https` links) and `notes`. Rows with errors are expanded by default. Build the OSM/Google links **only** from values that passed the API (a court with an error in `lat`/`lng` shows no link).
+   - **"Copy errors for the agent"** (visible only when there are errors) → clipboard via `navigator.clipboard.writeText`, with a visible confirmation ("Copied") and a fallback that selects the text in a read-only textarea if the clipboard API is unavailable.
+5. **Create step** (only when the check is `ok` for the current text): primary button **"Create N draft courts"**. It opens `Modal.confirm`-style dialog stating what will happen from the report: "N courts will be created as **drafts**, **locked (premium)**; M new countries and K new regions will be added. Photos are added afterwards on each court's page. This cannot be undone from this screen." Confirm → `POST … { dryRun: false }` with the **same text that was checked**. While pending: disabled, spinner, no size jump. Success (201): replace the result card with a **success panel** — "N courts created as drafts" — and a list of the created courts (name → link to `/courts/:id/edit`), a button **"Go to draft courts"** (`/courts` with the status filter set to Draft if the list page supports a URL filter; otherwise plain `/courts`), and the next-step reminder: "Add photos on each court, check the coordinates on the map, then publish." The input is cleared and cannot be re-submitted by accident.
+6. **Failure handling** (use the existing `ApiError` + `ApiErrorAlert`): **422 on create** → the server's report (something changed between check and create, e.g. a slug was taken meanwhile) replaces the result card with the red state and the page tells the admin to re-check; **413** "File is too large"; **429** shows the `Retry-After` seconds if present; **403** → the existing "no access" alert; **409** → "A concurrent import changed the data — check again"; network failure → "Can't reach the server" (never "Something went wrong"). A 401 is handled centrally and must not be handled here.
+7. **Accessibility/keyboard:** the whole flow is usable with the keyboard; the status banner has `role="status"` (or `alert` for errors); table status icons have text alternatives.
+
+### 3. Pure logic in its own file(s), unit-tested
+Put these in `apps/admin/src/lib/court-import.ts` (no React, no DOM): `parseImportInput(text) → { ok: true, courts, wrapped } | { ok: false, message }` (size, JSON syntax with line/col, bare array vs object, `courts` array check, ≤ 50), `buildAgentErrorMessage(report) → string`, `osmLink(lat, lng) → string | null` (null unless both are finite numbers in range), `summarizeForConfirm(report) → { drafts, newCountries, newRegions }`, and `isCheckCurrent(checkedText, currentText) → boolean`. The page only wires them.
+
+## Testing
+
+Extend `apps/admin/scripts/verify-admin-ui.ts` (same `record()` style; keep all existing checks green; report the new total — currently 58):
+1. `parseImportInput`: valid object; bare array → wrapped; empty string; whitespace only; invalid JSON with the line/column in the message; object without `courts`; `courts` not an array; 0 courts; 51 courts; > 1 MB; a JSON `null`/number/string; BOM at the start; Windows line endings; very long single line.
+2. `buildAgentErrorMessage`: multiple courts with several errors each; 1-based numbering; court name included (and a court with no name uses "Court N"); output is plain text with no markdown/HTML; error paths preserved (`tags[1]`); empty report → empty string; names containing quotes/newlines don't break the format.
+3. `osmLink`: valid coordinates → exact expected URL; `NaN`/`Infinity`/out-of-range/strings → `null`; negative coordinates; no scientific notation (e.g. `1e-7` is formatted as a plain decimal).
+4. `summarizeForConfirm` counts from a sample report; `isCheckCurrent` is exact string equality (a trailing space makes it false).
+5. **Wiring through `apiFetch`:** with the injected-`fetch` stub style already used in this harness, the import call sends `X-Tennis-Admin: 1`, `credentials: 'include'`, a JSON body `{ courts, dryRun }` with `dryRun: true` for Check and `false` for Create; a 422 with a report body surfaces the report (not just a message); a 413 and a 429 (with `Retry-After`) map to their messages; a network error becomes "Can't reach the server".
+6. **Source scans (extend the existing ones):** no `localStorage`/`sessionStorage`/`document.cookie`/`dangerouslySetInnerHTML` in the new files; every external `<a target="_blank">` in the new files has `rel="noopener noreferrer"`; the new page imports nothing from `apps/api`; no direct `fetch(` outside `api-client.ts`.
+7. **Kit copy step:** a check that `scripts/copy-court-import-kit.mjs` (or whatever you name it) fails with a non-zero exit when a source file is missing (run it against a temp directory), and that after a normal run the four files exist under `public/court-import/` and are byte-identical to `docs/court-import/`; `apps/admin/public/court-import/` is gitignored.
+
+Then `pnpm typecheck`, `pnpm lint`, `pnpm build` at the root (stop `pnpm dev` first; **delete `apps/web/.next` before restarting dev**), and re-run `pnpm --filter @tennis/api verify:admin-court-import` and `verify:admin-courts` (unchanged).
+
+**Live walkthrough** with the API running (`COURT_IMAGE_STORAGE=local`, `ADMIN_APP_URL=http://127.0.0.1:18002`) and the admin dev server up — in a real browser if you have a browser tool, otherwise state plainly that it was **not** done and leave the steps in the report: sign in → open Courts → Import courts → download the four kit files → upload `example.json` → Check (all ok, or only "slug already exists" if those courts exist — say which) → edit one coordinate to `0,0` in the textarea → the create button disables and Check reports the error → copy the errors → fix → Check → Create → see the success panel → open a created court → confirm it is a **draft**, **locked**, has **no photos**, and the OSM link in the preview pointed at the right place → paste an invalid JSON and an over-1-MB text and see the client-side messages → run the same import a second time and see the "already exists" errors. If you make fixtures in the local DB, delete exactly those afterwards (print before deleting; local DB only: `127.0.0.1`/`localhost:15432`) and report what was removed.
+
+## Do not touch
+`apps/api`, `apps/web`, `packages/*`, the Prisma schema/migrations, the kit documents in `docs/court-import/` (if you find a defect in them, report it — do not edit), any existing admin page's behaviour except adding the entry button, CI. No new dependency. No git commit or push unless asked.
+
+## Report
+1. Files created/changed (grouped); how the kit copy step works and what the build does when a file is missing.
+2. How the "check is current" rule is implemented and that editing the text after a check disables Create (show the evidence).
+3. `verify:admin-ui` new total; typecheck/lint/build results; the API suites re-run.
+4. The live walkthrough: each step done or **not done**, with what you observed. Be explicit about anything untested.
+5. Every deviation or interpretation (route/entry placement, clipboard fallback, status-filter link behaviour).
+6. UX gaps you noticed that the owner or the client will hit on day one (report, don't build).
+7. The exact commands run.

@@ -158,3 +158,54 @@ export const AdminRegionCreatedSchema = z.object({
   lng: z.number(),
 });
 export type AdminRegionCreatedDTO = z.infer<typeof AdminRegionCreatedSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Court bulk import (TASK_79) — `POST /v1/admin/courts/import`. See
+// `docs/TASK_79_COURT_IMPORT_API.md` "Report shape" and `docs/court-import/`
+// for the agent-facing kit this response shape pairs with.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** One `{ path, message }` entry — `path` names the offending field, e.g.
+ *  `"lat"`, `"country.isoCode"`, `"tags[1]"`. */
+export const AdminCourtImportIssueSchema = z.object({
+  path: z.string(),
+  message: z.string(),
+});
+export type AdminCourtImportIssueDTO = z.infer<typeof AdminCourtImportIssueSchema>;
+
+export const AdminCourtImportResolvedSchema = z.object({
+  country: z.enum(['existing', 'create']).nullable(),
+  region: z.enum(['existing', 'create']).nullable(),
+  isLocked: z.boolean().nullable(),
+});
+export type AdminCourtImportResolvedDTO = z.infer<typeof AdminCourtImportResolvedSchema>;
+
+export const AdminCourtImportItemResultSchema = z.object({
+  index: z.number().int(),
+  name: z.string().nullable(),
+  slug: z.string().nullable(),
+  status: z.enum(['ok', 'error']),
+  errors: z.array(AdminCourtImportIssueSchema),
+  warnings: z.array(AdminCourtImportIssueSchema),
+  resolved: AdminCourtImportResolvedSchema,
+  sources: z.array(z.string()),
+  notes: z.string().nullable(),
+  /** Present only after a successful commit. */
+  courtId: z.string().optional(),
+});
+export type AdminCourtImportItemResultDTO = z.infer<typeof AdminCourtImportItemResultSchema>;
+
+export const AdminCourtImportReportSchema = z.object({
+  dryRun: z.boolean(),
+  ok: z.boolean(),
+  summary: z.object({
+    total: z.number().int(),
+    valid: z.number().int(),
+    invalid: z.number().int(),
+    newCountries: z.number().int(),
+    newRegions: z.number().int(),
+    warnings: z.number().int(),
+  }),
+  items: z.array(AdminCourtImportItemResultSchema),
+});
+export type AdminCourtImportReportDTO = z.infer<typeof AdminCourtImportReportSchema>;

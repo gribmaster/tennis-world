@@ -99,7 +99,10 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
       data && typeof data === 'object' && typeof (data as { errors?: unknown }).errors === 'object'
         ? ((data as { errors: Record<string, unknown> }).errors)
         : undefined;
-    throw new ApiError(message, response.status, { missing, errors });
+    const retryAfterHeader = response.headers.get('Retry-After');
+    const retryAfterSeconds =
+      retryAfterHeader !== null && /^\d+$/.test(retryAfterHeader) ? Number(retryAfterHeader) : undefined;
+    throw new ApiError(message, response.status, { missing, errors, body: data, retryAfterSeconds });
   }
 
   return data as T;

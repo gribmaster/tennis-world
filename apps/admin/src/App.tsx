@@ -10,6 +10,7 @@ import { SessionBoundary } from './components/SessionBoundary';
 import { LoginPage } from './pages/LoginPage';
 import { CourtListPage } from './pages/CourtListPage';
 import { CourtFormPage } from './pages/CourtFormPage';
+import { CourtImportPage } from './pages/CourtImportPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export function App() {
@@ -42,6 +43,7 @@ export function App() {
                 <Route index element={<Navigate to="/courts" replace />} />
                 <Route path="courts" element={<CourtListPage />} />
                 <Route path="courts/create" element={<CourtFormPage />} />
+                <Route path="courts/import" element={<CourtImportPage />} />
                 <Route path="courts/:id/edit" element={<CourtFormPage />} />
               </Route>
               <Route path="*" element={<NotFoundPage />} />

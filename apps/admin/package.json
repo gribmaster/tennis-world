@@ -5,7 +5,9 @@
   "type": "module",
   "description": "Tennis World internal admin app (TASK_74) — Vite + React 18 + Refine + Ant Design, a thin HTTP client over /v1/admin/*. No Prisma, no database connection.",
   "scripts": {
+    "predev": "node scripts/copy-court-import-kit.mjs",
     "dev": "vite --port 18002 --host 127.0.0.1",
+    "prebuild": "node scripts/copy-court-import-kit.mjs",
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "preview": "vite preview --port 18002 --host 127.0.0.1",
     "typecheck": "tsc -p tsconfig.json --noEmit",

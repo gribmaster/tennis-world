@@ -2,7 +2,8 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException, 
 import { Prisma } from '@prisma/client';
 import type { AdminCourtDetailDTO, AdminCourtListResponseDTO } from '@tennis/contracts';
 import { PrismaService } from '../../prisma/prisma.service';
-import { approxFromExact, mapCoordsFromSeed, slugify, URL_SAFE_SLUG_PATTERN } from '../../courts/court-derived-fields';
+import { approxFromExact, mapCoordsFromSeed, URL_SAFE_SLUG_PATTERN } from '../../courts/court-derived-fields';
+import { assertCourtLatLngNotZeroZero, resolveCourtSlug, SLUG_RULE_MESSAGE } from './admin-court-pure';
 import { lockCourtRow } from './court-lock';
 import { logAdminMutation } from '../admin-mutation-logger';
 import type { AdminCourtListQuery, CreateCourtRequestDTO, UpdateCourtRequestDTO } from './admin-courts.dto';
@@ -23,9 +24,6 @@ import {
 // no hard delete, server-computed derived fields, slug immutability once
 // published, the publish gate, and strict field validation.
 // ─────────────────────────────────────────────────────────────────────────────
-
-const SLUG_RULE_MESSAGE =
-  'slug must match ^[a-z0-9]+(?:-[a-z0-9]+)*$ and be at most 80 characters.';
 
 @Injectable()
 export class AdminCourtsService {
@@ -69,11 +67,11 @@ export class AdminCourtsService {
 
   async create(dto: CreateCourtRequestDTO, adminId: string): Promise<AdminCourtDetailDTO> {
     await this.assertCountryRegion(dto.countryId, dto.regionId);
-    this.assertNotZeroZero(dto.lat, dto.lng);
+    assertCourtLatLngNotZeroZero(dto.lat, dto.lng);
 
     const tags = validateAdminTags(dto.tags ?? []);
     const mapLinkUrl = validateMapLinkUrl(dto.mapLinkUrl ?? null);
-    const slug = this.resolveSlug(dto.slug, dto.name);
+    const slug = resolveCourtSlug(dto.slug, dto.name);
     const status = dto.status ?? 'draft';
     const blurb = dto.blurb ?? '';
 
@@ -180,7 +178,7 @@ export class AdminCourtsService {
 
         const lat = dto.lat ?? fresh.lat;
         const lng = dto.lng ?? fresh.lng;
-        this.assertNotZeroZero(lat, lng);
+        assertCourtLatLngNotZeroZero(lat, lng);
 
         const latLngChanged = dto.lat !== undefined || dto.lng !== undefined;
         const { approxLat, approxLng } = latLngChanged
@@ -265,21 +263,6 @@ export class AdminCourtsService {
     if (!country) {
       throw new BadRequestException(`Unknown countryId "${countryId}".`);
     }
-  }
-
-  /** lat/lng === 0/0 is never a real location (decision 11). */
-  private assertNotZeroZero(lat: number, lng: number): void {
-    if (lat === 0 && lng === 0) {
-      throw new BadRequestException('lat/lng of exactly 0,0 is not a valid location.');
-    }
-  }
-
-  private resolveSlug(provided: string | undefined, name: string): string {
-    const candidate = provided?.trim() || slugify(name);
-    if (!candidate || !URL_SAFE_SLUG_PATTERN.test(candidate) || candidate.length > 80) {
-      throw new BadRequestException(SLUG_RULE_MESSAGE);
-    }
-    return candidate;
   }
 
   private mapSlugConflict(err: unknown, slug: string): unknown {

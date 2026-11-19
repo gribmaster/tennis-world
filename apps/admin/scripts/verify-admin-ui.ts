@@ -14,7 +14,9 @@
 //
 // Run: pnpm --filter @tennis/admin verify:admin-ui
 
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseCoordinatesFromMapLink } from '../src/lib/maps-link-parser';
@@ -28,7 +30,16 @@ import { buildCourtPatch, type CourtFormValues } from '../src/lib/court-patch';
 import { apiFetch, setUnauthorizedHandler } from '../src/lib/api-client';
 import { ApiError, NETWORK_ERROR_MESSAGE } from '../src/lib/api-error';
 import { dataProvider } from '../src/lib/data-provider';
-import type { AdminCourtDetailDTO, AdminCourtListResponseDTO } from '@tennis/contracts';
+import {
+  buildAgentErrorMessage,
+  googleMapsPinLink,
+  isCheckCurrent,
+  osmLink,
+  parseImportInput,
+  summarizeForConfirm,
+} from '../src/lib/court-import';
+import { importCourts } from '../src/lib/court-import-api';
+import type { AdminCourtDetailDTO, AdminCourtImportReportDTO, AdminCourtListResponseDTO } from '@tennis/contracts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ADMIN_ROOT = path.resolve(__dirname, '..');
@@ -520,6 +531,477 @@ async function main(): Promise<void> {
       offenders.length === 0,
       offenders.join(' | '),
     );
+  }
+
+  console.log('\n9. Court import — parseImportInput (TASK_80)\n');
+
+  {
+    const r1 = parseImportInput(JSON.stringify({ courts: [{ name: 'A' }, { name: 'B' }] }));
+    expectTrue('valid object parses ok', r1.ok && r1.courts.length === 2 && !r1.wrapped);
+
+    const r2 = parseImportInput(JSON.stringify([{ name: 'A' }]));
+    expectTrue('bare array is wrapped', r2.ok && r2.wrapped === true && r2.courts.length === 1);
+
+    const r3 = parseImportInput('');
+    expectTrue('empty string is a clean error', !r3.ok);
+
+    const r4 = parseImportInput('   \n\t  ');
+    expectTrue('whitespace-only is a clean error', !r4.ok);
+
+    const r5 = parseImportInput('{ "courts": [}');
+    expectTrue('invalid JSON is a clean error', !r5.ok);
+
+    // A trailing comma is a case where V8's own JSON.parse message carries a
+    // line/column ("... at position N (line L column C)") — forwarded as-is
+    // ("when available", per the task spec; not every invalid-JSON message
+    // carries one, e.g. the r5 case above).
+    const r5b = parseImportInput('{"courts": [{"a":1,}]}');
+    expectTrue(
+      'invalid JSON message carries line and column when the parser provides one',
+      !r5b.ok && /line \d+ column \d+/.test(r5b.message),
+      !r5b.ok ? r5b.message : undefined,
+    );
+
+    const r6 = parseImportInput(JSON.stringify({ notCourts: [] }));
+    expectTrue('object without a courts array is a clean error', !r6.ok);
+
+    const r7 = parseImportInput(JSON.stringify({ courts: 'nope' }));
+    expectTrue('courts not an array is a clean error', !r7.ok);
+
+    const r8 = parseImportInput(JSON.stringify({ courts: [] }));
+    expectTrue('0 courts is a clean error', !r8.ok);
+
+    const fiftyOne = Array.from({ length: 51 }, (_, i) => ({ name: `Court ${i}` }));
+    const r9 = parseImportInput(JSON.stringify({ courts: fiftyOne }));
+    expectTrue('51 courts is a clean error', !r9.ok);
+
+    const tooBig = JSON.stringify({ courts: [{ blurb: 'x'.repeat(1024 * 1024 + 1) }] });
+    const r10 = parseImportInput(tooBig);
+    expectEqual('> 1 MB text message', !r10.ok ? r10.message : undefined, 'File is too large (max 1 MB).');
+
+    for (const bad of ['null', '42', '"a string"']) {
+      const r = parseImportInput(bad);
+      expectTrue(`top-level JSON ${bad} is a clean error, not a crash`, !r.ok);
+    }
+
+    const bom = `﻿${JSON.stringify({ courts: [{ name: 'A' }] })}`;
+    const r11 = parseImportInput(bom);
+    expectTrue('a leading BOM is stripped and the JSON still parses', r11.ok);
+
+    const crlf = '{\r\n  "courts": [\r\n    { "name": "A" }\r\n  ]\r\n}';
+    const r12 = parseImportInput(crlf);
+    expectTrue('Windows line endings parse ok', r12.ok);
+
+    const longLine = JSON.stringify({ courts: [{ name: 'A'.repeat(5000) }] });
+    const r13 = parseImportInput(longLine);
+    expectTrue('a very long single line parses ok', r13.ok);
+  }
+
+  console.log('\n10. Court import — buildAgentErrorMessage (TASK_80)\n');
+
+  {
+    const report: AdminCourtImportReportDTO = {
+      dryRun: true,
+      ok: false,
+      summary: { total: 3, valid: 1, invalid: 2, newCountries: 0, newRegions: 0, warnings: 0 },
+      items: [
+        {
+          index: 0,
+          name: 'Alpha',
+          slug: 'alpha',
+          status: 'ok',
+          errors: [],
+          warnings: [],
+          resolved: { country: 'existing', region: 'existing', isLocked: true },
+          sources: [],
+          notes: null,
+        },
+        {
+          index: 1,
+          name: null,
+          slug: null,
+          status: 'error',
+          errors: [{ path: 'name', message: 'name is required.' }],
+          warnings: [],
+          resolved: { country: null, region: null, isLocked: null },
+          sources: [],
+          notes: null,
+        },
+        {
+          index: 2,
+          name: 'Gamma "Court"\nWith a newline',
+          slug: null,
+          status: 'error',
+          errors: [
+            { path: 'surface', message: 'must be one of: Clay, Hard, Grass.' },
+            { path: 'tags[1]', message: 'unknown tag "Foo".' },
+          ],
+          warnings: [],
+          resolved: { country: null, region: null, isLocked: null },
+          sources: [],
+          notes: null,
+        },
+      ],
+    };
+    const expected = [
+      'Court 2: `name` name is required.',
+      'Court 3 ("Gamma "Court" With a newline"): `surface` must be one of: Clay, Hard, Grass.',
+      'Court 3 ("Gamma "Court" With a newline"): `tags[1]` unknown tag "Foo".',
+      '',
+      'Return the corrected JSON only.',
+    ].join('\n');
+    expectEqual('message is 1-based, names courts without a name "Court N", preserves paths', buildAgentErrorMessage(report), expected);
+    expectTrue('message is plain text (no markdown/HTML beyond backticks)', !/<[a-z]/i.test(buildAgentErrorMessage(report)));
+
+    const emptyReport: AdminCourtImportReportDTO = {
+      dryRun: true,
+      ok: true,
+      summary: { total: 1, valid: 1, invalid: 0, newCountries: 0, newRegions: 0, warnings: 0 },
+      items: [
+        {
+          index: 0,
+          name: 'A',
+          slug: 'a',
+          status: 'ok',
+          errors: [],
+          warnings: [],
+          resolved: { country: 'existing', region: 'existing', isLocked: true },
+          sources: [],
+          notes: null,
+        },
+      ],
+    };
+    expectEqual('an all-ok report produces an empty string', buildAgentErrorMessage(emptyReport), '');
+  }
+
+  console.log('\n11. Court import — osmLink (TASK_80)\n');
+
+  {
+    expectEqual(
+      'valid coordinates -> exact expected URL',
+      osmLink(45.4642, 9.19),
+      'https://www.openstreetmap.org/?mlat=45.4642&mlon=9.19#map=14/45.4642/9.19',
+    );
+    expectEqual(
+      'negative coordinates',
+      osmLink(-33.8688, 151.2093),
+      'https://www.openstreetmap.org/?mlat=-33.8688&mlon=151.2093#map=14/-33.8688/151.2093',
+    );
+    expectEqual('NaN -> null', osmLink(Number.NaN, 9), null);
+    expectEqual('Infinity -> null', osmLink(45, Number.POSITIVE_INFINITY), null);
+    expectEqual('out-of-range latitude -> null', osmLink(200, 9), null);
+    expectEqual('out-of-range longitude -> null', osmLink(45, 200), null);
+    expectEqual('a string -> null', osmLink('45', 9), null);
+    expectEqual(
+      'no scientific notation for very small numbers',
+      osmLink(1e-7, 1e-7),
+      'https://www.openstreetmap.org/?mlat=0.0000001&mlon=0.0000001#map=14/0.0000001/0.0000001',
+    );
+  }
+
+  console.log('\n12. Court import — summarizeForConfirm / isCheckCurrent (TASK_80)\n');
+
+  {
+    const sampleReport: AdminCourtImportReportDTO = {
+      dryRun: true,
+      ok: true,
+      summary: { total: 4, valid: 4, invalid: 0, newCountries: 2, newRegions: 3, warnings: 1 },
+      items: [],
+    };
+    expectEqual('summarizeForConfirm reads the summary counts', summarizeForConfirm(sampleReport), {
+      drafts: 4,
+      newCountries: 2,
+      newRegions: 3,
+    });
+
+    expectTrue('isCheckCurrent true for identical text', isCheckCurrent('abc', 'abc'));
+    expectTrue('isCheckCurrent false for a trailing space', !isCheckCurrent('abc', 'abc '));
+    expectTrue('isCheckCurrent false when nothing has been checked yet', !isCheckCurrent(null, 'abc'));
+  }
+
+  console.log('\n13. Court import — wiring through apiFetch (TASK_80)\n');
+
+  {
+    const okReport: AdminCourtImportReportDTO = {
+      dryRun: true,
+      ok: true,
+      summary: { total: 1, valid: 1, invalid: 0, newCountries: 0, newRegions: 0, warnings: 0 },
+      items: [],
+    };
+    stubFetch({ status: 200, body: okReport });
+    await importCourts([{ name: 'A' }], true);
+    expectTrue('Check sets credentials: include', captured[0]?.init.credentials === 'include');
+    expectEqual(
+      'Check sets X-Tennis-Admin: 1',
+      (captured[0]?.init.headers as Record<string, string>)?.['X-Tennis-Admin'],
+      '1',
+    );
+    expectEqual(
+      'Check sends { courts, dryRun: true }',
+      JSON.parse(String(captured[0]?.init.body)),
+      { courts: [{ name: 'A' }], dryRun: true },
+    );
+
+    stubFetch({ status: 201, body: { ...okReport, dryRun: false } });
+    await importCourts([{ name: 'A' }], false);
+    expectEqual('Create sends dryRun: false', JSON.parse(String(captured[0]?.init.body)).dryRun, false);
+
+    const errorReport: AdminCourtImportReportDTO = {
+      dryRun: false,
+      ok: false,
+      summary: { total: 1, valid: 0, invalid: 1, newCountries: 0, newRegions: 0, warnings: 0 },
+      items: [
+        {
+          index: 0,
+          name: 'A',
+          slug: 'a',
+          status: 'error',
+          errors: [{ path: 'slug', message: 'slug "a" already exists.' }],
+          warnings: [],
+          resolved: { country: null, region: null, isLocked: null },
+          sources: [],
+          notes: null,
+        },
+      ],
+    };
+    stubFetch({ status: 422, body: errorReport });
+    let caught422: ApiError | undefined;
+    try {
+      await importCourts([{ name: 'A' }], false);
+    } catch (err) {
+      caught422 = err instanceof ApiError ? err : undefined;
+    }
+    expectTrue(
+      '422 surfaces the full report body, not just a message',
+      JSON.stringify(caught422?.body) === JSON.stringify(errorReport),
+    );
+
+    stubFetch({ status: 413, body: { message: 'Request entity too large' } });
+    let caught413: ApiError | undefined;
+    try {
+      await importCourts([{ name: 'A' }], true);
+    } catch (err) {
+      caught413 = err instanceof ApiError ? err : undefined;
+    }
+    expectEqual('413 maps to statusCode 413', caught413?.statusCode, 413);
+
+    (globalThis as { fetch: typeof fetch }).fetch = (async () =>
+      new Response(JSON.stringify({ message: 'Too Many Requests' }), {
+        status: 429,
+        headers: { 'Retry-After': '42' },
+      })) as typeof fetch;
+    let caught429: ApiError | undefined;
+    try {
+      await importCourts([{ name: 'A' }], true);
+    } catch (err) {
+      caught429 = err instanceof ApiError ? err : undefined;
+    }
+    expectEqual('429 surfaces Retry-After as retryAfterSeconds', caught429?.retryAfterSeconds, 42);
+
+    stubFetch({ throws: true });
+    let networkMessage2: string | undefined;
+    try {
+      await importCourts([{ name: 'A' }], true);
+    } catch (err) {
+      networkMessage2 = err instanceof ApiError ? err.message : undefined;
+    }
+    expectEqual('a network failure on import becomes "Can\'t reach the server"', networkMessage2, NETWORK_ERROR_MESSAGE);
+  }
+
+  console.log('\n14. Court import — source scans (TASK_80, extends section 4)\n');
+
+  {
+    const newFiles = [
+      path.join(ADMIN_ROOT, 'src', 'pages', 'CourtImportPage.tsx'),
+      path.join(ADMIN_ROOT, 'src', 'lib', 'court-import.ts'),
+      path.join(ADMIN_ROOT, 'src', 'lib', 'court-import-api.ts'),
+    ];
+
+    const blankTargetOffenders: string[] = [];
+    for (const file of newFiles) {
+      const content = readFileSync(file, 'utf8');
+      const anchorTags = content.match(/<a\b[^>]*>/g) ?? [];
+      for (const tag of anchorTags) {
+        if (tag.includes('target="_blank"') && !tag.includes('rel="noopener noreferrer"')) {
+          blankTargetOffenders.push(`${path.basename(file)}: ${tag}`);
+        }
+      }
+    }
+    expectTrue(
+      'every target="_blank" anchor in the new files has rel="noopener noreferrer"',
+      blankTargetOffenders.length === 0,
+      blankTargetOffenders.join(' | '),
+    );
+
+    const apiImportOffenders = newFiles.filter((f) => /apps\/api|\.\.\/\.\.\/api\//.test(readFileSync(f, 'utf8')));
+    expectTrue(
+      'the new import page/lib files import nothing from apps/api',
+      apiImportOffenders.length === 0,
+      apiImportOffenders.join(', '),
+    );
+
+    const directFetchOffenders = sourceFiles.filter(
+      (f) => !f.endsWith(path.join('lib', 'api-client.ts')) && /\bfetch\(/.test(readFileSync(f, 'utf8')),
+    );
+    expectTrue(
+      'no direct fetch( outside api-client.ts',
+      directFetchOffenders.length === 0,
+      directFetchOffenders.map((f) => path.relative(ADMIN_ROOT, f)).join(', '),
+    );
+  }
+
+  console.log('\n15. Kit copy step (TASK_80)\n');
+
+  {
+    const scriptPath = path.join(ADMIN_ROOT, 'scripts', 'copy-court-import-kit.mjs');
+    const realKitDir = path.resolve(ADMIN_ROOT, '..', '..', 'docs', 'court-import');
+    const tmpBase = mkdtempSync(path.join(os.tmpdir(), 'court-import-kit-'));
+
+    const badSrc = path.join(tmpBase, 'src-missing');
+    const badDest = path.join(tmpBase, 'dest-missing');
+    mkdirSync(badSrc, { recursive: true });
+    writeFileSync(path.join(badSrc, 'court-import.schema.json'), '{}');
+    writeFileSync(path.join(badSrc, 'AGENT_PROMPT.md'), 'x');
+    writeFileSync(path.join(badSrc, 'example.json'), '{}');
+    // CLIENT_GUIDE.uk.md is deliberately left out.
+    const failRun = spawnSync(process.execPath, [scriptPath, badSrc, badDest], { encoding: 'utf8' });
+    expectTrue(
+      'copy script exits non-zero when a source file is missing',
+      failRun.status !== 0,
+      `exit ${failRun.status}: ${failRun.stderr}`,
+    );
+    expectTrue(
+      "copy script's error message names the missing file",
+      failRun.stderr.includes('CLIENT_GUIDE.uk.md'),
+      failRun.stderr,
+    );
+    expectTrue('nothing was copied to the dest dir on failure', !existsSync(badDest));
+
+    const goodDest = path.join(tmpBase, 'dest-ok');
+    const okRun = spawnSync(process.execPath, [scriptPath, realKitDir, goodDest], { encoding: 'utf8' });
+    expectTrue('copy script exits 0 on a normal run', okRun.status === 0, okRun.stderr);
+
+    const kitFiles = ['court-import.schema.json', 'AGENT_PROMPT.md', 'example.json', 'CLIENT_GUIDE.uk.md'];
+    for (const f of kitFiles) {
+      const src = readFileSync(path.join(realKitDir, f));
+      const destPath = path.join(goodDest, f);
+      const dest = existsSync(destPath) ? readFileSync(destPath) : null;
+      expectTrue(`${f} exists under the dest dir and is byte-identical to docs/court-import`, dest !== null && src.equals(dest));
+    }
+
+    rmSync(tmpBase, { recursive: true, force: true });
+  }
+
+  console.log('\n16. Court import — TASK_82 amendments\n');
+
+  {
+    // #1a: the pre-parse guard measures UTF-8 BYTES, not JS string length —
+    // a multi-byte-heavy text can be well under 1,048,576 "characters" yet
+    // over the byte limit.
+    const multiByteValue = '€'.repeat(400_000); // '€' is 3 bytes in UTF-8, 1 UTF-16 code unit
+    const multiByteText = JSON.stringify({ courts: [{ pad: multiByteValue }] });
+    expectTrue(
+      'multi-byte text under 1 MB in characters but over in UTF-8 bytes is rejected',
+      multiByteText.length < 1_048_576 && !parseImportInput(multiByteText).ok,
+    );
+
+    // #1b: the 1 KB margin applies to the RE-SERIALISED request body
+    // (`{ courts, dryRun: true }`), not the pasted text — calibrate the
+    // padding needed to land exactly on the boundary rather than guessing.
+    const MAX_BODY_BYTES_EXPECTED = 1024 * 1024 - 1024;
+    function bodyBytesForPad(padLength: number): number {
+      return new TextEncoder().encode(JSON.stringify({ courts: [{ pad: 'x'.repeat(padLength) }], dryRun: true }))
+        .length;
+    }
+    function rawTextForPad(padLength: number): string {
+      return JSON.stringify({ courts: [{ pad: 'x'.repeat(padLength) }] });
+    }
+    const overheadBytes = bodyBytesForPad(0);
+    const padAtLimit = MAX_BODY_BYTES_EXPECTED - overheadBytes;
+    const atLimitResult = parseImportInput(rawTextForPad(padAtLimit));
+    expectTrue(
+      'a request body landing exactly on the 1 KB margin boundary is accepted',
+      atLimitResult.ok,
+      atLimitResult.ok ? undefined : atLimitResult.message,
+    );
+    const overLimitResult = parseImportInput(rawTextForPad(padAtLimit + 1));
+    expectTrue(
+      'a request body one byte past the 1 KB margin boundary is rejected',
+      !overLimitResult.ok,
+    );
+
+    // #2: fenced code blocks (an agent's chat answer).
+    const sampleCourts = [{ name: 'A' }];
+    const sampleJson = JSON.stringify({ courts: sampleCourts });
+
+    const fencedWithTag = parseImportInput(`\`\`\`json\n${sampleJson}\n\`\`\``);
+    expectTrue(
+      'a ```json fenced block is parsed, with fenced: true',
+      fencedWithTag.ok && fencedWithTag.fenced && !fencedWithTag.wrapped && fencedWithTag.courts.length === 1,
+    );
+
+    const fencedBare = parseImportInput(`\`\`\`\n${sampleJson}\n\`\`\``);
+    expectTrue('a bare ``` fenced block (no "json" tag) is parsed', fencedBare.ok && fencedBare.fenced);
+
+    const fencedCrlf = parseImportInput(`\`\`\`json\r\n${sampleJson}\r\n\`\`\``);
+    expectTrue('a fenced block with Windows (CRLF) line endings is parsed', fencedCrlf.ok && fencedCrlf.fenced);
+
+    const fencedWithTrailingNote = parseImportInput(
+      `\`\`\`json\n${sampleJson}\n\`\`\`\n\nCOULD NOT VERIFY: Some Court (no official source found)`,
+    );
+    expectTrue(
+      'text after the closing fence (a "COULD NOT VERIFY:" note) is ignored',
+      fencedWithTrailingNote.ok && fencedWithTrailingNote.fenced && fencedWithTrailingNote.courts.length === 1,
+    );
+
+    const unterminated = parseImportInput(`\`\`\`json\n${sampleJson}`);
+    expectEqual(
+      'an unterminated fence is a clean error naming the missing close',
+      unterminated.ok ? undefined : unterminated.message,
+      'The JSON block is not closed (missing closing ```).',
+    );
+
+    const proseBeforeFence = parseImportInput(`Here is the file:\n\`\`\`json\n${sampleJson}\n\`\`\``);
+    expectTrue(
+      'prose before the fence falls back to the normal invalid-JSON message',
+      !proseBeforeFence.ok && proseBeforeFence.message.startsWith('Invalid JSON:'),
+      proseBeforeFence.ok ? undefined : proseBeforeFence.message,
+    );
+
+    const bomPlusFence = parseImportInput(`﻿\`\`\`json\n${sampleJson}\n\`\`\``);
+    expectTrue('a BOM followed by a fenced block is parsed', bomPlusFence.ok && bomPlusFence.fenced);
+
+    const twoFencedBlocks = parseImportInput(
+      `\`\`\`json\n${JSON.stringify({ courts: [{ name: 'First' }] })}\n\`\`\`\n\`\`\`json\n${JSON.stringify({ courts: [{ name: 'Second' }] })}\n\`\`\``,
+    );
+    expectTrue(
+      'two fenced blocks: only the first is used',
+      twoFencedBlocks.ok &&
+        twoFencedBlocks.fenced &&
+        (twoFencedBlocks.courts[0] as { name: string }).name === 'First',
+    );
+
+    const fencedBareArray = parseImportInput(`\`\`\`json\n${JSON.stringify([{ name: 'A' }])}\n\`\`\``);
+    expectTrue(
+      'a fenced block containing a bare array is both wrapped and fenced',
+      fencedBareArray.ok && fencedBareArray.fenced && fencedBareArray.wrapped,
+    );
+
+    // #3: googleMapsPinLink.
+    expectEqual(
+      'googleMapsPinLink: typical coordinates',
+      googleMapsPinLink(45.4642, 9.19),
+      'https://www.google.com/maps/search/?api=1&query=45.4642,9.19',
+    );
+    expectEqual(
+      'googleMapsPinLink: negative coordinates',
+      googleMapsPinLink(-33.8688, 151.2093),
+      'https://www.google.com/maps/search/?api=1&query=-33.8688,151.2093',
+    );
+    expectEqual('googleMapsPinLink: zero is a valid coordinate', googleMapsPinLink(0, 0), 'https://www.google.com/maps/search/?api=1&query=0,0');
+    expectEqual('googleMapsPinLink: out-of-range -> null', googleMapsPinLink(200, 9), null);
+    expectEqual('googleMapsPinLink: NaN -> null', googleMapsPinLink(Number.NaN, 9), null);
+    expectEqual('googleMapsPinLink: tiny numbers (1e-7) -> null (exponent form)', googleMapsPinLink(1e-7, 1e-7), null);
   }
 
   console.log(`\nTotal checks: ${results.length}   Passed: ${results.filter((r) => r.ok).length}   Failed: ${results.filter((r) => !r.ok).length}\n`);
