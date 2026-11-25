@@ -932,10 +932,10 @@ async function runKitDriftChecks(token: string): Promise<void> {
   }
 
   try {
-    const guide = readFileSync(path.join(kitDir, 'CLIENT_GUIDE.uk.md'), 'utf-8');
-    expectTrue('CLIENT_GUIDE.uk.md exists, is non-empty, and contains Cyrillic text', guide.trim().length > 0 && /[Ѐ-ӿ]/.test(guide));
+    const guide = readFileSync(path.join(kitDir, 'CLIENT_GUIDE.ru.md'), 'utf-8');
+    expectTrue('CLIENT_GUIDE.ru.md exists, is non-empty, and contains Cyrillic text', guide.trim().length > 0 && /[Ѐ-ӿ]/.test(guide));
   } catch (err) {
-    expectTrue('CLIENT_GUIDE.uk.md exists and is readable', false, String(err));
+    expectTrue('CLIENT_GUIDE.ru.md exists and is readable', false, String(err));
   }
 }
 

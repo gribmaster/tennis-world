@@ -863,7 +863,7 @@ async function main(): Promise<void> {
     writeFileSync(path.join(badSrc, 'court-import.schema.json'), '{}');
     writeFileSync(path.join(badSrc, 'AGENT_PROMPT.md'), 'x');
     writeFileSync(path.join(badSrc, 'example.json'), '{}');
-    // CLIENT_GUIDE.uk.md is deliberately left out.
+    // CLIENT_GUIDE.ru.md is deliberately left out.
     const failRun = spawnSync(process.execPath, [scriptPath, badSrc, badDest], { encoding: 'utf8' });
     expectTrue(
       'copy script exits non-zero when a source file is missing',
@@ -872,7 +872,7 @@ async function main(): Promise<void> {
     );
     expectTrue(
       "copy script's error message names the missing file",
-      failRun.stderr.includes('CLIENT_GUIDE.uk.md'),
+      failRun.stderr.includes('CLIENT_GUIDE.ru.md'),
       failRun.stderr,
     );
     expectTrue('nothing was copied to the dest dir on failure', !existsSync(badDest));
@@ -881,7 +881,7 @@ async function main(): Promise<void> {
     const okRun = spawnSync(process.execPath, [scriptPath, realKitDir, goodDest], { encoding: 'utf8' });
     expectTrue('copy script exits 0 on a normal run', okRun.status === 0, okRun.stderr);
 
-    const kitFiles = ['court-import.schema.json', 'AGENT_PROMPT.md', 'example.json', 'CLIENT_GUIDE.uk.md'];
+    const kitFiles = ['court-import.schema.json', 'AGENT_PROMPT.md', 'example.json', 'CLIENT_GUIDE.ru.md'];
     for (const f of kitFiles) {
       const src = readFileSync(path.join(realKitDir, f));
       const destPath = path.join(goodDest, f);

@@ -29,11 +29,27 @@ import {
 // report by index. No API change was needed.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const KIT_LINKS: Array<{ href: string; label: string }> = [
-  { href: '/court-import/court-import.schema.json', label: 'Schema (court-import.schema.json)' },
-  { href: '/court-import/AGENT_PROMPT.md', label: 'Agent prompt (AGENT_PROMPT.md)' },
-  { href: '/court-import/example.json', label: 'Example (example.json)' },
-  { href: '/court-import/CLIENT_GUIDE.uk.md', label: 'Client guide, in Ukrainian (CLIENT_GUIDE.uk.md)' },
+const KIT_LINKS: Array<{ href: string; label: string; hint: string }> = [
+  {
+    href: '/court-import/AGENT_PROMPT.md',
+    label: 'Agent prompt (AGENT_PROMPT.md)',
+    hint: 'the instructions: how to turn the PDF into the JSON — give this to the agent',
+  },
+  {
+    href: '/court-import/court-import.schema.json',
+    label: 'Schema (court-import.schema.json)',
+    hint: 'the exact file format and allowed values — give this to the agent too',
+  },
+  {
+    href: '/court-import/example.json',
+    label: 'Example (example.json)',
+    hint: 'a finished example of the output (the five courts of the reference PDF)',
+  },
+  {
+    href: '/court-import/CLIENT_GUIDE.ru.md',
+    label: 'Client guide, in Russian (CLIENT_GUIDE.ru.md)',
+    hint: 'step-by-step instructions for the client — for you, not for the agent',
+  },
 ];
 
 function asString(v: unknown): string | null {
@@ -222,13 +238,15 @@ export function CourtImportPage() {
       <Typography.Title level={3}>Import courts</Typography.Title>
 
       <Card title="Before you start" size="small" style={{ marginBottom: 16 }}>
-        <p>Give the agent the prompt + the schema; it returns one JSON file.</p>
+        <p>Give the agent the court PDF, the prompt and the schema; it copies the data from the PDF and returns one JSON file.</p>
         <ul style={{ margin: 0, paddingLeft: 20 }}>
           {KIT_LINKS.map((link) => (
             <li key={link.href}>
               <a href={link.href} download>
                 {link.label}
               </a>
+              {' — '}
+              <span>{link.hint}</span>
             </li>
           ))}
         </ul>

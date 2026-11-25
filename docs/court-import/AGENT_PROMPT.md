@@ -1,163 +1,157 @@
-# Tennis Map — court import agent prompt
+# Tennis Map — court import agent prompt (PDF → JSON)
 
-Paste this whole document (or point your agent at this file) together with
-`court-import.schema.json` and your list of court names.
+Give your agent **this whole document**, `court-import.schema.json`, and the
+**court PDF** ("The Tennis Map — Court Cards", one page per court, with the
+index page first). `example.json` is a finished example of the output for the
+five courts of the reference PDF.
 
 ---
 
 ## Your task
 
-You will be given a list of tennis court / venue names. For each one, research
-it on the web and produce **one JSON document** describing it, valid against
-the attached JSON Schema (`court-import.schema.json`).
+The PDF already contains everything about each court. **You are not
+researching anything — you are transcribing.** Turn every court page of the PDF
+into one entry of a single JSON document that is valid against
+`court-import.schema.json`.
+
+**Work only from the PDF.** Do not browse the web, do not add facts from your
+own knowledge, do not rewrite or "improve" the text. The only knowledge you may
+use is reference data that is not in the PDF: the country's ISO code and
+continent.
 
 **Your output is that one JSON document, inside a single ```json code
 block** (so the reviewer can copy it in one click). Nothing but the JSON goes
 inside the block, and no introduction or commentary comes before it. If you
-could not verify one or more courts well enough to include them (see "Research,
-don't guess" below), add a short plain-text note **after** the code block —
-outside it — listing which courts you left out and why, headed exactly
-`COULD NOT VERIFY:`.
+had to leave a court out (see "When to leave a court out"), add a short
+plain-text note **after** the code block — outside it — headed exactly
+`COULD NOT VERIFY:`, listing each court you left out and why.
 
-A human will review every field before anything is imported, and the import
-system itself double-checks shapes, enums, and ranges — but it cannot check
-whether a fact is TRUE. That is your job.
+A human reviews every court before anything is published, and the import
+system checks shapes, enums and ranges — but it cannot check that you copied
+the right value. That is your job.
 
-## Research, don't guess
+## What is on a court page, and where each value goes
 
-For every court, search the web for:
-- the venue's own official website (if it has one),
-- its Google Maps listing,
-- its OpenStreetMap entry,
-- any reputable third-party page that describes it (hotel booking sites,
-  tennis/travel press, the relevant national or regional tennis federation).
+A court page has: a heading (court name, ALL CAPS), a location line
+(`CITY, COUNTRY`), a coordinates line, a row of small pill labels, a table
+called **THE ESSENTIALS**, one to three paragraphs of description, photos, and
+an **OPEN IN GOOGLE MAPS →** button. Depending on how you read the PDF, the
+small grey labels may come out letter-spaced (`A C C E S S`) — read them as the
+normal words.
 
-Use these to fill in every field. **Never invent a fact you could not verify.**
-If you cannot verify a court's coordinates from an official page, Google Maps,
-or OpenStreetMap, **leave that court out of the JSON entirely** and list it in
-the `COULD NOT VERIFY:` note instead, with a one-line reason. Do not guess at
-a plausible-sounding location, surface, or history. An approximate-but-wrong
-fact is worse than an honest gap — the human reviewer cannot easily catch a
-confident wrong answer, but can easily fill in a gap you flagged.
+| JSON field | Take it from the PDF | Rules |
+|---|---|---|
+| `name` | The court's entry in the **"IN THIS FILE" index on page 1** | The page heading is ALL CAPS and split over several lines; use the index spelling (proper case, accents kept), e.g. `Monte-Carlo Country Club`, `Hotel Cap-Estel`. |
+| `country` | The country after the last comma of the location line | `{ "name": "France", "isoCode": "FR", "continent": "Europe" }`. English common name; `isoCode` is the ISO 3166-1 alpha-2 code; `continent` is one of `Europe`, `Asia`, `Americas`, `Africa`, `Oceania`. |
+| `region` | The city/area before the last comma of the location line | Proper case, accents kept, as spelled in the index (`Èze-sur-Mer`, `Saint-Jean-Cap-Ferrat`). |
+| `lat`, `lng` | The coordinates line, e.g. `43.7516° N / 7.4407° E` | Decimal degrees as numbers, **exactly the printed digits** (do not round, pad or extend). `N` and `E` are positive; **`S` and `W` are negative**. First number is latitude. |
+| `mapLinkUrl` | The link behind the **OPEN IN GOOGLE MAPS →** button | Copy the URL exactly (it looks like `https://maps.google.com/?cid=…`). **If you cannot read link targets, leave `mapLinkUrl` out and say so in `notes`. Never build a link yourself and never guess a `cid`.** |
+| `surface` | `SURFACE` row of THE ESSENTIALS | One of `Clay`, `Hard`, `Grass`. If several are listed (`Clay · Hard`) use the **first** one and say so in `notes`. `Artificial grass` → `Grass` (say so in `notes`). |
+| `access` | `ACCESS` row, cross-checked with the pill labels | See "Access" below. One of `Resort`, `Club`, `Academy`, `Private`. |
+| `indoorOutdoor` | Not printed in the PDF | `Indoor` only if the page text clearly says indoor/covered. Otherwise `Outdoor`, **and say "indoor/outdoor not stated: assumed Outdoor" in `notes`**. |
+| `setting` | The description text | A SHORT factual phrase (max 120 characters, no `<` or `>`) taken from what the description says about where the courts are, e.g. `Terraced clay courts stepping down towards the sea`. Not a full sentence, not marketing copy, nothing the PDF does not say. |
+| `isScenic` | The pill labels | `true` if a pill label contains view / sea / lake / mountain / hills / coast / beach / garden / park; otherwise leave the field out. |
+| `tags` | The pill labels | See "Tags" below. Omit the field if nothing maps. |
+| `blurb` | The description paragraphs | **Copy verbatim** — same words, same punctuation, same accents, same order. See "Blurb" below. |
+| `sources` | `WEBSITE` row + the Google Maps link | 1–10 `https://` URLs: the website first (the URL behind the `WEBSITE` text if you can read it, otherwise `https://` + the printed domain, e.g. `https://mccc.mc`), then the Google Maps link if you have it. Not stored — only for the reviewer. |
+| `notes` | — | Optional, **max 500 characters**, for the reviewer: every assumption and every contradiction you noticed (see "Notes"). Not stored. |
 
-## Coordinates (`lat` / `lng`)
+The **ESSENTIALS rows `BOOKING`, `EVENT`, `COURTS`, `BEST TIME`, `WEBSITE`
+and `COURT HIRE`** have no field in the schema — **do not import them, do not
+put them into the blurb or the setting.** (`WEBSITE` goes to `sources`.)
 
-In this order of preference:
-1. If you found the venue's own Google Maps link, use the pin's exact
-   coordinates from that link (not a geocoded address).
-2. Otherwise, use the venue's own pin on Google Maps or OpenStreetMap — the
-   actual building/court location, not a street address lookup.
-3. **Never use the city or town centre as a stand-in.** If you cannot find the
-   venue's own pin, that court belongs in `COULD NOT VERIFY:`, not in the JSON
-   with a city-centre guess.
+## Access
 
-Give coordinates to **at most 7 decimal places** (more implies false
-precision the source doesn't actually have). If you are not fully confident
-in the pin, still include the court but say so explicitly in its `notes`
-field (e.g. `"notes": "coordinates approximate — venue has no exact pin"`).
+Decide from the `ACCESS` row; use the pill labels only to cross-check.
 
-If you found a usable Google Maps link for the venue, put it in `mapLinkUrl`
-too (it becomes the "Directions" link a member sees) — it must be the real
-link for this specific venue, not a generic search URL.
-
-## The enums, explained
-
-**`surface`** — the court's actual playing surface. Only `Clay`, `Hard`, or
-`Grass`. If a venue has multiple surfaces, pick the one most associated with
-its main/signature court (prefer what the venue itself calls its main court).
-Don't guess from the venue's general style (e.g. a Mediterranean resort is not
-automatically clay) — confirm it from a source.
-
-**`access`** — who can actually play there:
-- `Resort` — a hotel or resort property; the court is an amenity for guests
-  (e.g. "the hotel's tennis court", a resort spa/sports club).
-- `Club` — an ordinary members' tennis club or country club, not advertised
-  as exclusive/invitation-only.
-- `Academy` — a tennis academy or training centre (coaching-focused, usually
-  literally named "... Tennis Academy").
-- `Private` — an explicitly **private** club: invitation- or membership-only,
-  commonly described as a "private club".
-
-**`indoorOutdoor`** — `Indoor` only if the court is genuinely covered/indoors.
-If you cannot confirm it either way, use `Outdoor` — it is the far more common
-case among the venues this project lists — **and say so in that court's
-`notes`** (e.g. `"indoor/outdoor not confirmed — assumed Outdoor"`), so the
-reviewer knows it is an assumption and not a verified fact.
-
-## Tags (optional — use only what clearly applies)
-
-A **closed** vocabulary; omit the field entirely if nothing clearly applies,
-and never use a tag to restate `surface`/`access`/`indoorOutdoor`/`isScenic`
-(those already have their own fields):
-
-| Tag | Use when the court/venue is… |
+| The PDF says… | `access` |
 |---|---|
-| `Sea View` | by the sea/ocean, or on a well-known coastline (e.g. the Riviera) |
-| `Beach Club` | on or directly attached to a beach club |
-| `Mountains` | in a mountain, alpine, or hill setting |
-| `Lakeside` | on or next to a lake |
-| `Garden` | set within a notable garden |
-| `Historic` | in a historic building or heritage site (e.g. a centuries-old estate) |
-| `Jungle` | in a jungle, rainforest, or tropical-garden setting |
-| `Island` | on an island |
-| `Rooftop` | a rooftop court |
-| `Countryside` | a rural/countryside estate (vineyard, château, manor, farmland) |
+| `Hotel guests`, `Hotel guests & court hire`, or the court belongs to a hotel/resort (pill `luxury hotel`, `boutique hotel`) | `Resort` — a hotel or resort property; the court is an amenity for guests |
+| `Public`, `Public · court hire`, a club whose courts can be hired, a members' club not described as exclusive | `Club` — an ordinary tennis or country club |
+| An academy / training centre (pill `tennis academy`) | `Academy` |
+| Explicitly **members only / invitation only / private club** in the ACCESS row | `Private` — an explicitly private club |
 
-## Writing `blurb`
+If the `ACCESS` row and a pill label disagree (e.g. `Public · court hire` vs
+the pill `private club`), **follow the ACCESS row** and mention the
+disagreement in `notes`.
 
-1 to 6 paragraphs, each separated by **one blank line**. Style: evocative but
-factual — no marketing superlatives ("world-class", "unparalleled",
-"once-in-a-lifetime"), no invented history, English only. Two real,
-already-approved examples (see `example.json` for the full JSON they sit in):
+## Tags
 
-> Domaine des Etangs is a 13th-century château set inside a vast private
-> estate in the French countryside, surrounded by forests, pastures, ponds,
-> and contemporary art. It feels less like a hotel and more like a quiet
-> world built around nature and time.
->
-> Its tennis court is the detail that makes the place unforgettable: a
-> floating court set on the water. Instead of a classic country-club
-> setting, tennis here feels almost surreal — red clay, still ponds, old
-> stone, and the silence of a château estate. A location where sport becomes
-> part of the landscape, not separate from it.
+The pill labels under the coordinates are the only source for tags. Map each
+pill with this closed vocabulary; a pill that matches nothing gives no tag, and
+**surface, access and indoor/outdoor are never tags** (`clay court`,
+`hard court`, `luxury hotel`, `private club` → no tag). Never invent a tag from
+the description.
 
-> Monte-Carlo Country Club opened in 1928 on the edge of Monaco, though
-> technically it sits just across the border in Roquebrune-Cap-Martin,
-> France. That small geographical twist is part of its charm: it belongs to
-> the Monaco myth, but its clay courts are carved into the French Riviera
-> hillside above the Mediterranean.
->
-> The club became the permanent home of the Monte-Carlo tournament, now the
-> Rolex Monte-Carlo Masters, one of the most elegant stops of the clay
-> season. Its terraced courts, sea views and old Riviera atmosphere make
-> tennis here feel less like a simple sport and more like a ritual of
-> spring: red clay, white lines, cypress trees, and the Mediterranean just
-> beyond the baseline.
+| Tag | Pill label examples |
+|---|---|
+| `Sea View` | `sea view`, `riviera`, `coastal`, `oceanfront`, `waterfront` |
+| `Beach Club` | `pampelonne beach`, any beach-club pill |
+| `Mountains` | `alpine view`, `mountain resort`, `saint-tropez hills`, `hilltop` |
+| `Lakeside` | `lakeside`, `lakefront`, `lake estate` |
+| `Garden` | `garden court` |
+| `Historic` | `heritage club`, `art deco`, `historic park`, `manor`, `centuries-old` |
+| `Jungle` | `jungle`, `rainforest`, `tropical garden` |
+| `Island` | `island` |
+| `Rooftop` | `rooftop court`, `roof terrace` |
+| `Countryside` | `countryside estate`, `vineyard estate`, `château` |
 
-Match that register: specific, sensory, grounded in verifiable facts — not a
-hotel brochure.
+Use each tag at most once.
 
-## `sources`
+## Blurb
 
-List 1–10 `https://` URLs you actually used, **official site first** when the
-venue has one, then Google Maps/OpenStreetMap/press. These are not stored on
-the court — they exist purely so the human reviewer can check your work.
+- The description paragraphs under THE ESSENTIALS become `blurb`, **verbatim**.
+  Join the lines of one paragraph with single spaces (a line break inside a
+  paragraph is only page wrapping) and separate paragraphs with **one blank
+  line** (`\n\n` inside the JSON string).
+- Paragraphs are visible as separate blocks with a small gap between them. Text
+  extraction often does not show the gaps. **If you can see the page image, use
+  it. If you cannot tell where a paragraph ends, keep the whole description as
+  one paragraph — never guess.**
+- 1 to 6 paragraphs. Do not translate, shorten, reorder, fix or add anything.
+  Keep typographic apostrophes and quotes as printed. The text must not contain
+  `<` or `>`.
+
+## Notes
+
+Put in `notes` (max 500 characters, short sentences), in this order of
+importance:
+1. **Contradictions inside the PDF** that you noticed, e.g. `COURTS says 23 but
+   the text says 21 courts`, or an ACCESS row that disagrees with a pill label.
+   Keep the PDF's text as is; just report it.
+2. Every value you had to **choose or convert** (first of several surfaces,
+   `Artificial grass` → `Grass`, a link you could not read).
+3. `indoor/outdoor not stated: assumed Outdoor` (required whenever you used the
+   default).
+
+## When to leave a court out
+
+Leave a court out of the JSON, and list it under `COULD NOT VERIFY:` with a
+one-line reason, **only** if a required value is missing or unreadable in the
+PDF: the name, the location line, the coordinates, the surface, or the
+description. Never fill such a gap with a guess, a city-centre coordinate or
+something from your own knowledge. A missing Google Maps link is **not** a
+reason to leave a court out — just omit `mapLinkUrl` and note it.
 
 ## What NOT to include
 
-- **No photos of any kind** — there is no field for them. The admin adds
-  photos by hand afterwards.
-- **No `status`** — every imported court is a draft; you never decide
-  publication.
-- **No `slug`**, unless you were explicitly told one to use — it is generated
-  automatically from `name`.
-- **No `isLocked` / `isFeatured`** — leave both out unless explicitly told
-  otherwise. They default to premium (`isLocked: true`) and
-  not-featured (`isFeatured: false`), which matches this project's normal
-  default for every imported court.
-- No field beyond what `court-import.schema.json` defines — an unknown field
-  is rejected, not ignored.
+- **No photos** — the PDF's photos are not imported; an admin adds photos by
+  hand afterwards.
+- **No `status`** — every imported court is a draft.
+- **No `slug`** — it is generated from `name`.
+- **No `isLocked` / `isFeatured`** — they default to premium (`isLocked: true`)
+  and not featured, which is this project's normal default for imported courts.
+- **No field that `court-import.schema.json` does not define** — an unknown
+  field makes the whole import fail.
 
 ## Output language
 
-English, for every field, regardless of what language your sources are in.
+English, for every field you write. (`blurb` is copied as printed in the PDF.)
+
+## Final self-check before you answer
+
+For each court, check: the coordinates have the printed digits and the right
+signs; `country.isoCode` is two letters; `surface`, `access`, `indoorOutdoor`
+and every tag are exactly one of the allowed values; `blurb` is an exact copy;
+`notes` is at most 500 characters; every URL starts with `https://`; the JSON
+parses.

@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export const KIT_FILES = ['court-import.schema.json', 'AGENT_PROMPT.md', 'example.json', 'CLIENT_GUIDE.uk.md'];
+export const KIT_FILES = ['court-import.schema.json', 'AGENT_PROMPT.md', 'example.json', 'CLIENT_GUIDE.ru.md'];
 
 export function copyCourtImportKit(srcDir, destDir) {
   const missing = KIT_FILES.filter((file) => !existsSync(path.join(srcDir, file)));

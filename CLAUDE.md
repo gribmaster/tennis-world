@@ -693,7 +693,7 @@ TASK_73 — `apps/api/src/admin` (`AdminModule`, sub-folders `auth/`, `courts/`,
   429 + `Retry-After` (`admin-court-import-rate-limit.service.ts`).
 - The agent-facing kit lives in `docs/court-import/`
   (`court-import.schema.json`, `AGENT_PROMPT.md`, `example.json`,
-  `CLIENT_GUIDE.uk.md`) — single source of truth for what an AI agent and a
+  `CLIENT_GUIDE.ru.md`) — single source of truth for what an AI agent and a
   non-technical admin are told; `verify:admin-court-import` asserts it never
   drifts from the live DTO/contract (enum lists, required fields, that
   `example.json` dry-runs clean).

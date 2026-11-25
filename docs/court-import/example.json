@@ -1,38 +1,133 @@
 {
   "courts": [
     {
-      "name": "Domaine des Etangs",
-      "country": { "name": "France", "isoCode": "FR", "continent": "Europe" },
-      "region": "Massignac",
-      "lat": 45.7756621,
-      "lng": 0.6434264,
-      "mapLinkUrl": "https://maps.app.goo.gl/qqzJ67ib9tRjwn6n9?g_st=ic",
+      "name": "Monte-Carlo Country Club",
+      "country": {
+        "name": "France",
+        "isoCode": "FR",
+        "continent": "Europe"
+      },
+      "region": "Roquebrune-Cap-Martin",
+      "lat": 43.7516,
+      "lng": 7.4407,
+      "mapLinkUrl": "https://maps.google.com/?cid=14186437719521286871",
+      "surface": "Clay",
+      "access": "Club",
+      "indoorOutdoor": "Outdoor",
+      "setting": "Terraced clay courts stepping down towards the sea",
+      "tags": [
+        "Sea View"
+      ],
+      "blurb": "The most famous clay in Monaco isn’t actually in Monaco. It sits just across the border, 21 courts stepping down towards the sea.\n\nIt all began with one woman. In 1925, an American admirer decided the old club wasn’t good enough for Suzanne Lenglen, so he built her this. When the terraces opened in 1928, Prince Louis II was on the guest list, and the Riviera had found its new favourite stage. A century later, the Masters brings the whole tennis world here every April. It’s still one of the most beautiful places in the world to play.",
+      "sources": [
+        "https://www.mccc.mc/",
+        "https://maps.google.com/?cid=14186437719521286871"
+      ],
+      "notes": "Check: COURTS says 23 but the text says 21 courts. ACCESS says Public · court hire but the chip says private club (Club used, not Private). SURFACE lists Clay · Hard (Clay used). Indoor/outdoor not stated: assumed Outdoor."
+    },
+    {
+      "name": "Hotel Cap-Estel",
+      "country": {
+        "name": "France",
+        "isoCode": "FR",
+        "continent": "Europe"
+      },
+      "region": "Èze-sur-Mer",
+      "lat": 43.7183,
+      "lng": 7.3741,
+      "mapLinkUrl": "https://maps.google.com/?cid=4649975419861106660",
       "surface": "Hard",
       "access": "Resort",
       "indoorOutdoor": "Outdoor",
-      "setting": "A floating court on a private lake within a 13th-century château estate.",
+      "setting": "Private hard court among gardens, with the sea just beyond",
       "isScenic": true,
-      "tags": ["Lakeside"],
-      "blurb": "Domaine des Etangs is a 13th-century château set inside a vast private estate in the French countryside, surrounded by forests, pastures, ponds, and contemporary art. It feels less like a hotel and more like a quiet world built around nature and time.\n\nIts tennis court is the detail that makes the place unforgettable: a floating court set on the water. Instead of a classic country-club setting, tennis here feels almost surreal — red clay, still ponds, old stone, and the silence of a château estate. A location where sport becomes part of the landscape, not separate from it.",
-      "sources": ["https://maps.app.goo.gl/qqzJ67ib9tRjwn6n9?g_st=ic"],
-      "notes": "Coordinates and map link come from this project's own content/coordinates.json; surface/access/tags derived with the content importer's existing token-mapping rules (run its --dry-run mode against content/DOMAINE DES ETANGS/info.txt to reproduce)."
+      "tags": [
+        "Sea View"
+      ],
+      "blurb": "Here is a quiet one. Cap-Estel sits on its own two-hectare peninsula at Èze-sur-Mer, between Nice and Monaco, with the Mediterranean wrapped around it.\n\nIt was built in 1899 by Irish writer Frank Harris, a friend of Oscar Wilde, and it has kept famous secrets ever since. Greta Garbo came for the seclusion, the Rolling Stones followed, and the Beatles are said to have found the idea for ‘Michelle’ here.\n\nToday the private tennis court sits among gardens, fountains and pools, with the sea just beyond. A match here feels like the Riviera with its voice lowered.",
+      "sources": [
+        "https://www.capestel.com/",
+        "https://maps.google.com/?cid=4649975419861106660"
+      ],
+      "notes": "Indoor/outdoor not stated: assumed Outdoor."
     },
     {
-      "name": "Monte-Carlo Country Club",
-      "country": { "name": "France", "isoCode": "FR", "continent": "Europe" },
-      "region": "Roquebrune-Cap-Martin",
-      "lat": 43.7516314,
-      "lng": 7.4407329,
-      "mapLinkUrl": "https://maps.app.goo.gl/FRTr7PPxs9KPt7JN9?g_st=ic",
+      "name": "Hotel du Cap-Eden-Roc",
+      "country": {
+        "name": "France",
+        "isoCode": "FR",
+        "continent": "Europe"
+      },
+      "region": "Antibes",
+      "lat": 43.5483,
+      "lng": 7.1216,
+      "mapLinkUrl": "https://maps.google.com/?cid=4562198646629823593",
       "surface": "Clay",
-      "access": "Private",
+      "access": "Resort",
       "indoorOutdoor": "Outdoor",
-      "setting": "Terraced clay courts carved into a Riviera hillside above the Mediterranean.",
-      "isScenic": false,
-      "tags": ["Sea View"],
-      "blurb": "Monte-Carlo Country Club opened in 1928 on the edge of Monaco, though technically it sits just across the border in Roquebrune-Cap-Martin, France. That small geographical twist is part of its charm: it belongs to the Monaco myth, but its clay courts are carved into the French Riviera hillside above the Mediterranean.\n\nThe club became the permanent home of the Monte-Carlo tournament, now the Rolex Monte-Carlo Masters, one of the most elegant stops of the clay season. Its terraced courts, sea views and old Riviera atmosphere make tennis here feel less like a simple sport and more like a ritual of spring: red clay, white lines, cypress trees, and the Mediterranean just beyond the baseline.",
-      "sources": ["https://maps.app.goo.gl/FRTr7PPxs9KPt7JN9?g_st=ic"],
-      "notes": "Coordinates and map link come from this project's own content/coordinates.json; surface/access/tags derived with the content importer's existing token-mapping rules (run its --dry-run mode against \"content/MONTE - CARLO COUNTRY CLUB/info.txt\" to reproduce). NOTE: a court with this slug already exists in the seeded dataset under Monaco/Roquebrune — a dry run against that database reports a slug-already-exists error on this item; that is expected, not a bug in the file."
+      "setting": "Five clay courts under Aleppo pines in a nine-hectare park by the sea",
+      "isScenic": true,
+      "tags": [
+        "Sea View"
+      ],
+      "blurb": "During the Cannes Film Festival, the biggest stars don't sleep in Cannes. They drive to the tip of Cap d'Antibes, to Hotel du Cap, which has been hiding famous guests since 1870. F. Scott Fitzgerald wrote it into Tender Is the Night, and its seawater pool cut into the rock is where the Riviera summer began.\n\nThe hotel sits in a nine-hectare park that runs down to the sea. Deep inside it, far from the cameras, are five clay courts under Aleppo pines, palms and olive trees. Between sets, the Mediterranean is only a short walk through the gardens. Red clay, green shade and the sound of the ball. On the most photographed coast in the world, this is the one place where nobody is watching you play.",
+      "sources": [
+        "https://www.oetkerhotels.com/hotels/hotel-du-cap-eden-roc/",
+        "https://maps.google.com/?cid=4562198646629823593"
+      ],
+      "notes": "Indoor/outdoor not stated: assumed Outdoor."
+    },
+    {
+      "name": "Grand-Hôtel du Cap-Ferrat, A Four Seasons Hotel",
+      "country": {
+        "name": "France",
+        "isoCode": "FR",
+        "continent": "Europe"
+      },
+      "region": "Saint-Jean-Cap-Ferrat",
+      "lat": 43.677,
+      "lng": 7.3315,
+      "mapLinkUrl": "https://maps.google.com/?cid=5827571335460603971",
+      "surface": "Clay",
+      "access": "Resort",
+      "indoorOutdoor": "Outdoor",
+      "setting": "Clay courts in seven-hectare grounds at the tip of the cape",
+      "isScenic": true,
+      "tags": [
+        "Sea View"
+      ],
+      "blurb": "Grand-Hôtel du Cap-Ferrat sits at the tip of Saint-Jean-Cap-Ferrat, its seven-hectare grounds meeting the Mediterranean. Clay-court tennis belongs to the same garden world as the hotel’s terraces and coastal paths.\n\nOpened in January 1908, the hotel still carries its Belle Époque beginnings. Its original Rotunda was designed by Gustave Eiffel. The estate also includes Villa Rose-Pierre, with its own clay court. A garden match, a sea-facing pause, the Riviera unhurried.",
+      "sources": [
+        "https://www.fourseasons.com/capferrat/",
+        "https://maps.google.com/?cid=5827571335460603971"
+      ],
+      "notes": "Indoor/outdoor not stated: assumed Outdoor."
+    },
+    {
+      "name": "Château de la Messardière",
+      "country": {
+        "name": "France",
+        "isoCode": "FR",
+        "continent": "Europe"
+      },
+      "region": "Saint-Tropez",
+      "lat": 43.2542,
+      "lng": 6.6577,
+      "mapLinkUrl": "https://maps.google.com/?cid=3372179652381000190",
+      "surface": "Grass",
+      "access": "Resort",
+      "indoorOutdoor": "Outdoor",
+      "setting": "Two sunken courts in twelve hectares of gardens above Saint-Tropez",
+      "isScenic": true,
+      "tags": [
+        "Mountains"
+      ],
+      "blurb": "Château de la Messardière rises in the hills above Saint-Tropez, surrounded by the vineyards of Ramatuelle. Two sunken tennis courts sit within twelve hectares of gardens and parasol pines, a quieter world above the coast.\n\nThe château began as a nineteenth-century wedding gift from cognac merchant Gabriel Dupuy d’Angeac to his daughter Louise and cavalry officer Henry Brisson de La Messardière. After Henry’s death, Louise turned it into a hotel, drawing Parisian aristocracy during the Roaring Twenties. A private love story became a Riviera address; tennis keeps its garden rhythm.",
+      "sources": [
+        "https://airelles.com/fr/destination/chateau-de-la-messardiere-hotel",
+        "https://maps.google.com/?cid=3372179652381000190"
+      ],
+      "notes": "SURFACE says Artificial grass (mapped to Grass). COURTS says 2 (2 tennis + 2 padel) but the text mentions two tennis courts only. Indoor/outdoor not stated: assumed Outdoor."
     }
   ]
 }
